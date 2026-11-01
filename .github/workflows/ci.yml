@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Placeholders: some unit tests import the Supabase client, which throws without a URL.
+      # Locally these come from the gitignored .env. No network calls are made in this job.
+      VITE_SUPABASE_URL: http://127.0.0.1:54321
+      VITE_SUPABASE_ANON_KEY: ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure no .env files are committed
+        run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then
+            echo "::error::A .env file is tracked by git. Remove it and rotate any secrets in it."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build # runs tsc -b, then vite build
+      - run: npm test # unit tests (vitest, jsdom)
+
+  database:
+    name: Database and integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Starts the local Supabase stack in Docker, applies migrations and seed.sql.
+      - name: Start local Supabase
+        run: npm run db:start
+
+      - name: Database tests (pgTAP, RLS access rules)
+        run: npm run test:db
+
+      # Reads the URL and keys from `supabase status`; refuses to run against anything non-local.
+      - name: Integration tests
+        run: npm run test:integration
+
+      - name: Stop Supabase
+        if: always()
+        run: npm run db:stop
