@@ -4,6 +4,7 @@ on:
   push:
   pull_request:
     branches: [main]
+  workflow_dispatch: # run everything manually: gh workflow run ci.yml
 
 # Cancel superseded runs on the same ref
 concurrency:
@@ -14,8 +15,60 @@ permissions:
   contents: read
 
 jobs:
+  # Cheap and always runs: a .env commit has no code in it, so a path filter would hide it.
+  guard:
+    name: No tracked .env files
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then
+            echo "::error::A .env file is tracked by git. Remove it and rotate any secrets in it."
+            exit 1
+          fi
+
+  # Decides which of the jobs below are worth running. Rules are documented in AGENTS.md.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      check: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.check == 'true' }}
+      database: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.database == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3.0.2
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        with:
+          filters: |
+            shared: &shared
+              - 'package.json'
+              - 'package-lock.json'
+              - '.nvmrc'
+              - 'tsconfig*.json'
+              - 'vite.config.ts'
+              - '.oxlintrc.json'
+              - 'index.html'
+              - 'scripts/**'
+              - '.github/workflows/**'
+            check:
+              - *shared
+              - 'src/**'
+            database:
+              - *shared
+              - 'src/lib/**'
+              - 'supabase/**'
+              - 'tests/integration/**'
+
   check:
     name: Lint, typecheck, unit tests, build
+    needs: changes
+    if: needs.changes.outputs.check == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -25,13 +78,6 @@ jobs:
       VITE_SUPABASE_ANON_KEY: ci-placeholder
     steps:
       - uses: actions/checkout@v4
-
-      - name: Ensure no .env files are committed
-        run: |
-          if git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'; then
-            echo "::error::A .env file is tracked by git. Remove it and rotate any secrets in it."
-            exit 1
-          fi
 
       - uses: actions/setup-node@v4
         with:
@@ -45,6 +91,8 @@ jobs:
 
   database:
     name: Database and integration tests
+    needs: changes
+    if: needs.changes.outputs.database == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
