@@ -73,3 +73,9 @@ npm run lint && npx tsc -b && npm run test:all
 - **Pure logic** (dates, schedule rules, agenda assembly) lives in `src/lib/` with unit tests next to it.
 - **UI** uses MUI with the theme in `src/theme.ts`. Support both light and dark modes (use theme tokens like `text.secondary` and `divider`, never hard-coded colors). Use native selects (`slotProps={nativeSelect}`) for dropdowns, and check layouts at phone width.
 - **Node** version is pinned in `.nvmrc`. Run `nvm use` first.
+
+## Branching and PRs
+
+The app is not live and there is one developer, so **do not open pull requests**. Commit directly to `main` (or a short-lived branch merged straight in) and push. Revisit this when the app goes live or a second developer joins.
+
+CI (`.github/workflows/ci.yml`) runs on every push. Check it with `gh run list` and fix failures before moving on.
