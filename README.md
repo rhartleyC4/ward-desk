@@ -20,7 +20,7 @@ Both modules share the same users, roles, notifications, and calendar.
 
 ## Stack
 
-- **Frontend:** PWA hosted on Cloudflare Pages
+- **Frontend:** React + TypeScript PWA built with Vite and [MUI](https://mui.com/), hosted on Cloudflare Pages. Light and dark themes follow the device by default; the toggle in the top bar overrides it (see `src/theme.ts`)
 - **Backend:** Supabase (Postgres, Auth, Realtime, Edge Functions)
 - **Auth:** Google sign-in and email magic links, invite-only via an allowlist table
 - **Notifications:** Web Push (VAPID) plus email fallback
@@ -38,18 +38,46 @@ Roles live in the `roles` table, not in Google. Access is enforced by Row Level 
 
 Adjust these as the real needs become clear.
 
+## How it replaces the Google Sheet
+
+| Sheet tab | In the app |
+|-----------|------------|
+| Sacrament | **Sacrament** page (`meetings`, `program_items`) |
+| Bishopric Schedule | **Schedule** page (`recurring_events`, `rotations`, `stewardships`) |
+| Travel | **Away** page (`absences`). Warns when whoever is conducting is away |
+| Weekly agenda tab (copied every Sunday) | **Agenda** page, assembled live. Upcoming sacrament meetings, interviews, the callings table, releases, and sustainings fill in automatically. Discussion and calendar items carry forward until marked done. |
+| Callings Needed table | **Callings** page (`calling_needs`, `calling_candidates`). Accepted names with a sustain date show up under "Sustainings today" |
+
 ## Setup
 
-1. Clone the repo and run `npm install`
-2. Copy `.env.example` to `.env` and fill in the values
-3. Run `npm run dev`
+Requirements: Node 24+ (`nvm use` reads `.nvmrc`) and Docker (OrbStack or Docker Desktop) for local Supabase.
 
-Never commit `.env`. Secrets needed:
+1. `npm install`
+2. `npm run db:start` starts local Supabase and applies `supabase/migrations` and `supabase/seed.sql`
+3. `npm run db:env` writes `.env` pointing at local Supabase
+4. `npm run dev` and open http://localhost:5173
 
-- `SUPABASE_URL` and `SUPABASE_ANON_KEY` (safe for the frontend)
+Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `scheduler@`, or `suggester@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or expand "Local test accounts" and use the dev-only password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
+
+After changing the schema, add a new migration (`npx supabase migration new <name>`), then run `npm run db:reset` and `npm run db:types`.
+
+Never commit `.env`. See `.env.example`. Secrets needed for a hosted deployment:
+
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (safe for the frontend)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only, never in the frontend)
 - `VAPID_PUBLIC_KEY` (frontend) and `VAPID_PRIVATE_KEY` (server only)
-- Google OAuth client ID and secret (stored in Supabase Auth settings)
+- Google OAuth client ID and secret (stored in Supabase Auth settings; set `VITE_ENABLE_GOOGLE=true` once configured)
+
+## Tests
+
+| Command | What it covers | Needs local Supabase |
+|---------|----------------|----------------------|
+| `npm test` | Unit and component tests (Vitest + Testing Library): dates, schedule rules, agenda assembly, role-based navigation, auth loading, forms | No |
+| `npm run test:db` | pgTAP tests in `supabase/tests/database`. Every RLS rule, checked as each role | Yes |
+| `npm run test:integration` | Signs in as each seeded role and runs the app's real queries (`src/lib/queries.ts`) against the local API | Yes |
+| `npm run test:all` | All of the above | Yes |
+
+Integration tests refuse to run against anything but a local Supabase. They clean up the rows they create.
 
 ## Handoff checklist
 
