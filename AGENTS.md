@@ -78,4 +78,22 @@ npm run lint && npx tsc -b && npm run test:all
 
 The app is not live and there is one developer, so **do not open pull requests**. Commit directly to `main` (or a short-lived branch merged straight in) and push. Revisit this when the app goes live or a second developer joins.
 
+## CI
+
 CI (`.github/workflows/ci.yml`) runs on every push. Check it with `gh run list` and fix failures before moving on.
+
+**Which jobs run is decided by the files changed, not the commit type.** A `docs:` commit can still touch code, and paths cannot be wrong. Don't use `[skip ci]`.
+
+| Changed files | `guard` (no tracked `.env`) | `check` (lint, build, unit tests) | `database` (Supabase, pgTAP, integration) |
+|---|---|---|---|
+| Only `*.md`, `.claude/**`, `.gitignore`, `.env.example`, `public/**` | runs | skipped | skipped |
+| `src/**` (UI, pages, components, tests) | runs | **runs** | skipped |
+| `src/lib/**` (queries, types, access, `supabase.ts`) | runs | **runs** | **runs** |
+| `supabase/**`, `tests/integration/**` | runs | skipped | **runs** |
+| `package.json`, `package-lock.json`, `.nvmrc`, `tsconfig*.json`, `vite.config.ts`, `.oxlintrc.json`, `index.html`, `scripts/**`, `.github/workflows/**` | runs | **runs** | **runs** |
+
+- `src/lib/**` also runs `database` because the integration tests call `queries.ts` and `database.types.ts` as real roles.
+- A commit that mixes docs and code runs whatever the code needs. A multi-commit push is judged on the whole push.
+- Skipped jobs show as "skipped" in the Actions tab. That is expected, not a failure.
+- To run everything on demand: `gh workflow run ci.yml`.
+- When you add a new top-level folder or config file that affects the build or tests, add its path to the filters in the `changes` job, or CI will skip checks it should run. Keep this table in sync.
