@@ -57,7 +57,7 @@ Requirements: Node 24+ (`nvm use` reads `.nvmrc`) and Docker (OrbStack or Docker
 3. `npm run db:env` writes `.env` pointing at local Supabase
 4. `npm run dev` and open http://localhost:5173
 
-Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `scheduler@`, or `suggester@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or expand "Local test accounts" and use the practice password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
+Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `scheduler@`, or `suggester@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or enter the practice password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
 
 After changing the schema, add a new migration (`npx supabase migration new <name>`), then run `npm run db:reset` and `npm run db:types`.
 
@@ -98,7 +98,7 @@ git push origin main:production
 
 The deploy job refuses any `production` commit that isn't already on `main`. Each deploy applies migrations (`supabase db push`) and then publishes the frontend, so **a migration must keep working with the frontend that is still live**. Add columns before using them, and remove them only after nothing uses them.
 
-**Resetting the training site:** Actions → "Reset training site" → Run workflow, then type `reset staging`. This wipes staging and reloads the seed data, then re-adds everyone in the staging variable `STAGING_ADMIN_EMAILS` (comma-separated) as admin and bishopric. Real addresses live there rather than in `seed.sql`. Run it once after the first staging deploy, since `db push` doesn't load the seed. Trainees sign in under "Practice accounts" with a seeded `@ward.test` email and the password from `seed.sql`.
+**Resetting the training site:** Actions → "Reset training site" → Run workflow, then type `reset staging`. This wipes staging and reloads the seed data, then re-adds everyone in the staging variable `STAGING_ADMIN_EMAILS` (comma-separated) as admin and bishopric. Real addresses live there rather than in `seed.sql`. Run it once after the first staging deploy, since `db push` doesn't load the seed. Trainees sign in with a seeded `@ward.test` email and the password from `seed.sql`.
 
 ### One-time setup
 
