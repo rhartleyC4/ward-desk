@@ -1,11 +1,10 @@
-import Accordion from '@mui/material/Accordion'
-import AccordionDetails from '@mui/material/AccordionDetails'
-import AccordionSummary from '@mui/material/AccordionSummary'
 import Alert from '@mui/material/Alert'
+import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
+import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -16,6 +15,16 @@ import { friendlyAuthError } from '../lib/authErrors'
 import { isTrainingSite } from '../lib/env'
 import { supabase } from '../lib/supabase'
 
+// The seeded accounts in supabase/seed.sql. Keep the two in sync.
+const PRACTICE_ACCOUNTS = [
+  { email: 'bishop@ward.test', role: 'Bishop (admin)' },
+  { email: 'first@ward.test', role: '1st counselor' },
+  { email: 'second@ward.test', role: '2nd counselor' },
+  { email: 'secretary@ward.test', role: 'Executive secretary' },
+  { email: 'clerk@ward.test', role: 'Ward clerk' },
+  { email: 'leader@ward.test', role: 'Other called leader' },
+]
+
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,8 +32,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const sendLink = async (e: FormEvent) => {
-    e.preventDefault()
+  const sendLink = async () => {
     setBusy(true)
     setError(null)
     const { error } = await supabase.auth.signInWithOtp({
@@ -36,9 +44,7 @@ export function LoginPage() {
     else setSent(true)
   }
 
-  // Local development only: seeded test accounts have a password so you can skip Mailpit.
-  const devSignIn = async (e: FormEvent) => {
-    e.preventDefault()
+  const passwordSignIn = async () => {
     setBusy(true)
     setError(null)
     const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -46,9 +52,15 @@ export function LoginPage() {
     if (error) setError(friendlyAuthError(error.message))
   }
 
-  // The seeded @ward.test accounts can't receive email, so they sign in with the seed password.
-  // On the training site this lets trainees try each role.
+  // The seeded @ward.test accounts can't receive email, so they sign in with the seed password:
+  // locally to skip Mailpit, and on the training site so trainees can try each role.
   const practice = isTrainingSite()
+  const withPassword = import.meta.env.DEV || practice
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    void (withPassword ? passwordSignIn() : sendLink())
+  }
 
   const google = () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
 
@@ -63,11 +75,58 @@ export function LoginPage() {
           {sent ? (
             <Alert severity="success">Check {email} for a sign-in link.</Alert>
           ) : (
-            <Stack component="form" onSubmit={sendLink} spacing={1.5}>
-              <TextField label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-              <Button type="submit" variant="contained" disabled={busy}>
-                Email me a sign-in link
-              </Button>
+            <Stack component="form" onSubmit={submit} spacing={1.5}>
+              {withPassword ? (
+                <Autocomplete
+                  freeSolo
+                  openOnFocus
+                  options={PRACTICE_ACCOUNTS.map((a) => a.email)}
+                  inputValue={email}
+                  onInputChange={(_, value) => setEmail(value)}
+                  renderOption={({ key, ...props }, option) => (
+                    <li key={key} {...props}>
+                      <Box>
+                        <Typography variant="body2">{option}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {PRACTICE_ACCOUNTS.find((a) => a.email === option)?.role}
+                        </Typography>
+                      </Box>
+                    </li>
+                  )}
+                  renderInput={(params) => <TextField {...params} label="Email" type="email" required autoComplete="off" />}
+                />
+              ) : (
+                <TextField label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+              )}
+              {withPassword && (
+                <>
+                  <TextField
+                    label="Password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                  <Button type="submit" variant="contained" disabled={busy}>
+                    Sign in
+                  </Button>
+                  <Divider>
+                    <Typography variant="body2" color="text.secondary">
+                      or
+                    </Typography>
+                  </Divider>
+                </>
+              )}
+              {withPassword ? (
+                <Button variant="outlined" disabled={busy || !email} onClick={() => void sendLink()}>
+                  Email me a sign-in link
+                </Button>
+              ) : (
+                <Button type="submit" variant="contained" disabled={busy}>
+                  Email me a sign-in link
+                </Button>
+              )}
               {import.meta.env.VITE_ENABLE_GOOGLE === 'true' && (
                 <Button variant="outlined" onClick={google}>
                   Sign in with Google
@@ -78,28 +137,6 @@ export function LoginPage() {
           <Box sx={{ mt: 1.5 }}>
             <ErrorNote error={error} />
           </Box>
-          {(import.meta.env.DEV || practice) && !sent && (
-            <Accordion disableGutters elevation={0} sx={{ mt: 1, border: 1, borderColor: 'divider', '&::before': { display: 'none' } }}>
-              <AccordionSummary>
-                <Typography variant="body2" color="text.secondary">
-                  {practice ? 'Practice accounts' : 'Local test accounts'}
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Stack component="form" onSubmit={devSignIn} spacing={1.5}>
-                  <TextField
-                    label={practice ? 'Practice password' : 'Password (see supabase/seed.sql)'}
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <Button type="submit" variant="outlined" disabled={busy || !email || !password}>
-                    Sign in with password
-                  </Button>
-                </Stack>
-              </AccordionDetails>
-            </Accordion>
-          )}
         </CardContent>
       </Card>
     </Box>

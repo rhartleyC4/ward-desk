@@ -75,7 +75,7 @@ describe('editing the agenda', () => {
     await removePrayerName(second, name.id, DATE)
     expect((await loadAgenda(second, DATE)).prayerRoll.map((p) => p.id)).not.toContain(name.id)
 
-    const scheduler = await signIn('scheduler')
-    await expect(addPrayerName(scheduler, `${TAG} Not allowed`)).rejects.toThrow(/row-level security/)
+    const leader = await signIn('leader')
+    await expect(addPrayerName(leader, `${TAG} Not allowed`)).rejects.toThrow(/row-level security/)
   })
 })

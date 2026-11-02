@@ -77,8 +77,8 @@ describe('AuthProvider', () => {
     loadMe.mockReturnValue(new Promise((r) => (resolveMe = r)))
     await act(async () => auth.listener!('SIGNED_IN', { user: { id: 'u2' } }))
     expect(state()).toBe('loading')
-    await act(async () => resolveMe({ profile: null, roles: ['suggester'] }))
-    expect(state()).toBe('in:suggester')
+    await act(async () => resolveMe({ profile: null, roles: ['leader'] }))
+    expect(state()).toBe('in:leader')
     expect(rendered).not.toContain('in:')
   })
 

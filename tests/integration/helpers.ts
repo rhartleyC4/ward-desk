@@ -6,7 +6,7 @@ import { execSync } from 'node:child_process'
 import type { Database } from '../../src/lib/database.types'
 import type { Client } from '../../src/lib/supabase'
 
-export const LOCAL_PASSWORD = 'ward-local-dev'
+export const LOCAL_PASSWORD = 'gp7'
 
 let cached: { url: string; anonKey: string } | undefined
 
@@ -29,7 +29,7 @@ export function anonClient(): Client {
   return createClient<Database>(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
-export type SeedUser = 'bishop' | 'first' | 'second' | 'scheduler' | 'suggester'
+export type SeedUser = 'bishop' | 'first' | 'second' | 'secretary' | 'clerk' | 'leader'
 
 export async function signIn(user: SeedUser): Promise<Client & { userId: string }> {
   const client = anonClient()

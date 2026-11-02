@@ -83,7 +83,7 @@ export function callingsNeeded(needs: CallingNeed[], candidates: Candidate[]): N
     })
 }
 
-/** Names submitted by suggesters that haven't been attached to a need yet. */
+/** Names submitted by called leaders that haven't been attached to a need yet. */
 export function unsortedSuggestions<T extends Candidate>(candidates: T[]): T[] {
   return candidates.filter((c) => c.need_id == null && c.status === 'suggested')
 }

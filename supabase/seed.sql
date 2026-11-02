@@ -1,34 +1,39 @@
--- Local development seed only. Invented people; never real member data.
+-- Seed for local development and the training site. Invented people; never real member data.
 -- Sign in with one of the ward.test emails and open the magic link in Mailpit (http://127.0.0.1:54324),
--- or use the local-only password "ward-local-dev" (integration tests do this).
+-- or use the practice password "gp7" (integration tests do this). The training site loads this
+-- seed too, so trainees sign in with it. Never reuse it anywhere real.
 
 insert into public.allowlist (email, initial_roles) values
   ('bishop@ward.test', '{admin,bishopric}'),
   ('first@ward.test', '{bishopric}'),
   ('second@ward.test', '{bishopric}'),
-  ('scheduler@ward.test', '{scheduler}'),
-  ('suggester@ward.test', '{suggester}');
+  ('secretary@ward.test', '{bishopric}'),
+  ('clerk@ward.test', '{bishopric}'),
+  ('leader@ward.test', '{leader}');
 
 -- Create the auth users up front so seed rows can reference them.
 -- The on_auth_user_created trigger fills in profiles and roles from the allowlist.
 insert into auth.users (instance_id, id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, encrypted_password, confirmation_token, recovery_token, email_change_token_new, email_change)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', u.email, now(),
-       '{"provider":"email","providers":["email"]}', jsonb_build_object('full_name', u.full_name), now(), now(), extensions.crypt('ward-local-dev', extensions.gen_salt('bf')), '', '', '', ''
+       '{"provider":"email","providers":["email"]}', jsonb_build_object('full_name', u.full_name), now(), now(), extensions.crypt('gp7', extensions.gen_salt('bf')), '', '', '', ''
 from (values
   ('00000000-0000-0000-0000-00000000000b'::uuid, 'bishop@ward.test', 'Bishop Avery'),
   ('00000000-0000-0000-0000-000000000001'::uuid, 'first@ward.test', 'Brother Lane'),
   ('00000000-0000-0000-0000-000000000002'::uuid, 'second@ward.test', 'Brother Ortiz'),
-  ('00000000-0000-0000-0000-00000000000c'::uuid, 'scheduler@ward.test', 'Brother Quinn'),
-  ('00000000-0000-0000-0000-00000000000d'::uuid, 'suggester@ward.test', 'Sister Reyes')
+  ('00000000-0000-0000-0000-00000000000c'::uuid, 'secretary@ward.test', 'Brother Quinn'),
+  ('00000000-0000-0000-0000-00000000000e'::uuid, 'clerk@ward.test', 'Brother Pike'),
+  ('00000000-0000-0000-0000-00000000000d'::uuid, 'leader@ward.test', 'Sister Reyes')
 ) as u (id, email, full_name);
 
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
 select gen_random_uuid(), id, id::text, 'email', jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true), now(), now(), now()
 from auth.users where email like '%@ward.test';
 
-update public.profiles set short_name = 'Bishop' where email = 'bishop@ward.test';
-update public.profiles set short_name = 'Lane' where email = 'first@ward.test';
-update public.profiles set short_name = 'Ortiz' where email = 'second@ward.test';
+update public.profiles set short_name = 'Bishop', office = 'bishop' where email = 'bishop@ward.test';
+update public.profiles set short_name = 'Lane', office = 'first_counselor' where email = 'first@ward.test';
+update public.profiles set short_name = 'Ortiz', office = 'second_counselor' where email = 'second@ward.test';
+update public.profiles set short_name = 'Quinn', office = 'executive_secretary' where email = 'secretary@ward.test';
+update public.profiles set short_name = 'Pike', office = 'ward_clerk' where email = 'clerk@ward.test';
 
 -- Sacrament tab ---------------------------------------------------------------
 

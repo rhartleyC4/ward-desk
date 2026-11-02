@@ -41,3 +41,29 @@ jobs:
 
       - name: Reset database and reload seed data
         run: npx supabase db reset --db-url "$SUPABASE_DB_URL" --yes
+
+      # Real people's emails stay out of the repo (seed.sql is invented data only). List staging
+      # admins, comma-separated, in the staging environment variable STAGING_ADMIN_EMAILS.
+      # Anyone who already signed in also gets their profile and roles back, since the
+      # on_auth_user_created trigger only fires the first time.
+      - name: Re-add staging admins
+        if: vars.STAGING_ADMIN_EMAILS != ''
+        env:
+          EMAILS: ${{ vars.STAGING_ADMIN_EMAILS }}
+        run: |
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -v emails="$EMAILS" <<'SQL'
+          insert into public.allowlist (email, initial_roles)
+          select trim(e), '{admin,bishopric}' from unnest(string_to_array(:'emails', ',')) as e
+          where trim(e) <> ''
+          on conflict (email) do update set initial_roles = excluded.initial_roles;
+
+          insert into public.profiles (id, email, display_name)
+          select u.id, u.email, coalesce(u.raw_user_meta_data ->> 'full_name', split_part(u.email, '@', 1))
+          from auth.users u join public.allowlist a on lower(a.email::text) = lower(u.email)
+          on conflict do nothing;
+
+          insert into public.roles (user_id, role)
+          select p.id, unnest(a.initial_roles)
+          from public.profiles p join public.allowlist a on lower(a.email::text) = lower(p.email::text)
+          on conflict do nothing;
+          SQL

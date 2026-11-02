@@ -32,9 +32,10 @@ Roles live in the `roles` table, not in Google. Access is enforced by Row Level 
 | Role | Can do |
 |------|--------|
 | admin | Manage users, roles, settings |
-| bishopric | View and decide on calling proposals, schedule interviews, manage meetings |
-| scheduler | Manage meeting assignments and speakers; **cannot** see calling proposals |
-| suggester | Submit name suggestions only |
+| bishopric | The bishop, 1st and 2nd counselors, executive secretary and ward clerk. View and decide on calling proposals, schedule interviews, manage meetings |
+| leader | Other called leaders. Submit name suggestions only; **cannot** see calling proposals |
+
+Each bishopric member's profile also has an `office` (bishop, first or second counselor, executive secretary, ward clerk) that only an admin can set. The Conducting and Interviewer pickers list only the bishop and counselors.
 
 Adjust these as the real needs become clear.
 
@@ -57,7 +58,7 @@ Requirements: Node 24+ (`nvm use` reads `.nvmrc`) and Docker (OrbStack or Docker
 3. `npm run db:env` writes `.env` pointing at local Supabase
 4. `npm run dev` and open http://localhost:5173
 
-Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `scheduler@`, or `suggester@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or expand "Local test accounts" and use the dev-only password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
+Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `secretary@`, `clerk@`, or `leader@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or enter the practice password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
 
 After changing the schema, add a new migration (`npx supabase migration new <name>`), then run `npm run db:reset` and `npm run db:types`.
 
@@ -98,7 +99,7 @@ git push origin main:production
 
 The deploy job refuses any `production` commit that isn't already on `main`. Each deploy applies migrations (`supabase db push`) and then publishes the frontend, so **a migration must keep working with the frontend that is still live**. Add columns before using them, and remove them only after nothing uses them.
 
-**Resetting the training site:** Actions → "Reset training site" → Run workflow, then type `reset staging`. This wipes staging and reloads the seed data. Run it once after the first staging deploy, since `db push` doesn't load the seed. Trainees sign in under "Practice accounts" with a seeded `@ward.test` email and the password from `seed.sql`.
+**Resetting the training site:** Actions → "Reset training site" → Run workflow, then type `reset staging`. This wipes staging and reloads the seed data, then re-adds everyone in the staging variable `STAGING_ADMIN_EMAILS` (comma-separated) as admin and bishopric. Real addresses live there rather than in `seed.sql`. Run it once after the first staging deploy, since `db push` doesn't load the seed. Trainees sign in with a seeded `@ward.test` email and the password from `seed.sql`.
 
 ### One-time setup
 
@@ -126,7 +127,7 @@ The deploy job refuses any `production` commit that isn't already on `main`. Eac
 
    Limit the `production` environment to the `production` branch under Deployment branches.
 5. Push to `main`, then run "Reset training site". Then promote to production.
-6. Add yourself to production **before** your first sign-in, since sign-in is refused for any email not on the allowlist. Run this in the production project's SQL editor, then sign in. Do the same in staging if you want to use your real address there as well as the practice accounts:
+6. Add yourself to production **before** your first sign-in, since sign-in is refused for any email not on the allowlist. Run this in the production project's SQL editor, then sign in. For staging, add your address to `STAGING_ADMIN_EMAILS` instead, so it survives resets:
    ```sql
    insert into public.allowlist (email, initial_roles) values ('you@example.com', '{admin,bishopric}');
    ```
