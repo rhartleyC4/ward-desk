@@ -1,4 +1,4 @@
-# Ward Planner
+# Ward Desk
 
 A mobile-first web app (PWA) for managing ward administration in one place: callings (proposing names, discussion, interviews) and sacrament meeting planning (conducting assignments, speakers, talks).
 

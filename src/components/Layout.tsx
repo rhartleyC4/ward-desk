@@ -29,7 +29,7 @@ export function Layout() {
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Toolbar sx={{ gap: 1, flexWrap: 'wrap', minHeight: { xs: 52 } }}>
           <Typography component="span" sx={{ fontWeight: 700, flexGrow: { xs: 1, md: 0 }, mr: 2 }}>
-            Ward Planner
+            Ward Desk
           </Typography>
           <Tabs
             value={current}

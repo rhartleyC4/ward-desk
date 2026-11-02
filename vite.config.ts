@@ -10,8 +10,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Ward Planner',
-        short_name: 'Ward Planner',
+        name: 'Ward Desk',
+        short_name: 'Ward Desk',
         description: 'Sacrament meetings, bishopric agenda, and callings in one place.',
         theme_color: '#1f3a5f',
         background_color: '#ffffff',
