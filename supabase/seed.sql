@@ -1,6 +1,7 @@
--- Local development seed only. Invented people; never real member data.
+-- Seed for local development and the training site. Invented people; never real member data.
 -- Sign in with one of the ward.test emails and open the magic link in Mailpit (http://127.0.0.1:54324),
--- or use the local-only password "ward-local-dev" (integration tests do this).
+-- or use the practice password "gp7" (integration tests do this). The training site loads this
+-- seed too, so trainees sign in with it. Never reuse it anywhere real.
 
 insert into public.allowlist (email, initial_roles) values
   ('bishop@ward.test', '{admin,bishopric}'),
@@ -13,7 +14,7 @@ insert into public.allowlist (email, initial_roles) values
 -- The on_auth_user_created trigger fills in profiles and roles from the allowlist.
 insert into auth.users (instance_id, id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, encrypted_password, confirmation_token, recovery_token, email_change_token_new, email_change)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', u.email, now(),
-       '{"provider":"email","providers":["email"]}', jsonb_build_object('full_name', u.full_name), now(), now(), extensions.crypt('ward-local-dev', extensions.gen_salt('bf')), '', '', '', ''
+       '{"provider":"email","providers":["email"]}', jsonb_build_object('full_name', u.full_name), now(), now(), extensions.crypt('gp7', extensions.gen_salt('bf')), '', '', '', ''
 from (values
   ('00000000-0000-0000-0000-00000000000b'::uuid, 'bishop@ward.test', 'Bishop Avery'),
   ('00000000-0000-0000-0000-000000000001'::uuid, 'first@ward.test', 'Brother Lane'),

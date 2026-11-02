@@ -57,7 +57,7 @@ Requirements: Node 24+ (`nvm use` reads `.nvmrc`) and Docker (OrbStack or Docker
 3. `npm run db:env` writes `.env` pointing at local Supabase
 4. `npm run dev` and open http://localhost:5173
 
-Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `scheduler@`, or `suggester@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or expand "Local test accounts" and use the dev-only password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
+Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `scheduler@`, or `suggester@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or expand "Local test accounts" and use the practice password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
 
 After changing the schema, add a new migration (`npx supabase migration new <name>`), then run `npm run db:reset` and `npm run db:types`.
 

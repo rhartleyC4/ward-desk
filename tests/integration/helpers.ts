@@ -6,7 +6,7 @@ import { execSync } from 'node:child_process'
 import type { Database } from '../../src/lib/database.types'
 import type { Client } from '../../src/lib/supabase'
 
-export const LOCAL_PASSWORD = 'ward-local-dev'
+export const LOCAL_PASSWORD = 'gp7'
 
 let cached: { url: string; anonKey: string } | undefined
 
