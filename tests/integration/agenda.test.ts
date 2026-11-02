@@ -31,7 +31,7 @@ describe('weekly agenda from seed data', () => {
 
     expect(sustainingsOn(SEED_SUNDAY, data.needs, data.candidates)).toContainEqual({ name: 'Sister Moss', calling: 'Relief Society Teacher' })
     expect(releasesOn('2026-11-08', data.needs).map((n) => n.release_name)).toEqual(['Sister Kemp'])
-    expect(data.bishopric).toHaveLength(5)
+    expect(data.bishopric).toHaveLength(3)
   })
 })
 

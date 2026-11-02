@@ -42,9 +42,15 @@ export async function loadProfiles(client: Client): Promise<Profile[]> {
 }
 
 /** Bishopric members, for the Conducting and interviewer pickers. */
+/** The bishop and counselors, in that order, for the Conducting and Interviewer pickers. */
 export async function loadBishopric(client: Client): Promise<Profile[]> {
-  const rows = must(await client.from('roles').select('profiles(id, email, display_name, short_name)').eq('role', 'bishopric'))
-  return rows.flatMap((r) => (r.profiles ? [r.profiles] : []))
+  return must(
+    await client
+      .from('profiles')
+      .select('id, email, display_name, short_name')
+      .in('office', ['bishop', 'first_counselor', 'second_counselor'])
+      .order('office'),
+  )
 }
 
 // ---------------------------------------------------------------------------

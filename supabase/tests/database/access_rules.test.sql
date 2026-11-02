@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(32);
+select plan(35);
 
 -- Act as a seeded user for the rest of the transaction, or until the next call.
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
@@ -151,10 +151,23 @@ select lives_ok(
   'bishopric adds agenda items'
 );
 select is((select count(*)::int from public.allowlist), 0, 'bishopric who is not admin cannot see the allowlist');
+select lives_ok(
+  $$ update public.profiles set short_name = 'L.' where id = (select auth.uid()) $$,
+  'bishopric member edits their own short name'
+);
+select throws_ok(
+  $$ update public.profiles set office = 'bishop' where id = (select auth.uid()) $$,
+  '42501', null,
+  'bishopric member cannot change their own office'
+);
 
 select pg_temp.act_as('bishop@ward.test');
 
 select ok((select count(*) from public.allowlist) >= 5, 'admin manages the allowlist');
+select lives_ok(
+  $$ update public.profiles set office = 'ward_clerk' where email = 'secretary@ward.test' $$,
+  'admin assigns offices'
+);
 
 select * from finish();
 rollback;

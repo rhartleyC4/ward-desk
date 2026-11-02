@@ -29,11 +29,11 @@ insert into auth.identities (id, user_id, provider_id, provider, identity_data, 
 select gen_random_uuid(), id, id::text, 'email', jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true), now(), now(), now()
 from auth.users where email like '%@ward.test';
 
-update public.profiles set short_name = 'Bishop' where email = 'bishop@ward.test';
-update public.profiles set short_name = 'Lane' where email = 'first@ward.test';
-update public.profiles set short_name = 'Ortiz' where email = 'second@ward.test';
-update public.profiles set short_name = 'Quinn' where email = 'secretary@ward.test';
-update public.profiles set short_name = 'Pike' where email = 'clerk@ward.test';
+update public.profiles set short_name = 'Bishop', office = 'bishop' where email = 'bishop@ward.test';
+update public.profiles set short_name = 'Lane', office = 'first_counselor' where email = 'first@ward.test';
+update public.profiles set short_name = 'Ortiz', office = 'second_counselor' where email = 'second@ward.test';
+update public.profiles set short_name = 'Quinn', office = 'executive_secretary' where email = 'secretary@ward.test';
+update public.profiles set short_name = 'Pike', office = 'ward_clerk' where email = 'clerk@ward.test';
 
 -- Sacrament tab ---------------------------------------------------------------
 

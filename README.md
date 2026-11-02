@@ -35,6 +35,8 @@ Roles live in the `roles` table, not in Google. Access is enforced by Row Level 
 | bishopric | The bishop, 1st and 2nd counselors, executive secretary and ward clerk. View and decide on calling proposals, schedule interviews, manage meetings |
 | leader | Other called leaders. Submit name suggestions only; **cannot** see calling proposals |
 
+Each bishopric member's profile also has an `office` (bishop, first or second counselor, executive secretary, ward clerk) that only an admin can set. The Conducting and Interviewer pickers list only the bishop and counselors.
+
 Adjust these as the real needs become clear.
 
 ## How it replaces the Google Sheet

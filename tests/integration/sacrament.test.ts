@@ -12,10 +12,10 @@ describe('sacrament planning', () => {
     for (const m of meetings) await deleteMeeting(secretary, m.id)
   })
 
-  it('lists the bishopric for the Conducting picker', async () => {
+  it('lists only the bishop and counselors, in order, for the Conducting picker', async () => {
     const secretary = await signIn('secretary')
-    const names = (await loadBishopric(secretary)).map((p) => p.display_name).sort()
-    expect(names).toEqual(['Bishop Avery', 'Brother Lane', 'Brother Ortiz', 'Brother Pike', 'Brother Quinn'])
+    const names = (await loadBishopric(secretary)).map((p) => p.display_name)
+    expect(names).toEqual(['Bishop Avery', 'Brother Lane', 'Brother Ortiz'])
   })
 
   it('lets the executive secretary plan a Sunday and replace its program', async () => {
