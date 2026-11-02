@@ -1,0 +1,43 @@
+name: Reset training site
+
+# Wipes the staging database and reloads migrations plus supabase/seed.sql, so a training
+# session starts from the same invented data. Never touches production.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "reset staging" to confirm. All staging data will be replaced.
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  reset:
+    name: Reset staging database
+    if: inputs.confirm == 'reset staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: staging
+    # Wait for any staging deploy in progress, so a reset never interleaves with migrations.
+    concurrency:
+      group: deploy-main
+      cancel-in-progress: false
+    env:
+      # Session pooler connection string for this environment's database. It reaches only that
+      # database, unlike a Supabase access token, which can manage every project you own.
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Reset database and reload seed data
+        run: npx supabase db reset --db-url "$SUPABASE_DB_URL" --yes
