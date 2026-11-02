@@ -3,12 +3,14 @@ import { ThemeProvider } from '@mui/material/styles'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import { EnvironmentBanner } from './components/EnvironmentBanner'
 import { theme } from './theme'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme} defaultMode="system">
       <CssBaseline enableColorScheme />
+      <EnvironmentBanner />
       <App />
     </ThemeProvider>
   </StrictMode>,

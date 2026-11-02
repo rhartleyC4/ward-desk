@@ -13,6 +13,7 @@ import { useState, type FormEvent } from 'react'
 import { ErrorNote } from '../components/Layout'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { friendlyAuthError } from '../lib/authErrors'
+import { isTrainingSite } from '../lib/env'
 import { supabase } from '../lib/supabase'
 
 export function LoginPage() {
@@ -45,6 +46,10 @@ export function LoginPage() {
     if (error) setError(friendlyAuthError(error.message))
   }
 
+  // The seeded @ward.test accounts can't receive email, so they sign in with the seed password.
+  // On the training site this lets trainees try each role.
+  const practice = isTrainingSite()
+
   const google = () => supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
 
   return (
@@ -73,17 +78,17 @@ export function LoginPage() {
           <Box sx={{ mt: 1.5 }}>
             <ErrorNote error={error} />
           </Box>
-          {import.meta.env.DEV && !sent && (
+          {(import.meta.env.DEV || practice) && !sent && (
             <Accordion disableGutters elevation={0} sx={{ mt: 1, border: 1, borderColor: 'divider', '&::before': { display: 'none' } }}>
               <AccordionSummary>
                 <Typography variant="body2" color="text.secondary">
-                  Local test accounts
+                  {practice ? 'Practice accounts' : 'Local test accounts'}
                 </Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <Stack component="form" onSubmit={devSignIn} spacing={1.5}>
                   <TextField
-                    label="Password (see supabase/seed.sql)"
+                    label={practice ? 'Practice password' : 'Password (see supabase/seed.sql)'}
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
