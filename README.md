@@ -98,7 +98,7 @@ git push origin main:production
 
 The deploy job refuses any `production` commit that isn't already on `main`. Each deploy applies migrations (`supabase db push`) and then publishes the frontend, so **a migration must keep working with the frontend that is still live**. Add columns before using them, and remove them only after nothing uses them.
 
-**Resetting the training site:** Actions → "Reset training site" → Run workflow, then type `reset staging`. This wipes staging and reloads the seed data. Run it once after the first staging deploy, since `db push` doesn't load the seed. Trainees sign in under "Practice accounts" with a seeded `@ward.test` email and the password from `seed.sql`.
+**Resetting the training site:** Actions → "Reset training site" → Run workflow, then type `reset staging`. This wipes staging and reloads the seed data, then re-adds everyone in the staging variable `STAGING_ADMIN_EMAILS` (comma-separated) as admin and bishopric. Real addresses live there rather than in `seed.sql`. Run it once after the first staging deploy, since `db push` doesn't load the seed. Trainees sign in under "Practice accounts" with a seeded `@ward.test` email and the password from `seed.sql`.
 
 ### One-time setup
 
@@ -126,7 +126,7 @@ The deploy job refuses any `production` commit that isn't already on `main`. Eac
 
    Limit the `production` environment to the `production` branch under Deployment branches.
 5. Push to `main`, then run "Reset training site". Then promote to production.
-6. Add yourself to production **before** your first sign-in, since sign-in is refused for any email not on the allowlist. Run this in the production project's SQL editor, then sign in. Do the same in staging if you want to use your real address there as well as the practice accounts:
+6. Add yourself to production **before** your first sign-in, since sign-in is refused for any email not on the allowlist. Run this in the production project's SQL editor, then sign in. For staging, add your address to `STAGING_ADMIN_EMAILS` instead, so it survives resets:
    ```sql
    insert into public.allowlist (email, initial_roles) values ('you@example.com', '{admin,bishopric}');
    ```
