@@ -12,12 +12,12 @@ describe('callings confidentiality', () => {
     await bishop.from('calling_needs').delete().like('calling_title', `${TAG}%`)
   })
 
-  it('lets a suggester send a name the bishopric then sees', async () => {
-    const suggester = await signIn('suggester')
-    await submitSuggestion(suggester, { calling_title: 'Primary Teacher', person_name: `${TAG} Sister Vale`, notes: 'Great with kids' })
+  it('lets a called leader send a name the bishopric then sees', async () => {
+    const leader = await signIn('leader')
+    await submitSuggestion(leader, { calling_title: 'Primary Teacher', person_name: `${TAG} Sister Vale`, notes: 'Great with kids' })
 
-    // The suggester cannot read anything back, including their own suggestion.
-    const theirs = await loadCallings(suggester)
+    // The leader cannot read anything back, including their own suggestion.
+    const theirs = await loadCallings(leader)
     expect(theirs.needs).toEqual([])
     expect(theirs.candidates).toEqual([])
 
@@ -28,18 +28,18 @@ describe('callings confidentiality', () => {
     expect(mine[0]).toMatchObject({ calling_title: 'Primary Teacher', notes: 'Great with kids', status: 'suggested' })
   })
 
-  it('hides every callings table, the agenda, and the prayer roll from a scheduler', async () => {
-    const scheduler = await signIn('scheduler')
-    const callings = await loadCallings(scheduler)
+  it('hides every callings table, the agenda, and the prayer roll from a called leader', async () => {
+    const leader = await signIn('leader')
+    const callings = await loadCallings(leader)
     expect(callings.needs).toEqual([])
     expect(callings.candidates).toEqual([])
 
-    const agenda = await loadAgenda(scheduler, '2026-11-01')
+    const agenda = await loadAgenda(leader, '2026-11-01')
     expect(agenda.agenda).toBeNull()
     expect(agenda.interviews).toEqual([])
     expect(agenda.agendaItems).toEqual([])
     expect(agenda.prayerRoll).toEqual([])
-    // Meetings are not confidential, so the scheduler still gets those.
+    // Meetings are not confidential, so the leader still gets those.
     expect(agenda.meetings.length).toBeGreaterThan(0)
   })
 

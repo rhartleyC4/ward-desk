@@ -150,7 +150,7 @@ export async function updateCandidate(client: Client, id: string, changes: Table
   check(await client.from('calling_candidates').update(changes).eq('id', id))
 }
 
-/** For suggesters: insert only. They can't read the row back, so don't ask for it. */
+/** For called leaders: insert only. They can't read the row back, so don't ask for it. */
 export async function submitSuggestion(client: Client, s: { calling_title: string; person_name: string; notes?: string }) {
   check(await client.from('calling_candidates').insert({ ...s, status: 'suggested' }))
 }

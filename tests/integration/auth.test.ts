@@ -16,8 +16,8 @@ describe('sign-in', () => {
     expect(me.profile?.display_name).toBe('Bishop Avery')
     expect(me.roles.sort()).toEqual(['admin', 'bishopric'])
 
-    const scheduler = await signIn('scheduler')
-    expect((await loadMe(scheduler, scheduler.userId)).roles).toEqual(['scheduler'])
+    const leader = await signIn('leader')
+    expect((await loadMe(leader, leader.userId)).roles).toEqual(['leader'])
   })
 
   it('returns nothing to an anonymous visitor', async () => {

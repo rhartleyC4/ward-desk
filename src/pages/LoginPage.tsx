@@ -18,10 +18,11 @@ import { supabase } from '../lib/supabase'
 // The seeded accounts in supabase/seed.sql. Keep the two in sync.
 const PRACTICE_ACCOUNTS = [
   { email: 'bishop@ward.test', role: 'Bishop (admin)' },
-  { email: 'first@ward.test', role: 'First counselor' },
-  { email: 'second@ward.test', role: 'Second counselor' },
-  { email: 'scheduler@ward.test', role: 'Scheduler' },
-  { email: 'suggester@ward.test', role: 'Suggester' },
+  { email: 'first@ward.test', role: '1st counselor' },
+  { email: 'second@ward.test', role: '2nd counselor' },
+  { email: 'secretary@ward.test', role: 'Executive secretary' },
+  { email: 'clerk@ward.test', role: 'Ward clerk' },
+  { email: 'leader@ward.test', role: 'Other called leader' },
 ]
 
 export function LoginPage() {

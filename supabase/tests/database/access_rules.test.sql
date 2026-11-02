@@ -24,7 +24,7 @@ select throws_ok(
   'sign-up is rejected for an email not on the allowlist'
 );
 
-insert into public.allowlist (email, initial_roles) values ('New.Member@Ward.test', '{scheduler}');
+insert into public.allowlist (email, initial_roles) values ('New.Member@Ward.test', '{leader}');
 insert into auth.users (id, email, aud, role)
   values ('20000000-0000-0000-0000-000000000001', 'new.member@ward.test', 'authenticated', 'authenticated');
 
@@ -34,7 +34,7 @@ select is(
 );
 select is(
   (select array_agg(role)::text from public.roles where user_id = '20000000-0000-0000-0000-000000000001'),
-  '{scheduler}', 'allowlisted sign-up receives initial_roles'
+  '{leader}', 'allowlisted sign-up receives initial_roles'
 );
 
 insert into public.allowlist (email) values ('noroles@ward.test');
@@ -42,70 +42,86 @@ insert into auth.users (id, email, aud, role)
   values ('20000000-0000-0000-0000-000000000002', 'noroles@ward.test', 'authenticated', 'authenticated');
 
 -- ---------------------------------------------------------------------------
--- Scheduler: meetings yes, anything confidential no
+-- The retired scheduler role can't be granted
 -- ---------------------------------------------------------------------------
 
-select pg_temp.act_as('scheduler@ward.test');
+select throws_ok(
+  $$ insert into public.roles (user_id, role) values ('20000000-0000-0000-0000-000000000002', 'scheduler') $$,
+  '23514', null,
+  'scheduler can no longer be granted'
+);
+select throws_ok(
+  $$ insert into public.allowlist (email, initial_roles) values ('old.scheduler@ward.test', '{scheduler}') $$,
+  '23514', null,
+  'scheduler can no longer be put on the allowlist'
+);
 
-select ok((select count(*) from public.meetings) > 0, 'scheduler reads meetings');
-select ok((select count(*) from public.program_items) > 0, 'scheduler reads program items');
+-- ---------------------------------------------------------------------------
+-- Executive secretary and ward clerk: full bishopric access, but not admin
+-- ---------------------------------------------------------------------------
+
+select pg_temp.act_as('secretary@ward.test');
+
+select is((select count(*)::int from public.calling_needs), 5, 'executive secretary sees all calling needs');
 select lives_ok(
   $$ insert into public.meetings (meeting_date) values ('2027-01-10') $$,
-  'scheduler creates a meeting'
-);
-select is((select count(*)::int from public.calling_needs), 0, 'scheduler cannot see calling needs');
-select is((select count(*)::int from public.calling_candidates), 0, 'scheduler cannot see calling candidates');
-select is((select count(*)::int from public.interviews), 0, 'scheduler cannot see interviews');
-select is((select count(*)::int from public.agendas), 0, 'scheduler cannot see agendas');
-select is((select count(*)::int from public.agenda_items), 0, 'scheduler cannot see agenda items');
-select is((select count(*)::int from public.prayer_roll), 0, 'scheduler cannot see the prayer roll');
-select is((select count(*)::int from public.allowlist), 0, 'scheduler cannot see the allowlist');
-select ok((select count(*) from public.absences) > 0, 'scheduler reads everyone''s away dates');
-select is(
-  (select array_agg(distinct role)::text from public.roles where user_id <> (select auth.uid())),
-  '{bishopric}', 'scheduler sees who is in the bishopric, but no one''s other roles'
+  'executive secretary creates a meeting'
 );
 select lives_ok(
   $$ insert into public.absences (starts_on, ends_on, location) values ('2027-01-01', '2027-01-03', 'Trip') $$,
-  'scheduler records their own away dates'
+  'executive secretary records their own away dates'
 );
 select throws_ok(
   $$ insert into public.absences (user_id, starts_on, ends_on) values ('00000000-0000-0000-0000-000000000001', '2027-01-01', '2027-01-02') $$,
   '42501', null,
-  'scheduler cannot record away dates for someone else'
-);
-select throws_ok(
-  $$ insert into public.rotations (title, months) values ('x', '{1}') $$,
-  '42501', null,
-  'scheduler cannot change the standing schedule'
+  'executive secretary cannot record away dates for someone else'
 );
 
+select pg_temp.act_as('clerk@ward.test');
+
+select ok((select count(*) from public.interviews) > 0, 'ward clerk sees interviews');
+select is((select count(*)::int from public.allowlist), 0, 'ward clerk cannot see the allowlist');
+
 -- ---------------------------------------------------------------------------
--- Suggester: may only submit names
+-- Other called leaders: may only submit names
 -- ---------------------------------------------------------------------------
 
-select pg_temp.act_as('suggester@ward.test');
+select pg_temp.act_as('leader@ward.test');
 
 select lives_ok(
   $$ insert into public.calling_candidates (calling_title, person_name) values ('Primary Teacher', 'Sister Vale') $$,
-  'suggester submits a name'
+  'leader submits a name'
 );
-select is((select count(*)::int from public.calling_candidates), 0, 'suggester cannot read candidates, even their own');
-select is((select count(*)::int from public.calling_needs), 0, 'suggester cannot see calling needs');
+select is((select count(*)::int from public.calling_candidates), 0, 'leader cannot read candidates, even their own');
+select is((select count(*)::int from public.calling_needs), 0, 'leader cannot see calling needs');
+select is((select count(*)::int from public.interviews), 0, 'leader cannot see interviews');
+select is((select count(*)::int from public.agendas), 0, 'leader cannot see agendas');
+select is((select count(*)::int from public.agenda_items), 0, 'leader cannot see agenda items');
+select is((select count(*)::int from public.prayer_roll), 0, 'leader cannot see the prayer roll');
+select is((select count(*)::int from public.allowlist), 0, 'leader cannot see the allowlist');
+select is(
+  (select array_agg(distinct role)::text from public.roles where user_id <> (select auth.uid())),
+  '{bishopric}', 'leader sees who is in the bishopric, but no one''s other roles'
+);
 select throws_ok(
   $$ insert into public.calling_candidates (calling_title, person_name, status) values ('Primary Teacher', 'Sister Vale', 'approved') $$,
   '42501', null,
-  'suggester cannot submit a name as already approved'
+  'leader cannot submit a name as already approved'
 );
 select throws_ok(
   $$ insert into public.calling_candidates (need_id, person_name) values ('10000000-0000-0000-0000-000000000001', 'Sister Vale') $$,
   '42501', null,
-  'suggester cannot attach a name to a specific need'
+  'leader cannot attach a name to a specific need'
 );
 select throws_ok(
   $$ insert into public.meetings (meeting_date) values ('2027-01-17') $$,
   '42501', null,
-  'suggester cannot create meetings'
+  'leader cannot create meetings'
+);
+select throws_ok(
+  $$ insert into public.rotations (title, months) values ('x', '{1}') $$,
+  '42501', null,
+  'leader cannot change the standing schedule'
 );
 
 -- ---------------------------------------------------------------------------

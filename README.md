@@ -32,9 +32,8 @@ Roles live in the `roles` table, not in Google. Access is enforced by Row Level 
 | Role | Can do |
 |------|--------|
 | admin | Manage users, roles, settings |
-| bishopric | View and decide on calling proposals, schedule interviews, manage meetings |
-| scheduler | Manage meeting assignments and speakers; **cannot** see calling proposals |
-| suggester | Submit name suggestions only |
+| bishopric | The bishop, 1st and 2nd counselors, executive secretary and ward clerk. View and decide on calling proposals, schedule interviews, manage meetings |
+| leader | Other called leaders. Submit name suggestions only; **cannot** see calling proposals |
 
 Adjust these as the real needs become clear.
 
@@ -57,7 +56,7 @@ Requirements: Node 24+ (`nvm use` reads `.nvmrc`) and Docker (OrbStack or Docker
 3. `npm run db:env` writes `.env` pointing at local Supabase
 4. `npm run dev` and open http://localhost:5173
 
-Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `scheduler@`, or `suggester@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or enter the practice password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
+Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `secretary@`, `clerk@`, or `leader@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or enter the practice password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
 
 After changing the schema, add a new migration (`npx supabase migration new <name>`), then run `npm run db:reset` and `npm run db:types`.
 

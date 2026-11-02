@@ -31,7 +31,7 @@ describe('weekly agenda from seed data', () => {
 
     expect(sustainingsOn(SEED_SUNDAY, data.needs, data.candidates)).toContainEqual({ name: 'Sister Moss', calling: 'Relief Society Teacher' })
     expect(releasesOn('2026-11-08', data.needs).map((n) => n.release_name)).toEqual(['Sister Kemp'])
-    expect(data.bishopric).toHaveLength(3)
+    expect(data.bishopric).toHaveLength(5)
   })
 })
 
@@ -75,7 +75,7 @@ describe('editing the agenda', () => {
     await removePrayerName(second, name.id, DATE)
     expect((await loadAgenda(second, DATE)).prayerRoll.map((p) => p.id)).not.toContain(name.id)
 
-    const scheduler = await signIn('scheduler')
-    await expect(addPrayerName(scheduler, `${TAG} Not allowed`)).rejects.toThrow(/row-level security/)
+    const leader = await signIn('leader')
+    await expect(addPrayerName(leader, `${TAG} Not allowed`)).rejects.toThrow(/row-level security/)
   })
 })

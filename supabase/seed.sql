@@ -7,8 +7,9 @@ insert into public.allowlist (email, initial_roles) values
   ('bishop@ward.test', '{admin,bishopric}'),
   ('first@ward.test', '{bishopric}'),
   ('second@ward.test', '{bishopric}'),
-  ('scheduler@ward.test', '{scheduler}'),
-  ('suggester@ward.test', '{suggester}');
+  ('secretary@ward.test', '{bishopric}'),
+  ('clerk@ward.test', '{bishopric}'),
+  ('leader@ward.test', '{leader}');
 
 -- Create the auth users up front so seed rows can reference them.
 -- The on_auth_user_created trigger fills in profiles and roles from the allowlist.
@@ -19,8 +20,9 @@ from (values
   ('00000000-0000-0000-0000-00000000000b'::uuid, 'bishop@ward.test', 'Bishop Avery'),
   ('00000000-0000-0000-0000-000000000001'::uuid, 'first@ward.test', 'Brother Lane'),
   ('00000000-0000-0000-0000-000000000002'::uuid, 'second@ward.test', 'Brother Ortiz'),
-  ('00000000-0000-0000-0000-00000000000c'::uuid, 'scheduler@ward.test', 'Brother Quinn'),
-  ('00000000-0000-0000-0000-00000000000d'::uuid, 'suggester@ward.test', 'Sister Reyes')
+  ('00000000-0000-0000-0000-00000000000c'::uuid, 'secretary@ward.test', 'Brother Quinn'),
+  ('00000000-0000-0000-0000-00000000000e'::uuid, 'clerk@ward.test', 'Brother Pike'),
+  ('00000000-0000-0000-0000-00000000000d'::uuid, 'leader@ward.test', 'Sister Reyes')
 ) as u (id, email, full_name);
 
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
@@ -30,6 +32,8 @@ from auth.users where email like '%@ward.test';
 update public.profiles set short_name = 'Bishop' where email = 'bishop@ward.test';
 update public.profiles set short_name = 'Lane' where email = 'first@ward.test';
 update public.profiles set short_name = 'Ortiz' where email = 'second@ward.test';
+update public.profiles set short_name = 'Quinn' where email = 'secretary@ward.test';
+update public.profiles set short_name = 'Pike' where email = 'clerk@ward.test';
 
 -- Sacrament tab ---------------------------------------------------------------
 

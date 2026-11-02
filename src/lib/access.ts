@@ -7,11 +7,11 @@ export type AppRole = Enums<'app_role'>
 
 export const canSeeCallings = (roles: AppRole[]) => roles.includes('bishopric')
 export const canSeeAgenda = (roles: AppRole[]) => roles.includes('bishopric')
-export const canPlanMeetings = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('scheduler')
-export const canSuggest = (roles: AppRole[]) => roles.includes('suggester') || roles.includes('bishopric')
+export const canPlanMeetings = (roles: AppRole[]) => roles.includes('bishopric')
+export const canSuggest = (roles: AppRole[]) => roles.includes('leader') || roles.includes('bishopric')
 export const canEditSchedule = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
-/** Suggesters only submit names; everyone else with a role sees the ward calendar pages. */
-export const isMember = (roles: AppRole[]) => roles.some((r) => r !== 'suggester')
+/** Called leaders only submit names; everyone else with a role sees the ward calendar pages. */
+export const isMember = (roles: AppRole[]) => roles.some((r) => r !== 'leader')
 
 export type NavLink = { to: string; label: string }
 

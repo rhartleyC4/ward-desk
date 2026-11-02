@@ -99,7 +99,7 @@ describe('callings', () => {
     { id: 'c1', need_id: 'n1', calling_title: null, person_name: 'Declined person', status: 'declined', sustain_on: null },
     { id: 'c2', need_id: 'n1', calling_title: null, person_name: 'Under discussion', status: 'discussing', sustain_on: null },
     { id: 'c3', need_id: 'n2', calling_title: null, person_name: 'Sister Moss', status: 'accepted', sustain_on: '2026-11-01' },
-    { id: 'c4', need_id: null, calling_title: 'Primary Teacher', person_name: 'From a suggester', status: 'suggested', sustain_on: null },
+    { id: 'c4', need_id: null, calling_title: 'Primary Teacher', person_name: 'From a leader', status: 'suggested', sustain_on: null },
   ]
 
   it('builds the Callings Needed table from open needs, hiding declined names', () => {
@@ -110,8 +110,8 @@ describe('callings', () => {
     expect(rows[1].approved).toBe(true)
   })
 
-  it('lists suggester submissions that are not yet attached to a need', () => {
-    expect(unsortedSuggestions(candidates).map((c) => c.person_name)).toEqual(['From a suggester'])
+  it('lists leader submissions that are not yet attached to a need', () => {
+    expect(unsortedSuggestions(candidates).map((c) => c.person_name)).toEqual(['From a leader'])
   })
 
   it('produces Releases Today and Sustainings Today', () => {
