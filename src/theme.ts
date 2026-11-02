@@ -1,4 +1,9 @@
+import '@fontsource-variable/lexend'
 import { createTheme } from '@mui/material/styles'
+
+// Deep ink and notebook gold, matching the app icon (public/favicon.svg).
+const ink = '#1b2233'
+const gold = '#f2b23a'
 
 // Light and dark palettes. The mode follows the device by default; ThemeToggle overrides it
 // (MUI stores the choice in localStorage).
@@ -7,30 +12,39 @@ export const theme = createTheme({
   colorSchemes: {
     light: {
       palette: {
-        primary: { main: '#1f5fa8' },
-        secondary: { main: '#6b4b9a' },
-        background: { default: '#f4f6f9', paper: '#ffffff' },
+        primary: { main: ink, contrastText: '#ffffff' },
+        // Darkened gold so it passes contrast as text on a light background.
+        secondary: { main: '#8a5a00', contrastText: '#ffffff' },
+        background: { default: '#f5f2ea', paper: '#ffffff' },
+        text: { primary: ink, secondary: '#4c5263' },
       },
     },
     dark: {
       palette: {
-        primary: { main: '#7fb2f0' },
-        secondary: { main: '#c3a6ef' },
-        background: { default: '#0f141a', paper: '#18202a' },
+        primary: { main: gold, contrastText: ink },
+        secondary: { main: '#f6cd7a', contrastText: ink },
+        background: { default: '#12161f', paper: ink },
+        text: { primary: '#f3f1ec', secondary: '#b9bdc8' },
       },
     },
   },
-  shape: { borderRadius: 10 },
+  shape: { borderRadius: 14 },
   typography: {
-    fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-    h1: { fontSize: '1.5rem', fontWeight: 700 },
-    h2: { fontSize: '1.125rem', fontWeight: 600 },
-    h3: { fontSize: '1rem', fontWeight: 600 },
+    fontFamily: '"Lexend Variable", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+    // Larger base size for easier reading; MUI scales every variant from this.
+    fontSize: 16,
+    h1: { fontSize: '1.75rem', fontWeight: 700 },
+    h2: { fontSize: '1.25rem', fontWeight: 600 },
+    h3: { fontSize: '1.0625rem', fontWeight: 600 },
+    button: { fontWeight: 600 },
   },
   components: {
     MuiTextField: { defaultProps: { size: 'small', fullWidth: true } },
-    MuiButton: { defaultProps: { disableElevation: true }, styleOverrides: { root: { textTransform: 'none' } } },
-    MuiTab: { styleOverrides: { root: { textTransform: 'none', minWidth: 0 } } },
+    MuiButton: {
+      defaultProps: { disableElevation: true },
+      styleOverrides: { root: { textTransform: 'none', minHeight: 44 }, sizeSmall: { minHeight: 40 } },
+    },
+    MuiTab: { styleOverrides: { root: { textTransform: 'none', minWidth: 0, fontSize: '1rem' } } },
     MuiCard: { defaultProps: { variant: 'outlined' } },
     MuiTableCell: { styleOverrides: { root: { paddingLeft: 6, paddingRight: 6 } } },
   },
