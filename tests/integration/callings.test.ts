@@ -38,7 +38,7 @@ describe('callings confidentiality', () => {
     const [bishopric] = await loadAgendaTemplates(await signIn('bishop'))
     const agenda = await loadAgenda(leader, bishopric, '2026-11-01')
     expect(agenda.agenda).toBeNull()
-    expect(agenda.interviews).toEqual([])
+    expect(agenda.appointments).toEqual([])
     expect(agenda.agendaItems).toEqual([])
     expect(agenda.prayerRoll).toEqual([])
     // Meetings are not confidential, so the leader still gets those.
@@ -58,6 +58,6 @@ describe('callings confidentiality', () => {
     const { candidates } = await loadAgenda(bishop, bishopric, '2030-06-02')
     const { sustainingsOn } = await import('../../src/lib/agenda')
     const { needs } = await loadCallings(bishop)
-    expect(sustainingsOn('2030-06-02', needs, candidates)).toContainEqual({ name: `${TAG} Brother West`, calling: `${TAG} Activities Committee` })
+    expect(sustainingsOn('2030-06-02', needs, candidates)).toContainEqual({ id: candidate.id, name: `${TAG} Brother West`, calling: `${TAG} Activities Committee` })
   })
 })

@@ -42,6 +42,15 @@ export function upcomingSunday(date: IsoDate): IsoDate {
   return addDays(date, (7 - weekday(date)) % 7)
 }
 
+/**
+ * The Sunday someone who accepts today is sustained (and the person they replace released):
+ * today if it's Sunday, since an appointment can come just before sacrament meeting, otherwise
+ * the coming Sunday. The bishopric can move it.
+ */
+export function sustainingSunday(today: IsoDate): IsoDate {
+  return upcomingSunday(today)
+}
+
 export function sundaysFrom(start: IsoDate, count: number): IsoDate[] {
   const first = upcomingSunday(start)
   return Array.from({ length: count }, (_, i) => addDays(first, i * 7))

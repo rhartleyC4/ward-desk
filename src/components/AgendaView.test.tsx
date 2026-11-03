@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { agendaData, bishopricTemplate, wardCouncilTemplate } from '../test/fixtures'
@@ -11,7 +11,12 @@ function actions(): AgendaActions {
     resolveItem: vi.fn(),
     addPrayerName: vi.fn(),
     removePrayerName: vi.fn(),
-    addInterview: vi.fn(),
+    addNeed: vi.fn(),
+    updateNeed: vi.fn(),
+    addCandidate: vi.fn(),
+    updateCandidate: vi.fn(),
+    acceptCandidate: vi.fn(),
+    assignAppointment: vi.fn(),
   }
 }
 
@@ -27,9 +32,7 @@ describe('AgendaView', () => {
     expect(header).toHaveTextContent('Opening prayer: Brother Ortiz')
     expect(header).toHaveTextContent('Spiritual thought: Handbook updates')
 
-    expect(within(section('Interviews & appointments')).getByText('Brother Park (calling)')).toBeInTheDocument()
-    expect(within(section('Interviews & appointments')).getByText('10:00 AM')).toBeInTheDocument()
-    expect(within(section('Interviews & appointments')).getByText(/PPI: YW President/)).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Interviews & appointments' })).not.toBeInTheDocument()
 
     expect(within(section('Upcoming sacrament meetings')).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
       '11/1 (Ortiz) - FAST SUNDAY',
@@ -38,7 +41,8 @@ describe('AgendaView', () => {
 
     const callings = section('Callings needed (to discuss)')
     const rows = within(callings).getAllByRole('row').slice(1).map((r) => r.textContent)
-    expect(rows).toEqual(['Primary TeacherBrother Ivey', 'RS TeacherSister MossY', 'Sunday SchoolSister Kemp'])
+    // RS Teacher was accepted and is sustained today, so it's under Sustainings instead.
+    expect(rows).toEqual(['Primary TeacherBrother IveySister NashY', 'Sunday SchoolSister Kemp'])
     expect(within(callings).getByText(/Brother Vale for Primary Teacher/)).toBeInTheDocument()
 
     expect(within(section(/Releases today/)).getByText('Sister Kemp, Sunday School')).toBeInTheDocument()
@@ -57,7 +61,7 @@ describe('AgendaView', () => {
 
     await user.type(within(discussion).getByLabelText('New item for Action / discussion items'), 'Ward website / bulletin')
     await user.click(within(discussion).getByRole('button', { name: 'Add' }))
-    expect(a.addItem).toHaveBeenCalledWith(bishopricTemplate.sections[1], 'Ward website / bulletin', null)
+    expect(a.addItem).toHaveBeenCalledWith(bishopricTemplate.sections[0], 'Ward website / bulletin', null)
   })
 
   it('adds a calendar item with its date', async () => {
@@ -70,27 +74,30 @@ describe('AgendaView', () => {
     await user.type(within(calendar).getByLabelText('Date'), '2026-11-22')
     await user.type(within(calendar).getByLabelText('New item for Calendar'), 'Tithing declaration')
     await user.click(within(calendar).getByRole('button', { name: 'Add' }))
-    expect(a.addItem).toHaveBeenCalledWith(bishopricTemplate.sections[3], 'Tithing declaration', '2026-11-22')
+    expect(a.addItem).toHaveBeenCalledWith(bishopricTemplate.sections[2], 'Tithing declaration', '2026-11-22')
   })
 
-  it('schedules an interview for the agenda date', async () => {
-    const user = userEvent.setup()
+  it('works callings right on the agenda for the bishopric', () => {
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={actions()} timeZone="America/Denver" canEditCallings />)
+
+    const callings = section('Callings needed (to discuss)')
+    expect(within(callings).queryByRole('table')).not.toBeInTheDocument()
+    expect(within(callings).getByLabelText('Status for Sister Nash')).toHaveValue('approved')
+    expect(within(callings).getByRole('form', { name: 'Add a calling to fill' })).toBeInTheDocument()
+  })
+
+  it('lets the bishopric move a sustaining or release to another Sunday', () => {
     const a = actions()
-    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" canEditCallings />)
 
-    const form = screen.getByRole('form', { name: 'Add interview' })
-    await user.selectOptions(within(form).getByLabelText('Interviewer'), 'Brother Ortiz')
-    await user.type(within(form).getByLabelText('Time'), '12:40')
-    await user.type(within(form).getByLabelText('Name'), 'Sister Reed')
-    await user.selectOptions(within(form).getByLabelText('Purpose'), 'temple_recommend')
-    await user.click(within(form).getByRole('button', { name: 'Add interview' }))
+    const sustain = within(section(/Sustainings today/)).getByLabelText('Date for Sister Moss, RS Teacher')
+    expect(sustain).toHaveValue('2026-11-01')
+    fireEvent.change(sustain, { target: { value: '2026-11-08' } })
+    expect(a.updateCandidate).toHaveBeenLastCalledWith('c1', { sustain_on: '2026-11-08' })
 
-    expect(a.addInterview).toHaveBeenCalledWith({
-      interviewer_id: 'o',
-      scheduled_at: new Date('2026-11-01T12:40').toISOString(),
-      person_name: 'Sister Reed',
-      purpose: 'temple_recommend',
-    })
+    const release = within(section(/Releases today/)).getByLabelText('Date for Sister Kemp, Sunday School')
+    fireEvent.change(release, { target: { value: '2026-11-08' } })
+    expect(a.updateNeed).toHaveBeenLastCalledWith('n3', { release_on: '2026-11-08' })
   })
 
   it('manages the prayer roll', async () => {
@@ -119,7 +126,6 @@ describe('AgendaView', () => {
       'Relief Society',
     ])
     expect(screen.queryByRole('heading', { name: /Callings needed/ })).not.toBeInTheDocument()
-    expect(screen.queryByRole('form', { name: 'Add interview' })).not.toBeInTheDocument()
 
     expect(within(section('Upcoming assignments')).getByText('PPI: YW President — YW President')).toBeInTheDocument()
     expect(within(section('Relief Society')).getByText('Room for the combined lesson')).toBeInTheDocument()

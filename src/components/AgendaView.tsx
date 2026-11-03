@@ -6,7 +6,6 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
-import Grid from '@mui/material/Grid'
 import IconButton from '@mui/material/IconButton'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
@@ -23,7 +22,6 @@ import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import {
   callingsNeeded,
-  interviewsOn,
   openItems,
   personLabel,
   releasesOn,
@@ -33,73 +31,17 @@ import {
   upcomingMeetings,
 } from '../lib/agenda'
 import { longDate, type IsoDate } from '../lib/dates'
-import type { Enums } from '../lib/database.types'
 import type { AgendaData, AgendaSection, AgendaTemplate } from '../lib/queries'
 import { awayOn, eventsOn, formatTime, rotationsDue } from '../lib/schedule'
-import { nativeSelect } from '../theme'
+import { CallingsManager, type CallingsActions } from './CallingsManager'
 import { Muted, SectionCard } from './Layout'
 
-export type AgendaActions = {
+export type AgendaActions = CallingsActions & {
   saveHeader: (fields: { opening_prayer: string | null; spiritual_thought: string | null; closing_prayer: string | null }) => void
   addItem: (section: AgendaSection, body: string, eventDate: IsoDate | null) => void
   resolveItem: (id: string) => void
   addPrayerName: (name: string) => void
   removePrayerName: (id: string) => void
-  addInterview: (interview: { interviewer_id: string; scheduled_at: string; person_name: string; purpose: Enums<'interview_purpose'> }) => void
-}
-
-function AddInterview({ date, data, onAdd }: { date: IsoDate; data: AgendaData; onAdd: AgendaActions['addInterview'] }) {
-  const [form, setForm] = useState({ interviewer_id: '', time: '', person_name: '', purpose: 'calling' as Enums<'interview_purpose'> })
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    if (!form.interviewer_id || !form.time || !form.person_name.trim()) return
-    // Entered in the browser's local time, which is the ward's time for anyone using this.
-    onAdd({
-      interviewer_id: form.interviewer_id,
-      scheduled_at: new Date(`${date}T${form.time}`).toISOString(),
-      person_name: form.person_name.trim(),
-      purpose: form.purpose,
-    })
-    setForm({ ...form, time: '', person_name: '' })
-  }
-  return (
-    <Box component="form" onSubmit={submit} aria-label="Add interview" sx={{ mt: 2 }}>
-      <Grid container spacing={1.5} sx={{ alignItems: 'center' }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <TextField select label="Interviewer" slotProps={nativeSelect} value={form.interviewer_id} onChange={(e) => setForm({ ...form, interviewer_id: e.target.value })}>
-            <option value="">—</option>
-            {data.bishopric.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.display_name}
-              </option>
-            ))}
-          </TextField>
-        </Grid>
-        <Grid size={{ xs: 5, sm: 6, md: 2 }}>
-          <TextField label="Time" type="time" slotProps={{ inputLabel: { shrink: true } }} value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} />
-        </Grid>
-        <Grid size={{ xs: 7, sm: 6, md: 3 }}>
-          <TextField label="Name" value={form.person_name} onChange={(e) => setForm({ ...form, person_name: e.target.value })} />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2 }}>
-          <TextField select label="Purpose" slotProps={nativeSelect} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value as Enums<'interview_purpose'> })}>
-            <option value="calling">Calling</option>
-            <option value="temple_recommend">Temple recommend</option>
-            <option value="ppi">PPI</option>
-            <option value="youth">Youth</option>
-            <option value="tithing_declaration">Tithing declaration</option>
-            <option value="advancement">Advancement</option>
-            <option value="other">Other</option>
-          </TextField>
-        </Grid>
-        <Grid size={{ xs: 12, md: 2 }}>
-          <Button type="submit" variant="outlined" fullWidth>
-            Add interview
-          </Button>
-        </Grid>
-      </Grid>
-    </Box>
-  )
 }
 
 function AddLine({ label, name = label, onAdd, withDate }: { label: string; name?: string; onAdd: (text: string, date: IsoDate | null) => void; withDate?: boolean }) {
@@ -243,8 +185,44 @@ function NameList({ items }: { items: string[] }) {
   )
 }
 
+/** Releases or sustainings for the bishopric, each with its date so it can move to another Sunday. */
+function MovableNames({ date, items, onMove }: { date: IsoDate; items: { id: string; label: string }[]; onMove: (id: string, on: IsoDate) => void }) {
+  if (!items.length) return <Muted>None.</Muted>
+  return (
+    <Stack spacing={1.5}>
+      {items.map((item) => (
+        <Stack key={item.id} direction="row" spacing={1.5} sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
+          <Typography>{item.label}</Typography>
+          <TextField
+            type="date"
+            value={date}
+            // Ignore a cleared field; a half-typed date would otherwise drop the name from the list.
+            onChange={(e) => e.target.value && onMove(item.id, e.target.value)}
+            slotProps={{ htmlInput: { 'aria-label': `Date for ${item.label}` } }}
+            sx={{ width: 170, flexShrink: 0 }}
+          />
+        </Stack>
+      ))}
+    </Stack>
+  )
+}
+
 /** One section of an agenda, filled from live data according to its kind. */
-function Section({ section, date, data, actions, timeZone }: { section: AgendaSection; date: IsoDate; data: AgendaData; actions: AgendaActions; timeZone: string }) {
+function Section({
+  section,
+  date,
+  data,
+  actions,
+  timeZone,
+  canEditCallings,
+}: {
+  section: AgendaSection
+  date: IsoDate
+  data: AgendaData
+  actions: AgendaActions
+  timeZone: string
+  canEditCallings: boolean
+}) {
   const who = (id: string | null) => personLabel(id, data.profiles) || 'Unassigned'
   const rotations = rotationsDue(date, data.rotations)
   const rotationLine = (r: (typeof rotations)[number]) => (r.assignee_id ? `${r.title} — ${who(r.assignee_id)}` : r.assignee_label ? `${r.title} — ${r.assignee_label}` : r.title)
@@ -258,41 +236,9 @@ function Section({ section, date, data, actions, timeZone }: { section: AgendaSe
         </SectionCard>
       )
 
-    case 'interviews': {
-      const interviews = interviewsOn(date, data.interviews, timeZone)
-      return (
-        <SectionCard title={section.title}>
-          {interviews.length ? (
-            interviews.map((g) => (
-              <Box key={g.interviewerId ?? 'none'} sx={{ mb: 1 }}>
-                <Typography variant="h3">{who(g.interviewerId)}</Typography>
-                <Table size="small">
-                  <TableBody>
-                    {g.slots.map((s, i) => (
-                      <TableRow key={i}>
-                        <TableCell sx={{ width: '6rem', whiteSpace: 'nowrap' }}>{s.time}</TableCell>
-                        <TableCell>{s.label}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Box>
-            ))
-          ) : (
-            <Muted>No interviews scheduled today.</Muted>
-          )}
-          {rotations.length > 0 && (
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              <Box component="span" sx={{ color: 'text.secondary' }}>
-                Due this month:
-              </Box>{' '}
-              {rotations.map((r) => (r.assignee_id ? `${r.title} — ${who(r.assignee_id)}` : r.title)).join('; ')}
-            </Typography>
-          )}
-          <AddInterview date={date} data={data} onAdd={actions.addInterview} />
-        </SectionCard>
-      )
-    }
+    case 'interviews':
+      // Retired: interviews live on the Appointments page, and the database refuses new ones.
+      return null
 
     case 'assignments':
       return (
@@ -309,7 +255,15 @@ function Section({ section, date, data, actions, timeZone }: { section: AgendaSe
       )
 
     case 'callings': {
-      const needs = callingsNeeded(data.needs, data.candidates)
+      if (canEditCallings) {
+        return (
+          <SectionCard title={section.title}>
+            <CallingsManager date={date} data={data} actions={actions} timeZone={timeZone} />
+          </SectionCard>
+        )
+      }
+      // Attendees outside the bishopric get nothing back from RLS; this read-only table is for them.
+      const needs = callingsNeeded(date, data.needs, data.candidates)
       const suggestions = unsortedSuggestions(data.candidates)
       return (
         <SectionCard title={section.title}>
@@ -347,19 +301,31 @@ function Section({ section, date, data, actions, timeZone }: { section: AgendaSe
       )
     }
 
-    case 'releases':
+    case 'releases': {
+      const releases = releasesOn(date, data.needs).map((r) => ({ id: r.id, label: `${r.release_name}, ${r.calling_title}` }))
       return (
         <SectionCard title={`${section.title} (${longDate(date)})`}>
-          <NameList items={releasesOn(date, data.needs).map((r) => `${r.release_name}, ${r.calling_title}`)} />
+          {canEditCallings ? (
+            <MovableNames date={date} items={releases} onMove={(id, on) => actions.updateNeed(id, { release_on: on })} />
+          ) : (
+            <NameList items={releases.map((r) => r.label)} />
+          )}
         </SectionCard>
       )
+    }
 
-    case 'sustainings':
+    case 'sustainings': {
+      const sustainings = sustainingsOn(date, data.needs, data.candidates).map((s) => ({ id: s.id, label: `${s.name}, ${s.calling}` }))
       return (
         <SectionCard title={`${section.title} (${longDate(date)})`}>
-          <NameList items={sustainingsOn(date, data.needs, data.candidates).map((s) => `${s.name}, ${s.calling}`)} />
+          {canEditCallings ? (
+            <MovableNames date={date} items={sustainings} onMove={(id, on) => actions.updateCandidate(id, { sustain_on: on })} />
+          ) : (
+            <NameList items={sustainings.map((s) => s.label)} />
+          )}
         </SectionCard>
       )
+    }
 
     case 'closing_prayer':
       return (
@@ -431,12 +397,15 @@ export function AgendaView({
   data,
   actions,
   timeZone,
+  canEditCallings = false,
 }: {
   template: AgendaTemplate
   date: IsoDate
   data: AgendaData
   actions: AgendaActions
   timeZone: string
+  /** Bishopric members work callings right on the agenda; anyone else sees the table. */
+  canEditCallings?: boolean
 }) {
   const away = awayOn(date, data.absences)
 
@@ -451,7 +420,7 @@ export function AgendaView({
       )}
 
       {template.sections.map((section) => (
-        <Section key={section.id} section={section} date={date} data={data} actions={actions} timeZone={timeZone} />
+        <Section key={section.id} section={section} date={date} data={data} actions={actions} timeZone={timeZone} canEditCallings={canEditCallings} />
       ))}
     </>
   )

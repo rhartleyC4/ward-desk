@@ -29,7 +29,7 @@ export function anonClient(): Client {
   return createClient<Database>(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
 }
 
-export type SeedUser = 'bishop' | 'first' | 'second' | 'secretary' | 'clerk' | 'leader' | 'rspres'
+export type SeedUser = 'bishop' | 'first' | 'second' | 'secretary' | 'assistant' | 'clerk' | 'leader' | 'rspres'
 
 export async function signIn(user: SeedUser): Promise<Client & { userId: string }> {
   const client = anonClient()

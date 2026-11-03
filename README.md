@@ -1,15 +1,15 @@
 # Ward Desk
 
-A mobile-first web app (PWA) for managing ward administration in one place: callings (proposing names, discussion, interviews) and sacrament meeting planning (conducting assignments, speakers, talks).
+A mobile-first web app (PWA) for managing ward administration in one place: callings (proposing names, discussion, appointments) and sacrament meeting planning (conducting assignments, speakers, talks).
 
 > Contains no member data in this repo. All data lives in Supabase. Keep this repo **private**.
 
 ## Modules
 
 **Callings**
-- Propose and discuss names for a calling
-- Schedule and track interviews
-- Track assignments once decisions are made
+- Propose and discuss names for a calling, right on the bishopric meeting agenda
+- Assign the bishop or a counselor to meet with each approved name
+- Executive secretaries schedule those appointments for the leaders they cover
 
 **Meetings**
 - Conducting assignments by date
@@ -32,12 +32,14 @@ Roles live in the `roles` table, not in Google. Access is enforced by Row Level 
 | Role | Can do |
 |------|--------|
 | admin | Manage users, roles, settings |
-| bishopric | The bishop, 1st and 2nd counselors, executive secretary and ward clerk. View and decide on calling proposals, schedule interviews, manage meetings and their agendas |
+| bishopric | The bishop, 1st and 2nd counselors, executive secretaries and ward clerk. View and decide on calling proposals, schedule appointments, manage meetings and their agendas |
 | leader | Other called leaders. Submit name suggestions only; **cannot** see calling proposals |
 
-Meeting agendas follow attendance, not roles. The bishopric sees every agenda. Anyone else sees only the meetings they're listed for in `agenda_attendees`, plus the shared prayer roll if one of those agendas shows it. A leader who attends ward council can read and edit the ward council agenda, but still can't see interviews or callings.
+Meeting agendas follow attendance, not roles. The bishopric sees every agenda. Anyone else sees only the meetings they're listed for in `agenda_attendees`, plus the shared prayer roll if one of those agendas shows it. A leader who attends ward council can read and edit the ward council agenda, but still can't see appointments or callings.
 
-Each bishopric member's profile also has an `office` (bishop, first or second counselor, executive secretary, ward clerk) that only an admin can set. The Conducting and Interviewer pickers list only the bishop and counselors.
+Each bishopric member's profile also has an `office` (bishop, first or second counselor, executive secretary, ward clerk) that only an admin can set. The Conducting and "Meets with" pickers list only the bishop and counselors.
+
+Who schedules appointments for whom lives in `secretary_assignments`, set on the **Appointments** page. Any bishopric member who isn't the bishop or a counselor can be picked, and a leader can have more than one secretary. Each secretary's list starts with the leaders they cover.
 
 Adjust these as the real needs become clear.
 
@@ -48,9 +50,10 @@ Adjust these as the real needs become clear.
 | Sacrament | **Sacrament** page (`meetings`, `program_items`) |
 | Bishopric Schedule | **Schedule** page (`recurring_events`, `rotations`, `stewardships`) |
 | Travel | **Away** page (`absences`). Warns when whoever is conducting is away |
-| Weekly agenda tab (copied every Sunday) | **Agenda** page, assembled live. Upcoming sacrament meetings, interviews, the callings table, releases, and sustainings fill in automatically. Discussion and calendar items carry forward until marked done. |
+| Weekly agenda tab (copied every Sunday) | **Agenda** page, assembled live. Upcoming sacrament meetings, callings, releases, and sustainings fill in automatically. Discussion and calendar items carry forward until marked done. |
 | Ward council agenda sheet | **Agenda** page, Ward Council tab. Same idea: the prayer roll and assignments fill in, and each organization's items carry forward until marked done. |
-| Callings Needed table | **Callings** page (`calling_needs`, `calling_candidates`). Accepted names with a sustain date show up under "Sustainings today" |
+| Callings Needed table | The callings section of the **Agenda** (`calling_needs`, `calling_candidates`). The bishopric adds callings and names, changes statuses, and picks who meets with each approved name. Marking a name Accepted sets the sustaining and the release for that Sunday (or the coming one), marks the appointment met, and from that Sunday on the calling shows under "Sustainings today" and "Releases today" instead of in the callings list. The bishopric can move either date from those sections |
+| Interviews kept by the executive secretary | **Appointments** page (`interviews`, `secretary_assignments`). Approved names arrive without a time; the secretary who covers that leader books them |
 
 ## Setup
 
@@ -192,14 +195,14 @@ Each meeting with an agenda is a row in `agenda_templates`: its name, URL slug, 
 |------|-------|
 | `items` | Open items for that section, carried forward until marked done |
 | `calendar` | Dated items, dropped once the date passes |
-| `interviews` | That day's interviews, rotations due this month, and a form to add an interview |
 | `assignments` | Rotations due this month |
 | `sacrament` | Upcoming sacrament meetings |
-| `callings`, `releases`, `sustainings` | From the Callings page |
+| `callings` | Callings to fill, names to consider and who meets with them, all editable by the bishopric |
+| `releases`, `sustainings` | From the callings section |
 | `prayer_roll` | The prayer roll, shared by every agenda that shows it |
 | `closing_prayer` | The closing prayer from the agenda header |
 
-Interviews and callings stay confidential: those sections show nothing to attendees outside the bishopric.
+Callings stay confidential: that section shows nothing to attendees outside the bishopric. Interviews and appointments aren't on any agenda; they live on the **Appointments** page. (The old `interviews` section kind is still in the enum but the database refuses it.)
 
 Manage them on the **Meetings** page. Anyone in the bishopric role (the bishop, counselors, executive secretary and ward clerk) and admins can use it; leaders can't. There you can:
 

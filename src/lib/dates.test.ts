@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, isBetween, longDate, monthOf, shortDate, sundaysFrom, upcomingSunday, weekday, weekOfMonth } from './dates'
+import { addDays, isBetween, longDate, monthOf, shortDate, sundaysFrom, sustainingSunday, upcomingSunday, weekday, weekOfMonth } from './dates'
 
 describe('dates', () => {
   it('finds the weekday without time-zone drift', () => {
@@ -26,6 +26,12 @@ describe('dates', () => {
     expect(upcomingSunday('2026-11-01')).toBe('2026-11-01')
     expect(upcomingSunday('2026-11-02')).toBe('2026-11-08')
     expect(upcomingSunday('2026-11-07')).toBe('2026-11-08')
+  })
+
+  it('sustains on the same Sunday when someone accepts that morning, otherwise the next one', () => {
+    expect(sustainingSunday('2026-11-08')).toBe('2026-11-08')
+    expect(sustainingSunday('2026-11-05')).toBe('2026-11-08')
+    expect(sustainingSunday('2026-11-09')).toBe('2026-11-15')
   })
 
   it('lists consecutive Sundays', () => {

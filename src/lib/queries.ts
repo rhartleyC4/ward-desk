@@ -43,8 +43,7 @@ export async function loadProfiles(client: Client): Promise<Profile[]> {
   return must(await client.from('profiles').select('id, email, display_name, short_name').order('display_name'))
 }
 
-/** Bishopric members, for the Conducting and interviewer pickers. */
-/** The bishop and counselors, in that order, for the Conducting and Interviewer pickers. */
+/** The bishop and counselors, in that order, for the Conducting and "Meets with" pickers. */
 export async function loadBishopric(client: Client): Promise<Profile[]> {
   return must(
     await client
@@ -53,6 +52,17 @@ export async function loadBishopric(client: Client): Promise<Profile[]> {
       .in('office', ['bishop', 'first_counselor', 'second_counselor'])
       .order('office'),
   )
+}
+
+/**
+ * Bishopric members who aren't the bishop or a counselor (executive secretaries, clerk), who may
+ * schedule appointments for them.
+ */
+export async function loadSecretaries(client: Client): Promise<Profile[]> {
+  const ids = must(await client.from('roles').select('user_id').eq('role', 'bishopric')).map((r) => r.user_id)
+  if (!ids.length) return []
+  const rows = must(await client.from('profiles').select('id, email, display_name, short_name, office').in('id', ids).order('display_name'))
+  return rows.filter((p) => !['bishop', 'first_counselor', 'second_counselor'].includes(p.office ?? '')).map(({ office: _o, ...p }) => p)
 }
 
 // ---------------------------------------------------------------------------
@@ -158,9 +168,78 @@ export async function updateCandidate(client: Client, id: string, changes: Table
   check(await client.from('calling_candidates').update(changes).eq('id', id))
 }
 
+/**
+ * Someone accepted: they're sustained on the given Sunday unless a date is already set, the person
+ * they replace is released the same day, and their calling appointment counts as met.
+ */
+export async function acceptCandidate(client: Client, candidate: Pick<Candidate, 'id' | 'need_id' | 'sustain_on'>, sunday: IsoDate) {
+  const on = candidate.sustain_on ?? sunday
+  check(await client.from('calling_candidates').update({ status: 'accepted', sustain_on: on }).eq('id', candidate.id))
+  if (candidate.need_id) {
+    check(await client.from('calling_needs').update({ release_on: on }).eq('id', candidate.need_id).is('release_on', null).not('release_name', 'is', null))
+  }
+  check(
+    await client.from('interviews').update({ status: 'completed' }).eq('candidate_id', candidate.id).eq('purpose', 'calling').eq('status', 'scheduled'),
+  )
+}
+
 /** For called leaders: insert only. They can't read the row back, so don't ask for it. */
 export async function submitSuggestion(client: Client, s: { calling_title: string; person_name: string; notes?: string }) {
   check(await client.from('calling_candidates').insert({ ...s, status: 'suggested' }))
+}
+
+// ---------------------------------------------------------------------------
+// Appointments (assigned by the bishopric, scheduled by the executive secretaries)
+// ---------------------------------------------------------------------------
+
+export type Appointment = Tables<'interviews'>
+export type SecretaryAssignment = Tables<'secretary_assignments'>
+
+/** Open calling appointments and the ones already met, to show beside each name. */
+async function loadCallingAppointments(client: Client): Promise<Appointment[]> {
+  return must(await client.from('interviews').select('*').eq('purpose', 'calling').in('status', ['scheduled', 'completed']).not('candidate_id', 'is', null))
+}
+
+export async function loadAppointments(client: Client) {
+  const [appointments, assignments, callings, bishopric, secretaries, profiles] = await Promise.all([
+    client.from('interviews').select('*').eq('status', 'scheduled').order('scheduled_at', { nullsFirst: true }),
+    client.from('secretary_assignments').select('*'),
+    loadCallings(client),
+    loadBishopric(client),
+    loadSecretaries(client),
+    loadProfiles(client),
+  ])
+  return { appointments: must(appointments), assignments: must(assignments), ...callings, bishopric, secretaries, profiles }
+}
+
+export type AppointmentsData = Awaited<ReturnType<typeof loadAppointments>>
+
+/**
+ * Hands a name's calling appointment to a leader, or takes it back with null. Reassigning keeps
+ * any time already booked, so the secretary only reschedules if they need to.
+ */
+export async function assignCallingAppointment(client: Client, candidate: Pick<Candidate, 'id' | 'person_name'>, leaderId: string | null) {
+  const open = maybe<{ id: string }>(
+    await client.from('interviews').select('id').eq('candidate_id', candidate.id).eq('purpose', 'calling').eq('status', 'scheduled').maybeSingle(),
+  )
+  if (open) {
+    const changes: TablesUpdate<'interviews'> = leaderId ? { interviewer_id: leaderId } : { status: 'cancelled' }
+    check(await client.from('interviews').update(changes).eq('id', open.id))
+  } else if (leaderId) {
+    check(await client.from('interviews').insert({ candidate_id: candidate.id, interviewer_id: leaderId, person_name: candidate.person_name, purpose: 'calling' }))
+  }
+}
+
+export async function updateAppointment(client: Client, id: string, changes: Pick<TablesUpdate<'interviews'>, 'scheduled_at' | 'status' | 'interviewer_id'>) {
+  check(await client.from('interviews').update(changes).eq('id', id))
+}
+
+export async function addSecretary(client: Client, leaderId: string, secretaryId: string) {
+  check(await client.from('secretary_assignments').insert({ leader_id: leaderId, secretary_id: secretaryId }))
+}
+
+export async function removeSecretary(client: Client, leaderId: string, secretaryId: string) {
+  check(await client.from('secretary_assignments').delete().eq('leader_id', leaderId).eq('secretary_id', secretaryId))
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +250,6 @@ export type Agenda = Tables<'agendas'>
 export type AgendaItem = Tables<'agenda_items'>
 export type AgendaSection = Tables<'agenda_sections'>
 export type AgendaTemplate = Tables<'agenda_templates'> & { sections: AgendaSection[] }
-export type Interview = Tables<'interviews'>
 export type PrayerName = Tables<'prayer_roll'>
 
 /** The meetings this user attends, each with its sections in order. RLS hides the rest. */
@@ -183,12 +261,11 @@ export async function loadAgendaTemplates(client: Client): Promise<AgendaTemplat
 /** Everything one meeting's agenda pulls together. Sections the user can't see come back empty. */
 export async function loadAgenda(client: Client, template: AgendaTemplate, date: IsoDate) {
   const horizon = addDays(date, 9 * 7)
-  const [agenda, sacrament, callings, interviews, items, prayer, schedule, absences, profiles, bishopric] = await Promise.all([
+  const [agenda, sacrament, callings, appointments, items, prayer, schedule, absences, profiles, bishopric] = await Promise.all([
     client.from('agendas').select('*').eq('template_id', template.id).eq('meeting_date', date).maybeSingle(),
     loadSacrament(client, date, horizon),
     loadCallings(client),
-    // A day either side so the time-zone conversion in agenda.ts can pick the right ones.
-    client.from('interviews').select('*').gte('scheduled_at', addDays(date, -1)).lt('scheduled_at', addDays(date, 2)).order('scheduled_at'),
+    loadCallingAppointments(client),
     client.from('agenda_items').select('*').in('section_id', template.sections.map((s) => s.id)).order('created_at'),
     client.from('prayer_roll').select('*').is('removed_on', null).order('added_on'),
     loadSchedule(client),
@@ -200,7 +277,7 @@ export async function loadAgenda(client: Client, template: AgendaTemplate, date:
     agenda: maybe(agenda),
     ...sacrament,
     ...callings,
-    interviews: must(interviews),
+    appointments,
     agendaItems: must(items),
     prayerRoll: must(prayer),
     ...schedule,
@@ -231,7 +308,7 @@ export async function resolveAgendaItem(client: Client, id: string, on: IsoDate)
   check(await client.from('agenda_items').update({ resolved_on: on }).eq('id', id))
 }
 
-export async function addInterview(client: Client, interview: TablesInsert<'interviews'>) {
+export async function addAppointment(client: Client, interview: TablesInsert<'interviews'>) {
   check(await client.from('interviews').insert(interview))
 }
 

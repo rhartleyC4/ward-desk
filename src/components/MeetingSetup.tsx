@@ -123,7 +123,7 @@ function SectionRow({ section, first, last, template, actions }: { section: Agen
 
   return (
     <ListItem disableGutters sx={{ gap: 1 }}>
-      <ListItemText primary={section.title} secondary={SECTION_KINDS[section.kind]} />
+      <ListItemText primary={section.title} secondary={section.kind === 'interviews' ? null : SECTION_KINDS[section.kind]} />
       <Stack direction="row" sx={{ flexShrink: 0 }}>
         <IconButton size="small" aria-label={`Move ${section.title} up`} disabled={first} onClick={() => actions.moveSection(template, section.id, -1)}>
           <ArrowUpwardIcon fontSize="small" />

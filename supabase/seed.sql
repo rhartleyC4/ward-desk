@@ -8,6 +8,7 @@ insert into public.allowlist (email, initial_roles, initial_office) values
   ('first@ward.test', '{bishopric}', 'first_counselor'),
   ('second@ward.test', '{bishopric}', 'second_counselor'),
   ('secretary@ward.test', '{bishopric}', 'executive_secretary'),
+  ('assistant@ward.test', '{bishopric}', null),
   ('clerk@ward.test', '{bishopric}', 'ward_clerk'),
   ('leader@ward.test', '{leader}', null),
   ('rspres@ward.test', '{leader}', null);
@@ -22,6 +23,7 @@ from (values
   ('00000000-0000-0000-0000-000000000001'::uuid, 'first@ward.test', 'Brother Lane'),
   ('00000000-0000-0000-0000-000000000002'::uuid, 'second@ward.test', 'Brother Ortiz'),
   ('00000000-0000-0000-0000-00000000000c'::uuid, 'secretary@ward.test', 'Brother Quinn'),
+  ('00000000-0000-0000-0000-000000000010'::uuid, 'assistant@ward.test', 'Brother Tate'),
   ('00000000-0000-0000-0000-00000000000e'::uuid, 'clerk@ward.test', 'Brother Pike'),
   ('00000000-0000-0000-0000-00000000000d'::uuid, 'leader@ward.test', 'Sister Reyes'),
   ('00000000-0000-0000-0000-00000000000f'::uuid, 'rspres@ward.test', 'Sister Young')
@@ -36,6 +38,13 @@ update public.profiles set short_name = 'Lane' where email = 'first@ward.test';
 update public.profiles set short_name = 'Ortiz' where email = 'second@ward.test';
 update public.profiles set short_name = 'Quinn' where email = 'secretary@ward.test';
 update public.profiles set short_name = 'Pike' where email = 'clerk@ward.test';
+update public.profiles set short_name = 'Tate' where email = 'assistant@ward.test';
+
+-- The executive secretary schedules the bishop's appointments; the assistant takes the counselors'.
+insert into public.secretary_assignments (leader_id, secretary_id) values
+  ('00000000-0000-0000-0000-00000000000b', '00000000-0000-0000-0000-00000000000c'),
+  ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010'),
+  ('00000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000010');
 
 -- Sacrament tab ---------------------------------------------------------------
 
@@ -133,6 +142,11 @@ insert into public.interviews (interviewer_id, scheduled_at, person_name, purpos
   ('00000000-0000-0000-0000-000000000001', '2026-11-01 12:30 America/Denver', 'Sister Park', 'temple_recommend'),
   ('00000000-0000-0000-0000-000000000002', '2026-11-01 12:30 America/Denver', 'Brother Reed', 'temple_recommend'),
   ('00000000-0000-0000-0000-00000000000b', '2026-11-01 10:15 America/Denver', 'Sister Stone', 'other');
+
+-- Sister Nash is approved and Brother Lane will extend the call; it still needs a time.
+insert into public.interviews (interviewer_id, scheduled_at, person_name, purpose, candidate_id)
+select '00000000-0000-0000-0000-000000000001', null, person_name, 'calling', id
+from public.calling_candidates where person_name = 'Sister Nash';
 
 insert into public.agenda_items (section_id, kind, body, event_date)
 select s.id, i.kind::public.agenda_item_kind, i.body, i.event_date

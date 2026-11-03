@@ -225,14 +225,14 @@ isOneToOne: false
                   ]
                 },"interviews": {
                   Row: {
-                    "candidate_id": string | null,"created_at": string,"id": string,"interviewer_id": string | null,"location": string | null,"notes": string | null,"person_name": string | null,"purpose": Database["public"]['Enums']["interview_purpose"],"scheduled_at": string,"status": Database["public"]['Enums']["interview_status"]
+                    "candidate_id": string | null,"created_at": string,"id": string,"interviewer_id": string | null,"location": string | null,"notes": string | null,"person_name": string | null,"purpose": Database["public"]['Enums']["interview_purpose"],"scheduled_at": string | null,"status": Database["public"]['Enums']["interview_status"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "candidate_id"?: string | null,"created_at"?: string,"id"?: string,"interviewer_id"?: string | null,"location"?: string | null,"notes"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at": string,"status"?: Database["public"]['Enums']["interview_status"]
+                    "candidate_id"?: string | null,"created_at"?: string,"id"?: string,"interviewer_id"?: string | null,"location"?: string | null,"notes"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
                   }
                   Update: {
-                    "candidate_id"?: string | null,"created_at"?: string,"id"?: string,"interviewer_id"?: string | null,"location"?: string | null,"notes"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string,"status"?: Database["public"]['Enums']["interview_status"]
+                    "candidate_id"?: string | null,"created_at"?: string,"id"?: string,"interviewer_id"?: string | null,"location"?: string | null,"notes"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
                   }
                   Relationships: [
                     {
@@ -386,6 +386,32 @@ isOneToOne: false
                     {
       foreignKeyName: "rotations_assignee_id_fkey"
       columns: ["assignee_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"secretary_assignments": {
+                  Row: {
+                    "created_at": string,"leader_id": string,"secretary_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"leader_id": string,"secretary_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"leader_id"?: string,"secretary_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "secretary_assignments_leader_id_fkey"
+      columns: ["leader_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "secretary_assignments_secretary_id_fkey"
+      columns: ["secretary_id"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]

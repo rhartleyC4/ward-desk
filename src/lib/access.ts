@@ -5,7 +5,10 @@ import type { Enums } from './database.types'
 
 export type AppRole = Enums<'app_role'>
 
+/** Callings are worked on the bishopric agenda; this decides whether they're editable there. */
 export const canSeeCallings = (roles: AppRole[]) => roles.includes('bishopric')
+/** Appointments sit with interviews, which RLS limits to the bishopric. */
+export const canSeeAppointments = (roles: AppRole[]) => roles.includes('bishopric')
 /** Agendas follow attendance, not roles: RLS returns only the templates someone may open. */
 export const canSeeAgenda = (templates: readonly unknown[]) => templates.length > 0
 export const canPlanMeetings = (roles: AppRole[]) => roles.includes('bishopric')
@@ -24,7 +27,7 @@ export function navFor(roles: AppRole[], templates: readonly unknown[] = []): Na
   const links: NavLink[] = []
   if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Agenda' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
-  if (canSeeCallings(roles)) links.push({ to: '/callings', label: 'Callings' })
+  if (canSeeAppointments(roles)) links.push({ to: '/appointments', label: 'Appointments' })
   if (canSuggest(roles) && !canSeeCallings(roles)) links.push({ to: '/suggest', label: 'Suggest a name' })
   if (isMember(roles)) links.push({ to: '/away', label: 'Away' }, { to: '/schedule', label: 'Schedule' })
   if (canManageMeetings(roles)) links.push({ to: '/meetings', label: 'Meetings' })

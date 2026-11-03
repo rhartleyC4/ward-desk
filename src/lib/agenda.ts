@@ -8,7 +8,6 @@ export type Meeting = Pick<Tables<'meetings'>, 'id' | 'meeting_date' | 'meeting_
 export type ProgramItem = Pick<Tables<'program_items'>, 'meeting_id' | 'position' | 'kind' | 'person_name' | 'note'>
 export type CallingNeed = Pick<Tables<'calling_needs'>, 'id' | 'calling_title' | 'release_name' | 'release_on' | 'status'>
 export type Candidate = Pick<Tables<'calling_candidates'>, 'id' | 'need_id' | 'calling_title' | 'person_name' | 'status' | 'sustain_on'>
-export type Interview = Pick<Tables<'interviews'>, 'interviewer_id' | 'scheduled_at' | 'person_name' | 'purpose' | 'status'>
 export type AgendaItem = Pick<Tables<'agenda_items'>, 'id' | 'section_id' | 'body' | 'event_date' | 'resolved_on' | 'created_at'>
 export type AgendaSection = Pick<Tables<'agenda_sections'>, 'id' | 'kind'>
 export type Profile = Pick<Tables<'profiles'>, 'id' | 'display_name' | 'short_name'>
@@ -73,10 +72,22 @@ export type NeedRow = {
   approved: boolean
 }
 
-/** The "Callings Needed (to discuss)" table: open needs with their names to consider. */
-export function callingsNeeded(needs: CallingNeed[], candidates: Candidate[]): NeedRow[] {
-  return needs
-    .filter((n) => n.status === 'open')
+const DECIDED: Candidate['status'][] = ['accepted', 'sustained', 'set_apart']
+
+/**
+ * Open needs still being discussed on this date. Once someone accepts, the need moves to
+ * Sustainings (and its release to Releases) on their sustain date and drops off from then on.
+ * An accepted name with no sustain date stays so someone notices and sets one.
+ */
+export function needsToDiscuss<T extends CallingNeed>(date: IsoDate, needs: T[], candidates: Candidate[]): T[] {
+  return needs.filter(
+    (n) => n.status === 'open' && !candidates.some((c) => c.need_id === n.id && DECIDED.includes(c.status) && c.sustain_on && c.sustain_on <= date),
+  )
+}
+
+/** The "Callings Needed (to discuss)" table: needs still being discussed with their names to consider. */
+export function callingsNeeded(date: IsoDate, needs: CallingNeed[], candidates: Candidate[]): NeedRow[] {
+  return needsToDiscuss(date, needs, candidates)
     .map((need) => {
       const forNeed = candidates.filter((c) => c.need_id === need.id && c.status !== 'declined')
       const approved = forNeed.some((c) => ['approved', 'extended', 'accepted', 'sustained', 'set_apart'].includes(c.status))
@@ -93,53 +104,22 @@ export function releasesOn(date: IsoDate, needs: CallingNeed[]): CallingNeed[] {
   return needs.filter((n) => n.release_on === date && n.release_name)
 }
 
-export function sustainingsOn(date: IsoDate, needs: CallingNeed[], candidates: Candidate[]): { name: string; calling: string }[] {
+export function sustainingsOn(date: IsoDate, needs: CallingNeed[], candidates: Candidate[]): { id: string; name: string; calling: string }[] {
   return candidates
     .filter((c) => c.sustain_on === date && c.status !== 'declined')
     .map((c) => ({
+      id: c.id,
       name: c.person_name,
       calling: needs.find((n) => n.id === c.need_id)?.calling_title ?? c.calling_title ?? '',
     }))
 }
 
-const PURPOSE_LABELS: Record<Enums<'interview_purpose'>, string> = {
-  calling: 'calling',
-  temple_recommend: 'temple recommend',
-  ppi: 'PPI',
-  youth: 'youth interview',
-  tithing_declaration: 'tithing declaration',
-  advancement: 'advancement',
-  other: '',
-}
-
-export type InterviewGroup = { interviewerId: string | null; slots: { time: string; label: string }[] }
-
-/** "Callings & Temple Recommend Interviews Scheduled", grouped by interviewer, in the ward's time zone. */
-export function interviewsOn(date: IsoDate, interviews: Interview[], timeZone: string): InterviewGroup[] {
-  const dayFmt = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
-  const timeFmt = new Intl.DateTimeFormat('en-US', { timeZone, hour: 'numeric', minute: '2-digit' })
-
-  const groups = new Map<string | null, InterviewGroup>()
-  for (const iv of [...interviews].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))) {
-    if (iv.status === 'cancelled') continue
-    const at = new Date(iv.scheduled_at)
-    if (dayFmt.format(at) !== date) continue
-    const purpose = PURPOSE_LABELS[iv.purpose]
-    const label = [iv.person_name, purpose && `(${purpose})`].filter(Boolean).join(' ')
-    const group = groups.get(iv.interviewer_id) ?? { interviewerId: iv.interviewer_id, slots: [] }
-    group.slots.push({ time: timeFmt.format(at), label })
-    groups.set(iv.interviewer_id, group)
-  }
-  return [...groups.values()]
-}
-
-/** What each section kind shows, for the meeting setup page. */
-export const SECTION_KINDS: Record<Enums<'agenda_section_kind'>, string> = {
+/** What each section kind shows, for the meeting setup page. 'interviews' is retired; the database refuses it. */
+export const SECTION_KINDS: Record<Exclude<Enums<'agenda_section_kind'>, 'interviews'>, string> = {
   items: 'Items (carried forward until done)',
   calendar: 'Calendar (dated items)',
   assignments: 'Assignments due this month',
   sacrament: 'Upcoming sacrament meetings',
-  interviews: 'Interviews and appointments',
   callings: 'Callings needed',
   releases: 'Releases that day',
   sustainings: 'Sustainings that day',

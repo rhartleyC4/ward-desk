@@ -8,7 +8,8 @@ import { Link, Navigate, useParams } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { AgendaView, type AgendaActions } from '../components/AgendaView'
 import { ErrorNote, Loading } from '../components/Layout'
-import { shortDate, todayIso } from '../lib/dates'
+import { canSeeCallings } from '../lib/access'
+import { shortDate, sustainingSunday, todayIso } from '../lib/dates'
 import * as q from '../lib/queries'
 import { followingMeeting, nextMeeting, previousMeeting } from '../lib/schedule'
 import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
@@ -17,7 +18,7 @@ import { useAction, useAsync } from '../lib/useAsync'
 const isIsoDate = (s: string | undefined) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s)
 
 export function AgendaPage() {
-  const { templates } = useAuth()
+  const { roles, templates } = useAuth()
   const params = useParams()
   // Links from before templates were /agenda/:date and meant the bishopric meeting.
   const legacyDate = isIsoDate(params.slug) ? params.slug : undefined
@@ -36,7 +37,12 @@ export function AgendaPage() {
     resolveItem: (id) => run(() => q.resolveAgendaItem(supabase, id, date)),
     addPrayerName: (name) => run(() => q.addPrayerName(supabase, name)),
     removePrayerName: (id) => run(() => q.removePrayerName(supabase, id, date)),
-    addInterview: (interview) => run(() => q.addInterview(supabase, interview)),
+    addNeed: (need) => run(() => q.addNeed(supabase, need)),
+    updateNeed: (id, changes) => run(() => q.updateNeed(supabase, id, changes)),
+    addCandidate: (needId, name) => run(() => q.addCandidate(supabase, { need_id: needId, person_name: name, status: 'discussing' })),
+    updateCandidate: (id, changes) => run(() => q.updateCandidate(supabase, id, changes)),
+    acceptCandidate: (candidate) => run(() => q.acceptCandidate(supabase, candidate, sustainingSunday(todayIso()))),
+    assignAppointment: (candidate, leaderId) => run(() => q.assignCallingAppointment(supabase, candidate, leaderId)),
   }
 
   const prev = previousMeeting(template, date)
@@ -63,7 +69,7 @@ export function AgendaPage() {
         </Button>
       </Stack>
       <ErrorNote error={error ?? save.error} />
-      {data ? <AgendaView template={template} date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} /> : !error && <Loading />}
+      {data ? <AgendaView template={template} date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} canEditCallings={canSeeCallings(roles)} /> : !error && <Loading />}
     </>
   )
 }

@@ -52,9 +52,8 @@ function template(id: string, slug: string, name: string, weeks: number[] | null
   }
 }
 
-/** Mirrors the bishopric template seeded in the migration. Section ids are `bishopric-s<position>`. */
+/** Mirrors the bishopric template seeded in the migrations. Section ids are `bishopric-s<position>`. */
 export const bishopricTemplate = template('bishopric', 'bishopric', 'Bishopric Meeting', null, [
-  ['interviews', 'Interviews & appointments'],
   ['items', 'Action / discussion items'],
   ['sacrament', 'Upcoming sacrament meetings'],
   ['calendar', 'Calendar'],
@@ -94,13 +93,14 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
     candidates: [
       { id: 'c1', need_id: 'n2', calling_title: null, person_name: 'Sister Moss', status: 'accepted', sustain_on: '2026-11-01', notes: null, suggested_by: 'b', created_at: ts, updated_at: ts },
       { id: 'c2', need_id: null, calling_title: 'Primary Teacher', person_name: 'Brother Vale', status: 'suggested', sustain_on: null, notes: null, suggested_by: null, created_at: ts, updated_at: ts },
+      { id: 'c3', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, notes: null, suggested_by: 'b', created_at: ts, updated_at: ts },
     ],
-    interviews: [
-      { id: 'i1', interviewer_id: 'l', scheduled_at: '2026-11-01T17:00:00Z', person_name: 'Brother Park', purpose: 'calling', candidate_id: null, location: null, status: 'scheduled', notes: null, created_at: ts },
+    appointments: [
+      { id: 'ap1', interviewer_id: 'l', scheduled_at: '2026-11-08T17:00:00Z', person_name: 'Sister Nash', purpose: 'calling', candidate_id: 'c3', location: null, status: 'scheduled', notes: null, created_at: ts },
     ],
     agendaItems: [
-      { id: 'd1', section_id: 'bishopric-s2', kind: 'discussion', body: 'Fifth Sunday topic', event_date: null, resolved_on: null, created_by: 'b', created_at: ts },
-      { id: 'e1', section_id: 'bishopric-s4', kind: 'calendar', body: 'Ward Christmas party', event_date: '2026-12-04', resolved_on: null, created_by: 'b', created_at: ts },
+      { id: 'd1', section_id: 'bishopric-s1', kind: 'discussion', body: 'Fifth Sunday topic', event_date: null, resolved_on: null, created_by: 'b', created_at: ts },
+      { id: 'e1', section_id: 'bishopric-s3', kind: 'calendar', body: 'Ward Christmas party', event_date: '2026-12-04', resolved_on: null, created_by: 'b', created_at: ts },
       { id: 'rs1', section_id: 'council-s4', kind: 'discussion', body: 'Room for the combined lesson', event_date: null, resolved_on: null, created_by: 'b', created_at: ts },
     ],
     prayerRoll: [{ id: 'p1', name: 'Example family', added_on: '2026-10-01', removed_on: null }],

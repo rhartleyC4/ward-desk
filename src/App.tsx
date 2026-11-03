@@ -4,13 +4,13 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { Layout, Loading } from './components/Layout'
-import { canManageAccess, canManageMeetings, canSeeAgenda, canSeeCallings, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
+import { canManageAccess, canManageMeetings, canSeeAgenda, canSeeAppointments, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
 import type { AgendaTemplate } from './lib/queries'
 import { AccessPage } from './pages/AccessPage'
 import { AccountPage } from './pages/AccountPage'
 import { AgendaPage } from './pages/AgendaPage'
+import { AppointmentsPage } from './pages/AppointmentsPage'
 import { AwayPage } from './pages/AwayPage'
-import { CallingsPage } from './pages/CallingsPage'
 import { LoginPage } from './pages/LoginPage'
 import { MeetingsPage } from './pages/MeetingsPage'
 import { SacramentPage } from './pages/SacramentPage'
@@ -37,7 +37,9 @@ function AppRoutes() {
         <Route path="agenda/:slug" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
         <Route path="agenda/:slug/:date" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
         <Route path="sacrament" element={<Guard allow={isMember}><SacramentPage /></Guard>} />
-        <Route path="callings" element={<Guard allow={canSeeCallings}><CallingsPage /></Guard>} />
+        <Route path="appointments" element={<Guard allow={canSeeAppointments}><AppointmentsPage /></Guard>} />
+        {/* Callings moved onto the bishopric agenda. */}
+        <Route path="callings" element={<Navigate to="/agenda/bishopric" replace />} />
         <Route path="suggest" element={<Guard allow={canSuggest}><SuggestPage /></Guard>} />
         <Route path="away" element={<Guard allow={isMember}><AwayPage /></Guard>} />
         <Route path="schedule" element={<Guard allow={isMember}><SchedulePage /></Guard>} />

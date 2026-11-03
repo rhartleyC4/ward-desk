@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(69);
+select plan(80);
 
 -- Act as a seeded user for the rest of the transaction, or until the next call.
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
@@ -274,6 +274,57 @@ select throws_ok(
   $$ select public.delete_agenda_section(id) from public.agenda_sections where title = 'Primary' $$,
   '42501', null,
   'a leader cannot delete sections, even in a meeting they attend'
+);
+
+-- ---------------------------------------------------------------------------
+-- Appointments: the bishopric assigns, the executive secretaries schedule
+-- ---------------------------------------------------------------------------
+
+select pg_temp.act_as('assistant@ward.test');
+
+select is((select count(*)::int from public.secretary_assignments), 3, 'assistant executive secretary sees who schedules for whom');
+select is(
+  (select count(*)::int from public.interviews where scheduled_at is null and status = 'scheduled'),
+  1, 'an approved name waits as an appointment with no time'
+);
+select lives_ok(
+  $$ update public.interviews set scheduled_at = '2026-11-08 10:00 America/Denver' where person_name = 'Sister Nash' $$,
+  'assistant executive secretary schedules an appointment'
+);
+select throws_ok(
+  $$ insert into public.interviews (interviewer_id, person_name, purpose, candidate_id)
+     select '00000000-0000-0000-0000-000000000002', person_name, 'calling', candidate_id from public.interviews where person_name = 'Sister Nash' $$,
+  '23505', null,
+  'a name has only one open calling appointment'
+);
+select lives_ok(
+  $$ insert into public.secretary_assignments (leader_id, secretary_id) values ('00000000-0000-0000-0000-00000000000b', (select auth.uid())) $$,
+  'bishopric adds a secretary for a leader'
+);
+select throws_ok(
+  $$ insert into public.secretary_assignments (leader_id, secretary_id) values ((select auth.uid()), (select auth.uid())) $$,
+  '23514', null,
+  'no one schedules for themselves'
+);
+select is(
+  (select count(*)::int from public.agenda_sections where kind = 'interviews'),
+  0, 'no meeting lists interviews'
+);
+select throws_ok(
+  $$ insert into public.agenda_sections (template_id, position, kind, title) values (public.bishopric_template(), 99, 'interviews', 'Interviews') $$,
+  '23514', null,
+  'an interviews section can no longer be added'
+);
+
+select pg_temp.act_as('rspres@ward.test');
+select is((select count(*)::int from public.secretary_assignments), 0, 'attendee cannot see who schedules for whom');
+
+select pg_temp.act_as('leader@ward.test');
+select is((select count(*)::int from public.secretary_assignments), 0, 'leader cannot see who schedules for whom');
+select throws_ok(
+  $$ insert into public.secretary_assignments (leader_id, secretary_id) values ('00000000-0000-0000-0000-00000000000b', (select auth.uid())) $$,
+  '42501', null,
+  'leader cannot assign secretaries'
 );
 
 -- ---------------------------------------------------------------------------

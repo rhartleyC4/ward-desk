@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   callingsNeeded,
-  interviewsOn,
+  needsToDiscuss,
   moveId,
   slugFor,
   openItems,
@@ -13,7 +13,6 @@ import {
   type AgendaItem,
   type CallingNeed,
   type Candidate,
-  type Interview,
   type Meeting,
   type ProgramItem,
   type Profile,
@@ -108,11 +107,19 @@ describe('callings', () => {
   ]
 
   it('builds the Callings Needed table from open needs, hiding declined names', () => {
-    const rows = callingsNeeded(needs, candidates)
+    const rows = callingsNeeded('2026-10-25', needs, candidates)
     expect(rows.map((r) => r.need.calling_title)).toEqual(['Primary Teacher', 'RS Teacher', 'Sunday School'])
     expect(rows[0].candidates.map((c) => c.person_name)).toEqual(['Under discussion'])
     expect(rows[0].approved).toBe(false)
     expect(rows[1].approved).toBe(true)
+  })
+
+  it('drops a calling from discussion on the Sunday its accepted name is sustained', () => {
+    expect(needsToDiscuss('2026-10-25', needs, candidates).map((n) => n.id)).toEqual(['n1', 'n2', 'n3'])
+    expect(needsToDiscuss('2026-11-01', needs, candidates).map((n) => n.id)).toEqual(['n1', 'n3'])
+    // Accepted but no date yet: stays so someone sets one.
+    const undated = candidates.map((c) => (c.id === 'c3' ? { ...c, sustain_on: null } : c))
+    expect(needsToDiscuss('2026-11-08', needs, undated).map((n) => n.id)).toEqual(['n1', 'n2', 'n3'])
   })
 
   it('lists leader submissions that are not yet attached to a need', () => {
@@ -121,31 +128,8 @@ describe('callings', () => {
 
   it('produces Releases Today and Sustainings Today', () => {
     expect(releasesOn('2026-11-08', needs).map((n) => n.release_name)).toEqual(['Sister Kemp'])
-    expect(sustainingsOn('2026-11-01', needs, candidates)).toEqual([{ name: 'Sister Moss', calling: 'RS Teacher' }])
+    expect(sustainingsOn('2026-11-01', needs, candidates)).toEqual([{ id: 'c3', name: 'Sister Moss', calling: 'RS Teacher' }])
     expect(sustainingsOn('2026-11-08', needs, candidates)).toEqual([])
-  })
-})
-
-describe('interviewsOn', () => {
-  const interviews: Interview[] = [
-    // 12:30 and 10:00 Mountain Standard Time on 2026-11-01 (UTC-7)
-    { interviewer_id: 'k', scheduled_at: '2026-11-01T19:30:00Z', person_name: 'Sister Park', purpose: 'temple_recommend', status: 'scheduled' },
-    { interviewer_id: 'k', scheduled_at: '2026-11-01T17:00:00Z', person_name: 'Brother Park', purpose: 'calling', status: 'scheduled' },
-    { interviewer_id: 'r', scheduled_at: '2026-11-01T19:30:00Z', person_name: 'Cancelled', purpose: 'other', status: 'cancelled' },
-    // 8:00pm Saturday local time, which is already Sunday in UTC
-    { interviewer_id: 'k', scheduled_at: '2026-11-01T03:00:00Z', person_name: 'Saturday night', purpose: 'other', status: 'scheduled' },
-  ]
-
-  it('groups by interviewer in time order, in the ward time zone', () => {
-    expect(interviewsOn('2026-11-01', interviews, 'America/Denver')).toEqual([
-      {
-        interviewerId: 'k',
-        slots: [
-          { time: '10:00 AM', label: 'Brother Park (calling)' },
-          { time: '12:30 PM', label: 'Sister Park (temple recommend)' },
-        ],
-      },
-    ])
   })
 })
 
