@@ -151,14 +151,14 @@ isOneToOne: false
                   ]
                 },"allowlist": {
                   Row: {
-                    "created_at": string,"email": string,"initial_roles": (Database["public"]['Enums']["app_role"])[],"invited_by": string | null
+                    "created_at": string,"email": string,"initial_office": Database["public"]['Enums']["bishopric_office"] | null,"initial_roles": (Database["public"]['Enums']["app_role"])[],"invited_by": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"email": string,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null
+                    "created_at"?: string,"email": string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null
+                    "created_at"?: string,"email"?: string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null
                   }
                   Relationships: [
                     

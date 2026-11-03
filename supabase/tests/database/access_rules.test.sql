@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(64);
+select plan(68);
 
 -- Act as a seeded user for the rest of the transaction, or until the next call.
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
@@ -314,6 +314,34 @@ select throws_ok(
   $$ update public.allowlist set initial_roles = '{bishopric}' where email = 'bishop@ward.test' $$,
   '42501', null,
   'admin cannot drop their own admin role'
+);
+
+select throws_ok(
+  $$ insert into public.allowlist (email, initial_roles, initial_office) values ('pos@ward.test', '{leader}', 'bishop') $$,
+  '23514', null,
+  'a bishopric position needs the bishopric role'
+);
+
+update public.allowlist set initial_office = 'second_counselor' where email = 'first@ward.test';
+select is(
+  (select office::text from public.profiles where email = 'first@ward.test'),
+  'second_counselor', 'changing the position on the allowlist updates the profile'
+);
+
+delete from public.allowlist where email = 'second@ward.test';
+select is(
+  (select office from public.profiles where email = 'second@ward.test'),
+  null, 'removing an email clears the position, so they leave the pickers'
+);
+
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
+insert into public.allowlist (email, initial_roles, initial_office) values ('newclerk@ward.test', '{bishopric}', 'ward_clerk');
+insert into auth.users (id, email, aud, role)
+  values ('20000000-0000-0000-0000-000000000003', 'newclerk@ward.test', 'authenticated', 'authenticated');
+select is(
+  (select office::text from public.profiles where id = '20000000-0000-0000-0000-000000000003'),
+  'ward_clerk', 'sign-up gives the position chosen on the allowlist'
 );
 
 select * from finish();

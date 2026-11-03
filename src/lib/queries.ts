@@ -3,7 +3,6 @@
 
 import { addDays, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
-import type { AppRole } from './access'
 import type { Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
 
@@ -306,27 +305,28 @@ export async function removeAttendee(client: Client, templateId: string, userId:
 // Sign-in access (admins only)
 // ---------------------------------------------------------------------------
 
-export type Invite = Pick<Tables<'allowlist'>, 'email' | 'initial_roles' | 'created_at'>
+export type Invite = Pick<Tables<'allowlist'>, 'email' | 'initial_roles' | 'initial_office' | 'created_at'>
+export type InviteAccess = Pick<Invite, 'initial_roles' | 'initial_office'>
 
 /** Everyone allowed to sign in, with the profile of those who already have. */
 export async function loadAccess(client: Client) {
   const [invites, profiles] = await Promise.all([
-    client.from('allowlist').select('email, initial_roles, created_at').order('email'),
+    client.from('allowlist').select('email, initial_roles, initial_office, created_at').order('email'),
     loadProfiles(client),
   ])
   return { invites: must(invites) as Invite[], profiles }
 }
 
-export async function addInvite(client: Client, email: string, roles: AppRole[]) {
-  check(await client.from('allowlist').insert({ email: email.trim().toLowerCase(), initial_roles: roles }))
+export async function addInvite(client: Client, email: string, access: InviteAccess) {
+  check(await client.from('allowlist').insert({ email: email.trim().toLowerCase(), ...access }))
 }
 
-/** Also changes the roles of an account that has already signed in. */
-export async function setInviteRoles(client: Client, email: string, roles: AppRole[]) {
-  check(await client.from('allowlist').update({ initial_roles: roles }).eq('email', email))
+/** Also changes the roles and position of an account that has already signed in. */
+export async function updateInvite(client: Client, email: string, access: InviteAccess) {
+  check(await client.from('allowlist').update(access).eq('email', email))
 }
 
-/** Also takes away every role from an account that has already signed in. */
+/** Also takes away every role and the position from an account that has already signed in. */
 export async function removeInvite(client: Client, email: string) {
   check(await client.from('allowlist').delete().eq('email', email))
 }

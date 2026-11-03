@@ -11,9 +11,11 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import type { AppRole } from '../lib/access'
-import { addInvite, loadAccess, removeInvite, setInviteRoles } from '../lib/queries'
+import type { Enums } from '../lib/database.types'
+import { addInvite, loadAccess, removeInvite, updateInvite, type InviteAccess } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { nativeSelect } from '../theme'
 
 const ROLES: { role: AppRole; label: string; help: string }[] = [
   { role: 'bishopric', label: 'Bishopric', help: 'Plans meetings and sees callings' },
@@ -21,43 +23,79 @@ const ROLES: { role: AppRole; label: string; help: string }[] = [
   { role: 'admin', label: 'Admin', help: 'Manages meetings and who can sign in' },
 ]
 
-const toggle = (roles: AppRole[], role: AppRole) => (roles.includes(role) ? roles.filter((r) => r !== role) : [...roles, role])
+const OFFICES: { office: Enums<'bishopric_office'>; label: string }[] = [
+  { office: 'bishop', label: 'Bishop' },
+  { office: 'first_counselor', label: 'First Counselor' },
+  { office: 'second_counselor', label: 'Second Counselor' },
+  { office: 'executive_secretary', label: 'Executive Secretary' },
+  { office: 'ward_clerk', label: 'Ward Clerk' },
+]
 
-function RoleChips({ who, roles, onToggle, locked }: { who: string; roles: AppRole[]; onToggle: (role: AppRole) => void; locked?: AppRole }) {
+const NOBODY: InviteAccess = { initial_roles: [], initial_office: null }
+
+/** A position only goes with the bishopric role, so turning that off clears it. */
+function toggleRole(access: InviteAccess, role: AppRole): InviteAccess {
+  const roles = access.initial_roles
+  const initial_roles = roles.includes(role) ? roles.filter((r) => r !== role) : [...roles, role]
+  return { initial_roles, initial_office: initial_roles.includes('bishopric') ? access.initial_office : null }
+}
+
+/** Role chips, plus the bishopric position once Bishopric is on. */
+function AccessFields({ who, access, onChange, locked }: { who: string; access: InviteAccess; onChange: (access: InviteAccess) => void; locked?: AppRole }) {
   return (
-    <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
-      {ROLES.map(({ role, label, help }) => {
-        const on = roles.includes(role)
-        return (
-          <Tooltip key={role} describeChild title={role === locked ? "You can't remove your own admin access" : help}>
-            <span>
-              <Chip
-                label={label}
-                aria-label={`${label} for ${who}`}
-                size="small"
-                color={on ? 'primary' : 'default'}
-                variant={on ? 'filled' : 'outlined'}
-                aria-pressed={on}
-                disabled={role === locked}
-                onClick={() => onToggle(role)}
-              />
-            </span>
-          </Tooltip>
-        )
-      })}
+    <Stack spacing={1.5}>
+      <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
+        {ROLES.map(({ role, label, help }) => {
+          const on = access.initial_roles.includes(role)
+          return (
+            <Tooltip key={role} describeChild title={role === locked ? "You can't remove your own admin access" : help}>
+              <span>
+                <Chip
+                  label={label}
+                  aria-label={`${label} for ${who}`}
+                  size="small"
+                  color={on ? 'primary' : 'default'}
+                  variant={on ? 'filled' : 'outlined'}
+                  aria-pressed={on}
+                  disabled={role === locked}
+                  onClick={() => onChange(toggleRole(access, role))}
+                />
+              </span>
+            </Tooltip>
+          )
+        })}
+      </Stack>
+      {access.initial_roles.includes('bishopric') && (
+        <TextField
+          select
+          size="small"
+          label="Position"
+          slotProps={{ ...nativeSelect, htmlInput: { 'aria-label': `Position for ${who}` } }}
+          sx={{ maxWidth: 260 }}
+          value={access.initial_office ?? ''}
+          onChange={(e) => onChange({ ...access, initial_office: (e.target.value || null) as InviteAccess['initial_office'] })}
+        >
+          <option value="">No position</option>
+          {OFFICES.map(({ office, label }) => (
+            <option key={office} value={office}>
+              {label}
+            </option>
+          ))}
+        </TextField>
+      )}
     </Stack>
   )
 }
 
 const friendly = (message: string) => (/duplicate key/i.test(message) ? 'That email can already sign in.' : message)
 
-/** Admins decide which emails may sign in, and which roles each person has. */
+/** Admins decide which emails may sign in, and each person's roles and bishopric position. */
 export function AccessPage() {
   const { profile } = useAuth()
   const { data, error, reload } = useAsync(() => loadAccess(supabase), [])
   const save = useAction()
   const [email, setEmail] = useState('')
-  const [roles, setRoles] = useState<AppRole[]>([])
+  const [access, setAccess] = useState<InviteAccess>(NOBODY)
 
   if (error) return <ErrorNote error={error} />
   if (!data) return <Loading />
@@ -76,9 +114,9 @@ export function AccessPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (await run(() => addInvite(supabase, email, roles))) {
+    if (await run(() => addInvite(supabase, email, access))) {
       setEmail('')
-      setRoles([])
+      setAccess(NOBODY)
     }
   }
 
@@ -91,14 +129,17 @@ export function AccessPage() {
         Access
       </Typography>
       <Box sx={{ mb: 2 }}>
-        <Muted>Only these emails can sign in, with Google or an email link. Role changes apply right away, even for people who have already signed in.</Muted>
+        <Muted>
+          Only these emails can sign in, with Google or an email link. Changes apply right away, even for people who have already signed in. The bishop and
+          counselors appear in the Conducting and Interviewer pickers.
+        </Muted>
       </Box>
       <ErrorNote error={save.error} />
 
       <SectionCard title="Add someone">
         <Stack component="form" spacing={1.5} onSubmit={submit}>
           <TextField label="Email" type="email" required autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <RoleChips who="the new email" roles={roles} onToggle={(role) => setRoles(toggle(roles, role))} />
+          <AccessFields who="the new email" access={access} onChange={setAccess} />
           <Box>
             <Button type="submit" variant="contained" disabled={save.busy}>
               Add
@@ -118,11 +159,11 @@ export function AccessPage() {
                   <Typography sx={{ overflowWrap: 'anywhere' }}>{invite.email}</Typography>
                   <Muted>{name ? `${name}${me ? ' (you)' : ''}` : "Hasn't signed in yet"}</Muted>
                   <Box sx={{ mt: 1 }}>
-                    <RoleChips
+                    <AccessFields
                       who={invite.email}
-                      roles={invite.initial_roles}
+                      access={{ initial_roles: invite.initial_roles, initial_office: invite.initial_office }}
                       locked={me ? 'admin' : undefined}
-                      onToggle={(role) => run(() => setInviteRoles(supabase, invite.email, toggle(invite.initial_roles, role)))}
+                      onChange={(next) => run(() => updateInvite(supabase, invite.email, next))}
                     />
                   </Box>
                 </Box>
