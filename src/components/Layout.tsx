@@ -17,6 +17,7 @@ import type { ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { navFor } from '../lib/access'
+import { InstallPrompt } from './InstallPrompt'
 import { PasskeyOffer } from './PasskeyOffer'
 import { ThemeToggle } from './ThemeToggle'
 
@@ -61,6 +62,7 @@ export function Layout() {
         </Toolbar>
       </AppBar>
       <Container maxWidth="md" sx={{ py: 2 }}>
+        <InstallPrompt />
         <PasskeyOffer />
         <Outlet />
       </Container>
