@@ -83,7 +83,7 @@ export function InstallPrompt() {
       slotProps={{ closeButton: { 'aria-label': 'Not now' } }}
       sx={{ mb: 1.5 }}
     >
-      <AlertTitle>Add Ward Desk to your home screen</AlertTitle>
+      <AlertTitle>Add this app to your home screen</AlertTitle>
       {installEvent ? (
         <>
           It opens like any other app and keeps you signed in.
@@ -105,7 +105,7 @@ export function InstallPrompt() {
             <AddBoxOutlinedIcon aria-hidden sx={inline} />
             and tap it.
           </li>
-          <li>Tap Add, then open Ward Desk from its icon from now on.</li>
+          <li>Tap Add, then open it from its icon from now on.</li>
         </Box>
       ) : (
         <Box component="ol" sx={{ m: 0, pl: 2.5 }}>
@@ -115,7 +115,7 @@ export function InstallPrompt() {
             (on Samsung Internet, it's ≡ at the bottom).
           </li>
           <li>Choose Install app or Add to Home screen, then confirm.</li>
-          <li>Open Ward Desk from its icon from now on.</li>
+          <li>Open it from its icon from now on.</li>
         </Box>
       )}
     </Alert>

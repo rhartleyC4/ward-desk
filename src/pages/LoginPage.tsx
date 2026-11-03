@@ -90,7 +90,7 @@ export function LoginPage() {
       <Card sx={{ maxWidth: 400, mx: 'auto' }}>
         <CardContent>
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Typography variant="h1">Ward Desk</Typography>
+            <Typography variant="h1">Sign in</Typography>
             <ThemeToggle />
           </Stack>
           {sent ? (

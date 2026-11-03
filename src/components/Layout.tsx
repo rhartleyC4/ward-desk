@@ -31,9 +31,6 @@ export function Layout() {
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Toolbar sx={{ gap: 1, flexWrap: 'wrap', minHeight: { xs: 52 } }}>
-          <Typography component="span" sx={{ fontWeight: 700, flexGrow: { xs: 1, md: 0 }, mr: 2 }}>
-            Ward Desk
-          </Typography>
           <Tabs
             value={current}
             variant="scrollable"
@@ -45,7 +42,7 @@ export function Layout() {
               <Tab key={l.to} value={l.to} label={l.label} component={NavLink} to={l.to} sx={{ minHeight: 44 }} />
             ))}
           </Tabs>
-          <Typography variant="body2" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Typography variant="body2" color="text.secondary" noWrap sx={{ flexGrow: { xs: 1, md: 0 } }}>
             {profile?.display_name}
           </Typography>
           <ThemeToggle />
