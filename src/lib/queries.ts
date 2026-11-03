@@ -160,6 +160,18 @@ export async function updateNeed(client: Client, id: string, changes: TablesUpda
   check(await client.from('calling_needs').update(changes).eq('id', id))
 }
 
+/**
+ * Removes a calling and the names considered for it. Open appointments for those names are
+ * cancelled first; the cascade would otherwise leave them on the secretaries' list with no name.
+ */
+export async function deleteNeed(client: Client, id: string) {
+  const ids = must(await client.from('calling_candidates').select('id').eq('need_id', id)).map((c) => c.id)
+  if (ids.length) {
+    check(await client.from('interviews').update({ status: 'cancelled' }).in('candidate_id', ids).eq('purpose', 'calling').eq('status', 'scheduled'))
+  }
+  check(await client.from('calling_needs').delete().eq('id', id))
+}
+
 export async function addCandidate(client: Client, candidate: TablesInsert<'calling_candidates'>) {
   check(await client.from('calling_candidates').insert(candidate))
 }

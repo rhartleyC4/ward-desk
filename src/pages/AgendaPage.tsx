@@ -39,6 +39,7 @@ export function AgendaPage() {
     removePrayerName: (id) => run(() => q.removePrayerName(supabase, id, date)),
     addNeed: (need) => run(() => q.addNeed(supabase, need)),
     updateNeed: (id, changes) => run(() => q.updateNeed(supabase, id, changes)),
+    deleteNeed: (id) => run(() => q.deleteNeed(supabase, id)),
     addCandidate: (needId, name) => run(() => q.addCandidate(supabase, { need_id: needId, person_name: name, status: 'discussing' })),
     updateCandidate: (id, changes) => run(() => q.updateCandidate(supabase, id, changes)),
     acceptCandidate: (candidate) => run(() => q.acceptCandidate(supabase, candidate, sustainingSunday(todayIso()))),

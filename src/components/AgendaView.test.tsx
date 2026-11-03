@@ -13,6 +13,7 @@ function actions(): AgendaActions {
     removePrayerName: vi.fn(),
     addNeed: vi.fn(),
     updateNeed: vi.fn(),
+    deleteNeed: vi.fn(),
     addCandidate: vi.fn(),
     updateCandidate: vi.fn(),
     acceptCandidate: vi.fn(),

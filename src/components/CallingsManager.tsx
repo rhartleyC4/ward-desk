@@ -1,8 +1,11 @@
+import AddIcon from '@mui/icons-material/Add'
 import CheckIcon from '@mui/icons-material/Check'
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
 import Grid from '@mui/material/Grid'
+import IconButton from '@mui/material/IconButton'
 import List from '@mui/material/List'
 import ListItem from '@mui/material/ListItem'
 import Stack from '@mui/material/Stack'
@@ -18,16 +21,30 @@ import { nativeSelect } from '../theme'
 import { CallingField } from './CallingField'
 import { Muted } from './Layout'
 
-const STATUSES: { value: Enums<'candidate_status'>; label: string }[] = [
-  { value: 'suggested', label: 'Suggested' },
-  { value: 'discussing', label: 'Discussing' },
+type Status = Enums<'candidate_status'>
+
+// The steps the bishopric picks from. The database keeps a few more: 'suggested' marks a leader's
+// suggestion not yet attached to a calling, and older rows may say extended, sustained or set apart.
+const STATUSES: { value: Status; label: string }[] = [
+  { value: 'discussing', label: 'Considering' },
   { value: 'approved', label: 'Approved' },
-  { value: 'extended', label: 'Extended' },
   { value: 'accepted', label: 'Accepted' },
   { value: 'declined', label: 'Declined' },
-  { value: 'sustained', label: 'Sustained' },
-  { value: 'set_apart', label: 'Set apart' },
 ]
+
+/** The step a status shows as in the picker. */
+const SHOWN_AS: Record<Status, Status> = {
+  suggested: 'discussing',
+  discussing: 'discussing',
+  approved: 'approved',
+  extended: 'approved',
+  accepted: 'accepted',
+  sustained: 'accepted',
+  set_apart: 'accepted',
+  declined: 'declined',
+}
+
+const ACCEPTED: Status[] = ['accepted', 'sustained', 'set_apart']
 
 const dateLabel = { inputLabel: { shrink: true } } as const
 
@@ -42,6 +59,8 @@ export type CallingsData = {
 export type CallingsActions = {
   addNeed: (need: { calling_title: string; release_name: string | null }) => void
   updateNeed: (id: string, changes: TablesUpdate<'calling_needs'>) => void
+  /** Removes the calling, its names and their open appointments. */
+  deleteNeed: (id: string) => void
   addCandidate: (needId: string, name: string) => void
   updateCandidate: (id: string, changes: TablesUpdate<'calling_candidates'>) => void
   /** Sets the sustain and release dates and marks the appointment met. */
@@ -61,12 +80,21 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
   const appointment = appointmentFor(c.id, data.appointments)
   const open = appointment?.status === 'scheduled' ? appointment : undefined
   const showMeets = NEEDS_APPOINTMENT.includes(c.status) || !!open
-  const showSustain = ['accepted', 'sustained', 'set_apart'].includes(c.status)
+  const showSustain = ACCEPTED.includes(c.status)
 
   return (
     // Name on its own line on phones, then status and the rest two to a row; one row from sm up.
-    <Grid container spacing={1.5} sx={{ alignItems: 'center' }}>
-      <Grid size={{ xs: 12, sm: 3 }} sx={c.status === 'declined' ? { textDecoration: 'line-through', color: 'text.secondary' } : undefined}>
+    // Top-aligned so a helper line under one field doesn't push the others down.
+    <Grid container spacing={1.5} sx={{ alignItems: 'flex-start' }}>
+      <Grid
+        size={{ xs: 12, sm: 3 }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          minHeight: { sm: 40 },
+          ...(c.status === 'declined' && { textDecoration: 'line-through', color: 'text.secondary' }),
+        }}
+      >
         {c.person_name}
       </Grid>
       <Grid size={{ xs: 6, sm: 3 }}>
@@ -74,9 +102,9 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
           select
           label="Status"
           slotProps={{ ...nativeSelect, htmlInput: { 'aria-label': `Status for ${c.person_name}` } }}
-          value={c.status}
+          value={SHOWN_AS[c.status]}
           onChange={(e) => {
-            const status = e.target.value as Enums<'candidate_status'>
+            const status = e.target.value as Status
             if (status === 'accepted') actions.acceptCandidate(c)
             else actions.updateCandidate(c.id, { status })
           }}
@@ -123,36 +151,139 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
   )
 }
 
-function NeedBlock({ need, data, actions, timeZone }: { need: CallingNeed; data: CallingsData; actions: CallingsActions; timeZone: string }) {
+/** A name to consider. Once a calling has a name, the box hides behind a small + button. */
+function AddCandidate({ need, onAdd, collapsed }: { need: CallingNeed; onAdd: CallingsActions['addCandidate']; collapsed: boolean }) {
   const [name, setName] = useState('')
+  const [open, setOpen] = useState(false)
+  const label = `Name to consider for ${need.calling_title}`
+
+  if (collapsed && !open) {
+    return (
+      <Button size="small" startIcon={<AddIcon />} onClick={() => setOpen(true)} sx={{ mt: 1 }}>
+        Add name
+      </Button>
+    )
+  }
+  return (
+    <Stack
+      component="form"
+      direction="row"
+      spacing={1}
+      sx={{ mt: 1.5 }}
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (!name.trim()) return
+        onAdd(need.id, name.trim())
+        setName('')
+        setOpen(false)
+      }}
+    >
+      <TextField
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+        placeholder="Name to consider"
+        autoFocus={open}
+        slotProps={{ htmlInput: { 'aria-label': label } }}
+      />
+      <Button type="submit" variant="outlined">
+        Add
+      </Button>
+    </Stack>
+  )
+}
+
+/** Who the new person replaces. A small link until there's a name, so it can be added later. */
+function ReleaseLine({ need, actions, showDate }: { need: CallingNeed; actions: CallingsActions; showDate: boolean }) {
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState('')
+
+  if (!need.release_name && !editing) {
+    return (
+      <Button size="small" startIcon={<AddIcon />} onClick={() => setEditing(true)} sx={{ mb: 1, color: 'text.secondary' }}>
+        Releasing
+      </Button>
+    )
+  }
+  if (editing) {
+    const done = () => {
+      if (name.trim()) actions.updateNeed(need.id, { release_name: name.trim() })
+      setEditing(false)
+      setName('')
+    }
+    return (
+      <Stack
+        component="form"
+        direction="row"
+        spacing={1}
+        sx={{ mb: 1.5 }}
+        onSubmit={(e) => {
+          e.preventDefault()
+          done()
+        }}
+      >
+        <TextField
+          autoFocus
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && setEditing(false)}
+          placeholder="Releasing"
+          slotProps={{ htmlInput: { 'aria-label': `Releasing from ${need.calling_title}` } }}
+        />
+        <Button type="submit" variant="outlined">
+          Save
+        </Button>
+      </Stack>
+    )
+  }
+  return (
+    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' }, mb: 1.5 }}>
+      <Typography variant="body2">
+        <Box component="span" sx={{ color: 'text.secondary' }}>
+          Release:
+        </Box>{' '}
+        {need.release_name}
+      </Typography>
+      {showDate && (
+        <TextField
+          type="date"
+          label="Announce on"
+          slotProps={dateLabel}
+          value={need.release_on ?? ''}
+          onChange={(e) => actions.updateNeed(need.id, { release_on: e.target.value || null })}
+          sx={{ width: 180 }}
+        />
+      )}
+    </Stack>
+  )
+}
+
+function NeedBlock({ need, data, actions, timeZone }: { need: CallingNeed; data: CallingsData; actions: CallingsActions; timeZone: string }) {
   const all = data.candidates.filter((c) => c.need_id === need.id)
+  const accepted = all.some((c) => ACCEPTED.includes(c.status))
 
   return (
     <Box component="article" aria-label={need.calling_title}>
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1 }}>
-        <Typography variant="h3">{need.calling_title}</Typography>
+      <Stack direction="row" sx={{ alignItems: 'center', gap: 1, mb: 1 }}>
+        <Typography variant="h3" sx={{ flex: 1 }}>
+          {need.calling_title}
+        </Typography>
         <Button size="small" startIcon={<CheckIcon />} onClick={() => actions.updateNeed(need.id, { status: 'filled' })}>
           Mark filled
         </Button>
+        {/* Kept apart from Mark filled and behind a confirm, so it isn't hit by mistake. */}
+        <IconButton
+          size="small"
+          aria-label={`Remove ${need.calling_title}`}
+          sx={{ ml: 2, color: 'text.secondary' }}
+          onClick={() => {
+            if (window.confirm(`Remove ${need.calling_title}? Its names to consider and any open appointments for them are removed too.`)) actions.deleteNeed(need.id)
+          }}
+        >
+          <DeleteOutlinedIcon fontSize="small" />
+        </IconButton>
       </Stack>
-      {need.release_name && (
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' }, mb: 1.5 }}>
-          <Typography variant="body2">
-            <Box component="span" sx={{ color: 'text.secondary' }}>
-              Release:
-            </Box>{' '}
-            {need.release_name}
-          </Typography>
-          <TextField
-            type="date"
-            label="Announce on"
-            slotProps={dateLabel}
-            value={need.release_on ?? ''}
-            onChange={(e) => actions.updateNeed(need.id, { release_on: e.target.value || null })}
-            sx={{ width: 180 }}
-          />
-        </Stack>
-      )}
+      <ReleaseLine need={need} actions={actions} showDate={accepted} />
       {all.length > 0 && (
         <Stack divider={<Divider flexItem />} spacing={1.5}>
           {all.map((c) => (
@@ -160,28 +291,7 @@ function NeedBlock({ need, data, actions, timeZone }: { need: CallingNeed; data:
           ))}
         </Stack>
       )}
-      <Stack
-        component="form"
-        direction="row"
-        spacing={1}
-        sx={{ mt: 1.5 }}
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (!name.trim()) return
-          actions.addCandidate(need.id, name.trim())
-          setName('')
-        }}
-      >
-        <TextField
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name to consider"
-          slotProps={{ htmlInput: { 'aria-label': `Name to consider for ${need.calling_title}` } }}
-        />
-        <Button type="submit" variant="outlined">
-          Add
-        </Button>
-      </Stack>
+      <AddCandidate need={need} onAdd={actions.addCandidate} collapsed={all.length > 0} />
     </Box>
   )
 }

@@ -7,6 +7,7 @@ import {
   addNeed,
   addSecretary,
   assignCallingAppointment,
+  deleteNeed,
   loadAgenda,
   loadAgendaTemplates,
   loadAppointments,
@@ -88,6 +89,24 @@ describe('appointments', () => {
     expect(releasesOn('2030-06-09', sunday.needs).map((n) => n.id)).toContain(need.id)
     // The appointment happened, so it leaves the secretary's list.
     expect(appointmentFor(candidate.id, sunday.appointments)?.status).toBe('completed')
+  })
+
+  it("takes a removed calling's open appointments off the secretaries' list", async () => {
+    const bishop = await signIn('bishop')
+    const [, lane] = await loadBishopric(bishop)
+    await addNeed(bishop, { calling_title: `${TAG} Library Aide` })
+    const need = (await loadCallings(bishop)).needs.find((n) => n.calling_title === `${TAG} Library Aide`)!
+    await addCandidate(bishop, { need_id: need.id, person_name: `${TAG} Brother Gone`, status: 'approved' })
+    const candidate = (await loadCallings(bishop)).candidates.find((c) => c.person_name === `${TAG} Brother Gone`)!
+    await assignCallingAppointment(bishop, candidate, lane.id)
+
+    await deleteNeed(bishop, need.id)
+
+    const callings = await loadCallings(bishop)
+    expect(callings.needs.some((n) => n.id === need.id)).toBe(false)
+    expect(callings.candidates.some((c) => c.id === candidate.id)).toBe(false)
+    const { appointments } = await loadAppointments(bishop)
+    expect(appointments.some((a) => a.person_name === `${TAG} Brother Gone`)).toBe(false)
   })
 
   it('lets the bishopric change who schedules for whom', async () => {
