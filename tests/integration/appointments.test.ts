@@ -26,6 +26,7 @@ describe('appointments', () => {
     await bishop.from('interviews').delete().like('person_name', `${TAG}%`)
     await bishop.from('calling_candidates').delete().like('person_name', `${TAG}%`)
     await bishop.from('calling_needs').delete().like('calling_title', `${TAG}%`)
+    await bishop.from('callings').delete().like('title', `${TAG}%`)
   })
 
   it('carries an approved name from the bishopric to the secretary who schedules for that leader', async () => {

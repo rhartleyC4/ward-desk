@@ -1,6 +1,19 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { unsortedSuggestions } from '../../src/lib/agenda'
-import { addCandidate, addNeed, loadAgenda, loadAgendaTemplates, loadCallings, submitSuggestion, updateCandidate } from '../../src/lib/queries'
+import {
+  addCandidate,
+  addNeed,
+  addToCallingList,
+  loadAgenda,
+  loadAgendaTemplates,
+  loadCallingList,
+  loadCallings,
+  removeFromCallingList,
+  submitSuggestion,
+  updateCandidate,
+  updateCallingListEntry,
+  updateNeed,
+} from '../../src/lib/queries'
 import { signIn } from './helpers'
 
 const TAG = `it-${Date.now()}`
@@ -10,6 +23,7 @@ describe('callings confidentiality', () => {
     const bishop = await signIn('bishop')
     await bishop.from('calling_candidates').delete().like('person_name', `${TAG}%`)
     await bishop.from('calling_needs').delete().like('calling_title', `${TAG}%`)
+    await bishop.from('callings').delete().like('title', `${TAG}%`)
   })
 
   it('lets a called leader send a name the bishopric then sees', async () => {
@@ -59,5 +73,47 @@ describe('callings confidentiality', () => {
     const { sustainingsOn } = await import('../../src/lib/agenda')
     const { needs } = await loadCallings(bishop)
     expect(sustainingsOn('2030-06-02', needs, candidates)).toContainEqual({ id: candidate.id, name: `${TAG} Brother West`, calling: `${TAG} Activities Committee` })
+  })
+})
+
+describe('calling list', () => {
+  afterAll(async () => {
+    const bishop = await signIn('bishop')
+    await bishop.from('calling_needs').delete().like('calling_title', `${TAG}%`)
+    await bishop.from('callings').delete().like('title', `${TAG}%`)
+  })
+
+  it('lets a called leader read the list for the Suggest page but not change it', async () => {
+    const leader = await signIn('leader')
+    const list = await loadCallingList(leader)
+    expect(list.map((c) => c.title)).toContain('Primary President')
+    await expect(addToCallingList(leader, { title: `${TAG} Leader Pick`, organization: null })).rejects.toThrow()
+  })
+
+  it('adds a new title to the list when the bishopric uses it, ready for an admin to tidy', async () => {
+    const first = await signIn('first')
+    await addNeed(first, { calling_title: `${TAG} Ward Greter` })
+    const added = (await loadCallingList(first)).find((c) => c.title === `${TAG} Ward Greter`)
+    expect(added).toMatchObject({ organization: null })
+
+    // The bishop is the admin: fix the typo and file it under an organization.
+    const bishop = await signIn('bishop')
+    await updateCallingListEntry(bishop, added!.id, { title: `${TAG}  Ward Greeter `, organization: 'Other' })
+    const need = (await loadCallings(first)).needs.find((n) => n.calling_id === added!.id)!
+    expect(need.calling_title).toBe(`${TAG} Ward Greeter`)
+
+    // Once filled, a later rename leaves it alone.
+    await updateNeed(first, need.id, { status: 'filled' })
+    await updateCallingListEntry(bishop, added!.id, { title: `${TAG} Greeter` })
+    expect((await loadCallings(first)).needs.find((n) => n.id === need.id)!.calling_title).toBe(`${TAG} Ward Greeter`)
+  })
+
+  it('lets an admin add and remove entries, refusing a duplicate title', async () => {
+    const bishop = await signIn('bishop')
+    await addToCallingList(bishop, { title: `${TAG} Choir Librarian`, organization: 'Music' })
+    await expect(addToCallingList(bishop, { title: `${TAG} choir librarian`, organization: null })).rejects.toThrow(/duplicate key/)
+    const entry = (await loadCallingList(bishop)).find((c) => c.title === `${TAG} Choir Librarian`)!
+    await removeFromCallingList(bishop, entry.id)
+    expect((await loadCallingList(bishop)).some((c) => c.id === entry.id)).toBe(false)
   })
 })

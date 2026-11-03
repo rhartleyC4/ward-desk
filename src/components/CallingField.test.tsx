@@ -2,13 +2,20 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { describe, expect, it } from 'vitest'
+import type { ListedCalling } from '../lib/callings'
 import { CallingField } from './CallingField'
+
+const callings: ListedCalling[] = [
+  { id: '1', title: 'Primary President', organization: 'Primary' },
+  { id: '2', title: 'Primary Teacher', organization: 'Primary' },
+  { id: '3', title: 'Bishop', organization: 'Bishopric' },
+]
 
 function Harness() {
   const [value, setValue] = useState('')
   return (
     <>
-      <CallingField value={value} onChange={setValue} />
+      <CallingField callings={callings} value={value} onChange={setValue} />
       <output>{value}</output>
     </>
   )

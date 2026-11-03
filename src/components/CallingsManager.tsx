@@ -13,6 +13,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { needsToDiscuss, unsortedSuggestions } from '../lib/agenda'
+import type { ListedCalling } from '../lib/callings'
 import { appointmentFor, NEEDS_APPOINTMENT, whenLabel } from '../lib/appointments'
 import type { IsoDate } from '../lib/dates'
 import type { Enums, TablesUpdate } from '../lib/database.types'
@@ -51,6 +52,7 @@ const dateLabel = { inputLabel: { shrink: true } } as const
 export type CallingsData = {
   needs: CallingNeed[]
   candidates: Candidate[]
+  callingList: ListedCalling[]
   appointments: Appointment[]
   bishopric: Profile[]
   profiles: Profile[]
@@ -296,7 +298,7 @@ function NeedBlock({ need, data, actions, timeZone }: { need: CallingNeed; data:
   )
 }
 
-function AddNeed({ onAdd }: { onAdd: CallingsActions['addNeed'] }) {
+function AddNeed({ onAdd, callings }: { onAdd: CallingsActions['addNeed']; callings: ListedCalling[] }) {
   const [form, setForm] = useState({ calling_title: '', release_name: '' })
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -311,7 +313,7 @@ function AddNeed({ onAdd }: { onAdd: CallingsActions['addNeed'] }) {
       </Typography>
       <Grid container spacing={1.5}>
         <Grid size={{ xs: 12, sm: 5 }}>
-          <CallingField value={form.calling_title} onChange={(calling_title) => setForm({ ...form, calling_title })} />
+          <CallingField callings={callings} value={form.calling_title} onChange={(calling_title) => setForm({ ...form, calling_title })} />
         </Grid>
         <Grid size={{ xs: 12, sm: 5 }}>
           <TextField label="Releasing (optional)" value={form.release_name} onChange={(e) => setForm({ ...form, release_name: e.target.value })} />
@@ -381,7 +383,7 @@ export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDa
         <NeedBlock key={need.id} need={need} data={data} actions={actions} timeZone={timeZone} />
       ))}
 
-      <AddNeed onAdd={actions.addNeed} />
+      <AddNeed onAdd={actions.addNeed} callings={data.callingList} />
     </Stack>
   )
 }

@@ -1,14 +1,26 @@
 import { describe, expect, it } from 'vitest'
-import { COMMON_CALLINGS } from './callings'
+import { groupCallings, sortCallings, tidyTitle, UNREVIEWED, type ListedCalling } from './callings'
 
-describe('COMMON_CALLINGS', () => {
-  it('lists each title once', () => {
-    const titles = COMMON_CALLINGS.map((c) => c.title.toLowerCase())
-    expect(new Set(titles).size).toBe(titles.length)
+const c = (title: string, organization: string | null): ListedCalling => ({ id: title, title, organization })
+
+describe('groupCallings', () => {
+  it('orders handbook organizations first, then others, then titles waiting for review', () => {
+    const list = [c('YW Secretary', null), c('Ward Organist', 'Music'), c('Bishop', 'Bishopric'), c('Greeter', 'Hospitality'), c('Ward Clerk', 'Bishopric')]
+    expect(groupCallings(list).map((g) => [g.group, g.callings.map((x) => x.title)])).toEqual([
+      ['Bishopric', ['Bishop', 'Ward Clerk']],
+      ['Music', ['Ward Organist']],
+      ['Hospitality', ['Greeter']],
+      [UNREVIEWED, ['YW Secretary']],
+    ])
   })
 
-  it('keeps each group together so the picker shows one heading per group', () => {
-    const groups = COMMON_CALLINGS.map((c) => c.group).filter((g, i, all) => g !== all[i - 1])
-    expect(new Set(groups).size).toBe(groups.length)
+  it('flattens in the same order for the picker', () => {
+    expect(sortCallings([c('B', null), c('A', 'Primary')]).map((x) => x.title)).toEqual(['A', 'B'])
+  })
+})
+
+describe('tidyTitle', () => {
+  it('trims and collapses spaces', () => {
+    expect(tidyTitle('  Ward   Greeter ')).toBe('Ward Greeter')
   })
 })

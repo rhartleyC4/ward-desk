@@ -6,14 +6,19 @@ import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { CallingField } from '../components/CallingField'
 import { ErrorNote, SectionCard } from '../components/Layout'
-import { submitSuggestion } from '../lib/queries'
+import type { ListedCalling } from '../lib/callings'
+import { loadCallingList, submitSuggestion } from '../lib/queries'
 import { supabase } from '../lib/supabase'
-import { useAction } from '../lib/useAsync'
+import { useAction, useAsync } from '../lib/useAsync'
+
+const NO_CALLINGS: ListedCalling[] = []
 
 export function SuggestPage() {
   const [form, setForm] = useState({ calling_title: '', person_name: '', notes: '' })
   const [sent, setSent] = useState(false)
   const save = useAction()
+  // Suggestions still work if the list doesn't load; the box just offers nothing.
+  const { data: callings } = useAsync(() => loadCallingList(supabase), [])
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -41,7 +46,7 @@ export function SuggestPage() {
         </Alert>
       )}
       <Stack component="form" onSubmit={submit} spacing={1.5}>
-        <CallingField required value={form.calling_title} onChange={(calling_title) => setForm({ ...form, calling_title })} />
+        <CallingField required callings={callings ?? NO_CALLINGS} value={form.calling_title} onChange={(calling_title) => setForm({ ...form, calling_title })} />
         <TextField label="Name" required value={form.person_name} onChange={(e) => setForm({ ...form, person_name: e.target.value })} />
         <TextField label="Notes (optional)" multiline minRows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         <Button type="submit" variant="contained" disabled={save.busy}>

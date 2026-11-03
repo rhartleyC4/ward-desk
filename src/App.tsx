@@ -4,12 +4,13 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { Layout, Loading } from './components/Layout'
-import { canManageAccess, canManageMeetings, canSeeAgenda, canSeeAppointments, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
+import { canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
 import type { AgendaTemplate } from './lib/queries'
 import { AccessPage } from './pages/AccessPage'
 import { AccountPage } from './pages/AccountPage'
 import { AgendaPage } from './pages/AgendaPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
+import { CallingListPage } from './pages/CallingListPage'
 import { AwayPage } from './pages/AwayPage'
 import { LoginPage } from './pages/LoginPage'
 import { MeetingsPage } from './pages/MeetingsPage'
@@ -44,6 +45,7 @@ function AppRoutes() {
         <Route path="away" element={<Guard allow={isMember}><AwayPage /></Guard>} />
         <Route path="schedule" element={<Guard allow={isMember}><SchedulePage /></Guard>} />
         <Route path="meetings" element={<Guard allow={canManageMeetings}><MeetingsPage /></Guard>} />
+        <Route path="calling-list" element={<Guard allow={canManageCallingList}><CallingListPage /></Guard>} />
         <Route path="access" element={<Guard allow={canManageAccess}><AccessPage /></Guard>} />
         <Route path="account" element={<AccountPage />} />
         <Route

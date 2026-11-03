@@ -140,4 +140,16 @@ describe('CallingsManager', () => {
     await user.click(within(form).getByRole('button', { name: 'Add' }))
     expect(a.addNeed).toHaveBeenCalledWith({ calling_title: 'Ward Librarian', release_name: 'Sister Ames' })
   })
+
+  it('suggests titles from the calling list, including ones added by the ward', async () => {
+    const user = userEvent.setup()
+    render(<CallingsManager date="2026-10-25" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
+
+    const form = screen.getByRole('form', { name: 'Add a calling to fill' })
+    await user.type(within(form).getByLabelText('Calling'), 'teacher')
+    const list = screen.getByRole('listbox')
+    expect(within(list).getByText('Added by the ward')).toBeInTheDocument()
+    expect(within(list).getByRole('option', { name: 'RS Teacher' })).toBeInTheDocument()
+    expect(within(list).getByRole('option', { name: 'Relief Society Teacher' })).toBeInTheDocument()
+  })
 })

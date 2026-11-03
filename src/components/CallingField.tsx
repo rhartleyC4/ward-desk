@@ -1,17 +1,19 @@
 import Autocomplete from '@mui/material/Autocomplete'
 import TextField from '@mui/material/TextField'
-import { COMMON_CALLINGS, type CommonCalling } from '../lib/callings'
+import { useMemo } from 'react'
+import { groupOf, sortCallings, type ListedCalling } from '../lib/callings'
 
 /**
- * A calling title box that suggests common ward callings as the user types, while still taking any
- * title they enter.
+ * A calling title box that suggests titles from the ward's calling list as the user types, while
+ * still taking any title they enter.
  */
-export function CallingField({ value, onChange, required }: { value: string; onChange: (value: string) => void; required?: boolean }) {
+export function CallingField({ value, onChange, callings, required }: { value: string; onChange: (value: string) => void; callings: ListedCalling[]; required?: boolean }) {
+  const options = useMemo(() => sortCallings(callings), [callings])
   return (
-    <Autocomplete<CommonCalling, false, false, true>
+    <Autocomplete<ListedCalling, false, false, true>
       freeSolo
-      options={COMMON_CALLINGS}
-      groupBy={(option) => option.group}
+      options={options}
+      groupBy={groupOf}
       getOptionLabel={(option) => (typeof option === 'string' ? option : option.title)}
       // Controlling the selection too keeps it in step when the form clears the text.
       value={value || null}

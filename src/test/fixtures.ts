@@ -95,6 +95,11 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
       { id: 'c2', need_id: null, calling_title: 'Primary Teacher', person_name: 'Brother Vale', status: 'suggested', sustain_on: null, notes: null, suggested_by: null, created_at: ts, updated_at: ts },
       { id: 'c3', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, notes: null, suggested_by: 'b', created_at: ts, updated_at: ts },
     ],
+    callingList: [
+      { id: 'l1', title: 'Primary Teacher', organization: 'Primary' },
+      { id: 'l2', title: 'Relief Society Teacher', organization: 'Relief Society' },
+      { id: 'l3', title: 'RS Teacher', organization: null },
+    ],
     appointments: [
       { id: 'ap1', interviewer_id: 'l', scheduled_at: '2026-11-08T17:00:00Z', person_name: 'Sister Nash', purpose: 'calling', candidate_id: 'c3', location: null, status: 'scheduled', notes: null, created_at: ts },
     ],

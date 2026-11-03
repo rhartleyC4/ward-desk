@@ -1,6 +1,7 @@
 // All database access goes through here. Every function takes the client as a parameter so
 // integration tests can call the exact same queries signed in as different roles.
 
+import { tidyTitle, type ListedCalling } from './callings'
 import { addDays, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
 import type { Tables, TablesInsert, TablesUpdate } from './database.types'
@@ -152,6 +153,26 @@ export async function loadCallings(client: Client) {
   return { needs: must(needs), candidates: must(candidates) }
 }
 
+/** The titles the Calling box suggests. Bishopric, admins and called leaders can read it. */
+export async function loadCallingList(client: Client): Promise<ListedCalling[]> {
+  return must(await client.from('callings').select('id, title, organization').order('title'))
+}
+
+/** Admins only. A calling to fill with a new title also joins the list, through a trigger. */
+export async function addToCallingList(client: Client, calling: { title: string; organization: string | null }) {
+  check(await client.from('callings').insert({ ...calling, title: tidyTitle(calling.title) }))
+}
+
+/** Admins only. Renaming also renames the open callings to fill that use the title. */
+export async function updateCallingListEntry(client: Client, id: string, changes: { title?: string; organization?: string | null }) {
+  check(await client.from('callings').update(changes.title === undefined ? changes : { ...changes, title: tidyTitle(changes.title) }).eq('id', id))
+}
+
+/** Admins only. Callings already entered keep their title. */
+export async function removeFromCallingList(client: Client, id: string) {
+  check(await client.from('callings').delete().eq('id', id))
+}
+
 export async function addNeed(client: Client, need: TablesInsert<'calling_needs'>) {
   check(await client.from('calling_needs').insert(need))
 }
@@ -273,10 +294,11 @@ export async function loadAgendaTemplates(client: Client): Promise<AgendaTemplat
 /** Everything one meeting's agenda pulls together. Sections the user can't see come back empty. */
 export async function loadAgenda(client: Client, template: AgendaTemplate, date: IsoDate) {
   const horizon = addDays(date, 9 * 7)
-  const [agenda, sacrament, callings, appointments, items, prayer, schedule, absences, profiles, bishopric] = await Promise.all([
+  const [agenda, sacrament, callings, callingList, appointments, items, prayer, schedule, absences, profiles, bishopric] = await Promise.all([
     client.from('agendas').select('*').eq('template_id', template.id).eq('meeting_date', date).maybeSingle(),
     loadSacrament(client, date, horizon),
     loadCallings(client),
+    loadCallingList(client),
     loadCallingAppointments(client),
     client.from('agenda_items').select('*').in('section_id', template.sections.map((s) => s.id)).order('created_at'),
     client.from('prayer_roll').select('*').is('removed_on', null).order('added_on'),
@@ -289,6 +311,7 @@ export async function loadAgenda(client: Client, template: AgendaTemplate, date:
     agenda: maybe(agenda),
     ...sacrament,
     ...callings,
+    callingList,
     appointments,
     agendaItems: must(items),
     prayerRoll: must(prayer),

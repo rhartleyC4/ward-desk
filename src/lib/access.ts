@@ -18,6 +18,8 @@ export const canEditSchedule = (roles: AppRole[]) => roles.includes('bishopric')
 export const canManageMeetings = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
 /** Decide who may sign in and with which roles. Matches the allowlist RLS policy. */
 export const canManageAccess = (roles: AppRole[]) => roles.includes('admin')
+/** Tidy the titles the Calling box suggests. RLS also lets the bishopric add to the list as they use new titles. */
+export const canManageCallingList = (roles: AppRole[]) => roles.includes('admin')
 /** Called leaders only submit names; everyone else with a role sees the ward calendar pages. */
 export const isMember = (roles: AppRole[]) => roles.some((r) => r !== 'leader')
 
@@ -31,6 +33,7 @@ export function navFor(roles: AppRole[], templates: readonly unknown[] = []): Na
   if (canSuggest(roles) && !canSeeCallings(roles)) links.push({ to: '/suggest', label: 'Suggest a name' })
   if (isMember(roles)) links.push({ to: '/away', label: 'Away' }, { to: '/schedule', label: 'Schedule' })
   if (canManageMeetings(roles)) links.push({ to: '/meetings', label: 'Meetings' })
+  if (canManageCallingList(roles)) links.push({ to: '/calling-list', label: 'Calling list' })
   if (canManageAccess(roles)) links.push({ to: '/access', label: 'Access' })
   return links
 }

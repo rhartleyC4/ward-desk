@@ -113,12 +113,8 @@ insert into public.absences (user_id, starts_on, ends_on, location) values
   ('00000000-0000-0000-0000-000000000001', '2026-12-24', '2026-12-28', 'Family');
 
 -- Callings -------------------------------------------------------------------
-
-insert into public.callings (title, organization) values
-  ('Primary Teacher', 'Primary'),
-  ('Ward Missionary', 'Ward Mission'),
-  ('Relief Society Teacher', 'Relief Society'),
-  ('Sunday School Teacher', 'Sunday School');
+-- The calling list comes from its migration. The needs below that aren't on it (Ward Missionaries,
+-- YW Secretary, Special Needs Sunday School) join it as "Added by the ward", for admins to tidy.
 
 insert into public.calling_needs (id, calling_title, release_name, release_on, status) values
   ('10000000-0000-0000-0000-000000000001', 'Primary Teacher', 'Brother Ivey', null, 'open'),

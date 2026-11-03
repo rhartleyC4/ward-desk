@@ -1,97 +1,49 @@
-/** A calling offered as the user types a calling title. */
-export interface CommonCalling {
-  title: string
-  /** The organization it belongs to, used to group the list. */
-  group: string
+import type { Tables } from './database.types'
+
+/** An entry on the calling list: a title the Calling box suggests. */
+export type ListedCalling = Pick<Tables<'callings'>, 'id' | 'title' | 'organization'>
+
+/** The organizations the handbook list uses, in the order they're shown. */
+export const ORGANIZATIONS = [
+  'Bishopric',
+  'Elders Quorum',
+  'Relief Society',
+  'Aaronic Priesthood',
+  'Young Women',
+  'Primary',
+  'Sunday School',
+  'Missionary',
+  'Temple and Family History',
+  'Music',
+  'Other',
+]
+
+/** Titles the bishopric typed that joined the list without an organization, waiting for an admin. */
+export const UNREVIEWED = 'Added by the ward'
+
+export const groupOf = (c: Pick<ListedCalling, 'organization'>) => c.organization ?? UNREVIEWED
+
+const rank = (group: string) => {
+  if (group === UNREVIEWED) return ORGANIZATIONS.length + 1
+  const i = ORGANIZATIONS.indexOf(group)
+  // Organizations an admin typed in that aren't in the handbook list go just before the unreviewed ones.
+  return i === -1 ? ORGANIZATIONS.length : i
 }
 
-const group = (name: string, titles: string[]): CommonCalling[] => titles.map((title) => ({ title, group: name }))
-
 /**
- * Ward callings from the General Handbook's ward callings chart (30.8.1) and the organization
- * chapters, plus the everyday titles wards use for its "other callings". Grouped in the order the
- * picker shows them. Users can still type any title that isn't here.
+ * The list grouped by organization in handbook order, then any other organizations A–Z, then the
+ * unreviewed titles. Titles are A–Z within each group.
  */
-export const COMMON_CALLINGS: CommonCalling[] = [
-  ...group('Bishopric', ['Bishop', 'Bishopric First Counselor', 'Bishopric Second Counselor', 'Ward Clerk', 'Assistant Ward Clerk', 'Ward Executive Secretary', 'Assistant Ward Executive Secretary']),
-  ...group('Elders Quorum', [
-    'Elders Quorum President',
-    'Elders Quorum First Counselor',
-    'Elders Quorum Second Counselor',
-    'Elders Quorum Secretary',
-    'Elders Quorum Teacher',
-    'Elders Quorum Activity Coordinator',
-    'Ministering Brother',
-  ]),
-  ...group('Relief Society', [
-    'Relief Society President',
-    'Relief Society First Counselor',
-    'Relief Society Second Counselor',
-    'Relief Society Secretary',
-    'Relief Society Teacher',
-    'Relief Society Activity Coordinator',
-    'Compassionate Service Coordinator',
-    'Ministering Sister',
-  ]),
-  ...group('Aaronic Priesthood', [
-    'Priests Quorum First Assistant',
-    'Priests Quorum Second Assistant',
-    'Teachers Quorum President',
-    'Teachers Quorum First Counselor',
-    'Teachers Quorum Second Counselor',
-    'Teachers Quorum Secretary',
-    'Deacons Quorum President',
-    'Deacons Quorum First Counselor',
-    'Deacons Quorum Second Counselor',
-    'Deacons Quorum Secretary',
-    'Aaronic Priesthood Quorum Adviser',
-    'Aaronic Priesthood Quorum Specialist',
-  ]),
-  ...group('Young Women', [
-    'Young Women President',
-    'Young Women First Counselor',
-    'Young Women Second Counselor',
-    'Young Women Secretary',
-    'Young Women Class Adviser',
-    'Young Women Specialist',
-    'Young Women Class President',
-    'Young Women Class First Counselor',
-    'Young Women Class Second Counselor',
-    'Young Women Class Secretary',
-  ]),
-  ...group('Primary', [
-    'Primary President',
-    'Primary First Counselor',
-    'Primary Second Counselor',
-    'Primary Secretary',
-    'Primary Teacher',
-    'Primary Music Leader',
-    'Primary Pianist',
-    'Nursery Leader',
-    'Primary Activity Leader',
-  ]),
-  ...group('Sunday School', [
-    'Sunday School President',
-    'Sunday School First Counselor',
-    'Sunday School Second Counselor',
-    'Sunday School Secretary',
-    'Gospel Doctrine Teacher',
-    'Youth Sunday School Teacher',
-    'Ward Resource Center Specialist',
-    'Ward Librarian',
-  ]),
-  ...group('Missionary', ['Ward Mission Leader', 'Ward Missionary']),
-  ...group('Temple and Family History', ['Ward Temple and Family History Leader', 'Temple and Family History Consultant']),
-  ...group('Music', ['Ward Music Coordinator', 'Ward Organist', 'Ward Chorister', 'Ward Choir Director', 'Ward Choir Accompanist']),
-  ...group('Other', [
-    'Ward Welfare and Self-Reliance Specialist',
-    'Ward Activities Coordinator',
-    'Ward Activities Committee Member',
-    'Building Representative',
-    'Emergency Preparedness Coordinator',
-    'Ward Communication Specialist',
-    'Ward Newsletter Editor',
-    'Ward Bulletin Coordinator',
-    'Interpreter',
-  ]),
-]
+export function groupCallings(list: ListedCalling[]): { group: string; callings: ListedCalling[] }[] {
+  const groups = new Map<string, ListedCalling[]>()
+  for (const c of list) groups.set(groupOf(c), [...(groups.get(groupOf(c)) ?? []), c])
+  return [...groups.entries()]
+    .sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
+    .map(([group, callings]) => ({ group, callings: callings.sort((a, b) => a.title.localeCompare(b.title)) }))
+}
+
+/** The list in display order, flattened for the picker. */
+export const sortCallings = (list: ListedCalling[]) => groupCallings(list).flatMap((g) => g.callings)
+
+/** Cleans up a typed title: trims it and collapses runs of spaces. */
+export const tidyTitle = (title: string) => title.trim().replace(/\s+/g, ' ')
