@@ -69,22 +69,25 @@ describe('upcomingMeetings', () => {
 })
 
 describe('openItems', () => {
+  const discussion = { id: 'talk', kind: 'items' as const }
+  const calendar = { id: 'cal', kind: 'calendar' as const }
   const items: AgendaItem[] = [
-    { id: '1', kind: 'discussion', body: 'Old, resolved', event_date: null, resolved_on: '2026-10-25', created_at: '2026-10-01T00:00:00Z' },
-    { id: '2', kind: 'discussion', body: 'Carried over', event_date: null, resolved_on: null, created_at: '2026-10-11T00:00:00Z' },
-    { id: '3', kind: 'discussion', body: 'Added later', event_date: null, resolved_on: null, created_at: '2026-11-05T00:00:00Z' },
-    { id: '4', kind: 'discussion', body: 'Resolved this week', event_date: null, resolved_on: '2026-11-01', created_at: '2026-10-18T00:00:00Z' },
-    { id: '5', kind: 'calendar', body: 'Past event', event_date: '2026-10-30', resolved_on: null, created_at: '2026-10-01T00:00:00Z' },
-    { id: '6', kind: 'calendar', body: 'Christmas party', event_date: '2026-12-04', resolved_on: null, created_at: '2026-10-01T00:00:00Z' },
+    { id: '1', section_id: 'talk', body: 'Old, resolved', event_date: null, resolved_on: '2026-10-25', created_at: '2026-10-01T00:00:00Z' },
+    { id: '2', section_id: 'talk', body: 'Carried over', event_date: null, resolved_on: null, created_at: '2026-10-11T00:00:00Z' },
+    { id: '3', section_id: 'talk', body: 'Added later', event_date: null, resolved_on: null, created_at: '2026-11-05T00:00:00Z' },
+    { id: '4', section_id: 'talk', body: 'Resolved this week', event_date: null, resolved_on: '2026-11-01', created_at: '2026-10-18T00:00:00Z' },
+    { id: '5', section_id: 'cal', body: 'Past event', event_date: '2026-10-30', resolved_on: null, created_at: '2026-10-01T00:00:00Z' },
+    { id: '6', section_id: 'cal', body: 'Christmas party', event_date: '2026-12-04', resolved_on: null, created_at: '2026-10-01T00:00:00Z' },
+    { id: '7', section_id: 'other', body: 'Another section', event_date: null, resolved_on: null, created_at: '2026-10-01T00:00:00Z' },
   ]
 
   it('carries unresolved items forward until resolved', () => {
-    expect(openItems('2026-11-01', items, 'discussion').map((i) => i.body)).toEqual(['Carried over', 'Resolved this week'])
-    expect(openItems('2026-11-08', items, 'discussion').map((i) => i.body)).toEqual(['Carried over', 'Added later'])
+    expect(openItems('2026-11-01', items, discussion).map((i) => i.body)).toEqual(['Carried over', 'Resolved this week'])
+    expect(openItems('2026-11-08', items, discussion).map((i) => i.body)).toEqual(['Carried over', 'Added later'])
   })
 
   it('drops calendar items whose date has passed', () => {
-    expect(openItems('2026-11-01', items, 'calendar').map((i) => i.body)).toEqual(['Christmas party'])
+    expect(openItems('2026-11-01', items, calendar).map((i) => i.body)).toEqual(['Christmas party'])
   })
 })
 

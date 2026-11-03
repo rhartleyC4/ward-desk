@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { homeFor, navFor } from './access'
 
-const labels = (roles: Parameters<typeof navFor>[0]) => navFor(roles).map((l) => l.label)
+const labels = (roles: Parameters<typeof navFor>[0], templates: unknown[] = []) => navFor(roles, templates).map((l) => l.label)
+const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
 
 describe('navFor', () => {
   it('gives the bishopric everything', () => {
-    expect(labels(['bishopric'])).toEqual(['Agenda', 'Sacrament', 'Callings', 'Away', 'Schedule'])
+    expect(labels(['bishopric'], bishopric)).toEqual(['Agenda', 'Sacrament', 'Callings', 'Away', 'Schedule'])
   })
 
   it('limits called leaders to the suggestion form', () => {
     expect(labels(['leader'])).toEqual(['Suggest a name'])
+  })
+
+  it('adds the agenda for a leader who attends a meeting', () => {
+    expect(labels(['leader'], [{ slug: 'ward-council' }])).toEqual(['Agenda', 'Suggest a name'])
   })
 
   it('does not grant callings to an admin who is not in the bishopric', () => {
@@ -23,7 +28,7 @@ describe('navFor', () => {
 
 describe('homeFor', () => {
   it('lands each role on its main page', () => {
-    expect(homeFor(['admin', 'bishopric'])).toBe('/agenda')
+    expect(homeFor(['admin', 'bishopric'], bishopric)).toBe('/agenda')
     expect(homeFor(['leader'])).toBe('/suggest')
     expect(homeFor([])).toBe('/no-access')
   })

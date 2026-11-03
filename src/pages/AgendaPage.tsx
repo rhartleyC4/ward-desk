@@ -2,46 +2,68 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
 import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
-import { Link, useParams } from 'react-router'
+import Tab from '@mui/material/Tab'
+import Tabs from '@mui/material/Tabs'
+import { Link, Navigate, useParams } from 'react-router'
+import { useAuth } from '../auth/AuthProvider'
 import { AgendaView, type AgendaActions } from '../components/AgendaView'
 import { ErrorNote, Loading } from '../components/Layout'
-import { addDays, shortDate, todayIso, upcomingSunday } from '../lib/dates'
+import { shortDate, todayIso } from '../lib/dates'
 import * as q from '../lib/queries'
+import { followingMeeting, nextMeeting, previousMeeting } from '../lib/schedule'
 import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 
+const isIsoDate = (s: string | undefined) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s)
+
 export function AgendaPage() {
+  const { templates } = useAuth()
   const params = useParams()
-  const date = params.date ?? upcomingSunday(todayIso())
-  const { data, error, reload } = useAsync(() => q.loadAgenda(supabase, date), [date])
+  // Links from before templates were /agenda/:date and meant the bishopric meeting.
+  const legacyDate = isIsoDate(params.slug) ? params.slug : undefined
+  const template = (!legacyDate && templates.find((t) => t.slug === params.slug)) || templates[0]
+  const date = params.date ?? legacyDate ?? nextMeeting(template, todayIso())
+  const { data, error, reload } = useAsync(() => q.loadAgenda(supabase, template, date), [template, date])
   const save = useAction()
+
+  if (legacyDate) return <Navigate to={`/agenda/${template.slug}/${legacyDate}`} replace />
 
   const run = (fn: () => Promise<void>) => save.act(fn).then((ok) => ok && reload())
 
   const actions: AgendaActions = {
-    saveHeader: (fields) => run(() => q.saveAgendaHeader(supabase, date, fields)),
-    addItem: (kind, body, eventDate) => run(() => q.addAgendaItem(supabase, { kind, body, event_date: eventDate })),
+    saveHeader: (fields) => run(() => q.saveAgendaHeader(supabase, template.id, date, fields)),
+    addItem: (section, body, eventDate) => run(() => q.addAgendaItem(supabase, section, body, eventDate)),
     resolveItem: (id) => run(() => q.resolveAgendaItem(supabase, id, date)),
     addPrayerName: (name) => run(() => q.addPrayerName(supabase, name)),
     removePrayerName: (id) => run(() => q.removePrayerName(supabase, id, date)),
     addInterview: (interview) => run(() => q.addInterview(supabase, interview)),
   }
 
+  const prev = previousMeeting(template, date)
+  const next = followingMeeting(template, date)
+
   return (
     <>
-      <Stack component="nav" aria-label="Agenda weeks" direction="row" sx={{ justifyContent: 'space-between', mb: 1.5 }}>
-        <Button component={Link} to={`/agenda/${addDays(date, -7)}`} startIcon={<ChevronLeftIcon />}>
-          {shortDate(addDays(date, -7))}
+      {templates.length > 1 && (
+        <Tabs value={template.slug} variant="scrollable" scrollButtons={false} aria-label="Meetings" sx={{ mb: 1 }}>
+          {templates.map((t) => (
+            <Tab key={t.id} value={t.slug} label={t.name} component={Link} to={`/agenda/${t.slug}`} />
+          ))}
+        </Tabs>
+      )}
+      <Stack component="nav" aria-label="Agenda dates" direction="row" sx={{ justifyContent: 'space-between', mb: 1.5 }}>
+        <Button component={Link} to={`/agenda/${template.slug}/${prev}`} startIcon={<ChevronLeftIcon />}>
+          {shortDate(prev)}
         </Button>
-        <Button component={Link} to="/agenda">
-          This Sunday
+        <Button component={Link} to={`/agenda/${template.slug}`}>
+          Upcoming
         </Button>
-        <Button component={Link} to={`/agenda/${addDays(date, 7)}`} endIcon={<ChevronRightIcon />}>
-          {shortDate(addDays(date, 7))}
+        <Button component={Link} to={`/agenda/${template.slug}/${next}`} endIcon={<ChevronRightIcon />}>
+          {shortDate(next)}
         </Button>
       </Stack>
       <ErrorNote error={error ?? save.error} />
-      {data ? <AgendaView date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} /> : !error && <Loading />}
+      {data ? <AgendaView template={template} date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} /> : !error && <Loading />}
     </>
   )
 }

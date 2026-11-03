@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
-import { agendaData } from '../test/fixtures'
+import { agendaData, bishopricTemplate, wardCouncilTemplate } from '../test/fixtures'
 import { AgendaView, type AgendaActions } from './AgendaView'
 
 function actions(): AgendaActions {
@@ -19,7 +19,7 @@ const section = (title: string | RegExp) => screen.getByRole('heading', { name: 
 
 describe('AgendaView', () => {
   it('assembles the sections the weekly sheet tab used to hold', () => {
-    render(<AgendaView date="2026-11-01" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
 
     expect(screen.getByText('November 1st')).toBeInTheDocument()
     expect(screen.getByText(/8:30 Bishopric meeting, 9:15 Welfare/)).toBeInTheDocument()
@@ -49,34 +49,34 @@ describe('AgendaView', () => {
   it('adds and resolves discussion items', async () => {
     const user = userEvent.setup()
     const a = actions()
-    render(<AgendaView date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
     const discussion = section('Action / discussion items')
     await user.click(within(discussion).getByRole('button', { name: 'Done' }))
     expect(a.resolveItem).toHaveBeenCalledWith('d1')
 
-    await user.type(within(discussion).getByLabelText('New discussion item'), 'Ward website / bulletin')
+    await user.type(within(discussion).getByLabelText('New item for Action / discussion items'), 'Ward website / bulletin')
     await user.click(within(discussion).getByRole('button', { name: 'Add' }))
-    expect(a.addItem).toHaveBeenCalledWith('discussion', 'Ward website / bulletin', null)
+    expect(a.addItem).toHaveBeenCalledWith(bishopricTemplate.sections[1], 'Ward website / bulletin', null)
   })
 
   it('adds a calendar item with its date', async () => {
     const user = userEvent.setup()
     const a = actions()
-    render(<AgendaView date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
     const calendar = section('Calendar')
     expect(within(calendar).getByText(/Ward Christmas party/)).toBeInTheDocument()
     await user.type(within(calendar).getByLabelText('Date'), '2026-11-22')
-    await user.type(within(calendar).getByLabelText('New calendar item'), 'Tithing declaration')
+    await user.type(within(calendar).getByLabelText('New item for Calendar'), 'Tithing declaration')
     await user.click(within(calendar).getByRole('button', { name: 'Add' }))
-    expect(a.addItem).toHaveBeenCalledWith('calendar', 'Tithing declaration', '2026-11-22')
+    expect(a.addItem).toHaveBeenCalledWith(bishopricTemplate.sections[3], 'Tithing declaration', '2026-11-22')
   })
 
   it('schedules an interview for the agenda date', async () => {
     const user = userEvent.setup()
     const a = actions()
-    render(<AgendaView date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
     const form = screen.getByRole('form', { name: 'Add interview' })
     await user.selectOptions(within(form).getByLabelText('Interviewer'), 'Brother Ortiz')
@@ -96,7 +96,7 @@ describe('AgendaView', () => {
   it('manages the prayer roll', async () => {
     const user = userEvent.setup()
     const a = actions()
-    render(<AgendaView date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
     const roll = section('Prayer roll')
     await user.click(within(roll).getByRole('button', { name: 'Remove' }))
@@ -104,5 +104,29 @@ describe('AgendaView', () => {
     await user.type(within(roll).getByLabelText('Prayer roll name'), 'Another family')
     await user.click(within(roll).getByRole('button', { name: 'Add' }))
     expect(a.addPrayerName).toHaveBeenCalledWith('Another family')
+  })
+
+  it('lays out another meeting from its template', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    render(<AgendaView template={wardCouncilTemplate} date="2026-11-08" data={agendaData({ agenda: null })} actions={a} timeZone="America/Denver" />)
+
+    expect(screen.getByRole('heading', { name: 'Ward Council Agenda' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent)).toEqual([
+      'Prayer roll',
+      'General business',
+      'Upcoming assignments',
+      'Relief Society',
+    ])
+    expect(screen.queryByRole('heading', { name: /Callings needed/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('form', { name: 'Add interview' })).not.toBeInTheDocument()
+
+    expect(within(section('Upcoming assignments')).getByText('PPI: YW President — YW President')).toBeInTheDocument()
+    expect(within(section('Relief Society')).getByText('Room for the combined lesson')).toBeInTheDocument()
+    expect(within(section('General business')).getByText('Nothing open.')).toBeInTheDocument()
+
+    await user.type(within(section('Relief Society')).getByLabelText('New item for Relief Society'), 'Teacher council room')
+    await user.click(within(section('Relief Society')).getByRole('button', { name: 'Add' }))
+    expect(a.addItem).toHaveBeenCalledWith(wardCouncilTemplate.sections[3], 'Teacher council room', null)
   })
 })

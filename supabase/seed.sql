@@ -9,7 +9,8 @@ insert into public.allowlist (email, initial_roles) values
   ('second@ward.test', '{bishopric}'),
   ('secretary@ward.test', '{bishopric}'),
   ('clerk@ward.test', '{bishopric}'),
-  ('leader@ward.test', '{leader}');
+  ('leader@ward.test', '{leader}'),
+  ('rspres@ward.test', '{leader}');
 
 -- Create the auth users up front so seed rows can reference them.
 -- The on_auth_user_created trigger fills in profiles and roles from the allowlist.
@@ -22,7 +23,8 @@ from (values
   ('00000000-0000-0000-0000-000000000002'::uuid, 'second@ward.test', 'Brother Ortiz'),
   ('00000000-0000-0000-0000-00000000000c'::uuid, 'secretary@ward.test', 'Brother Quinn'),
   ('00000000-0000-0000-0000-00000000000e'::uuid, 'clerk@ward.test', 'Brother Pike'),
-  ('00000000-0000-0000-0000-00000000000d'::uuid, 'leader@ward.test', 'Sister Reyes')
+  ('00000000-0000-0000-0000-00000000000d'::uuid, 'leader@ward.test', 'Sister Reyes'),
+  ('00000000-0000-0000-0000-00000000000f'::uuid, 'rspres@ward.test', 'Sister Young')
 ) as u (id, email, full_name);
 
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
@@ -132,12 +134,32 @@ insert into public.interviews (interviewer_id, scheduled_at, person_name, purpos
   ('00000000-0000-0000-0000-000000000002', '2026-11-01 12:30 America/Denver', 'Brother Reed', 'temple_recommend'),
   ('00000000-0000-0000-0000-00000000000b', '2026-11-01 10:15 America/Denver', 'Sister Stone', 'other');
 
-insert into public.agenda_items (kind, body, event_date) values
-  ('discussion', 'Fifth Sunday topic and assignments', null),
-  ('discussion', 'Relief Society room seating capacity: next steps', null),
-  ('discussion', 'Ward website / bulletin', null),
-  ('calendar', 'Tithing declaration (Sundays and Tuesdays)', '2026-11-22'),
-  ('calendar', 'Ward Christmas party', '2026-12-04'),
-  ('ordination', 'Advancement interviews in December', null);
+insert into public.agenda_items (section_id, kind, body, event_date)
+select s.id, i.kind::public.agenda_item_kind, i.body, i.event_date
+from (values
+  ('bishopric', 'Action / discussion items', 'discussion', 'Fifth Sunday topic and assignments', null::date),
+  ('bishopric', 'Action / discussion items', 'discussion', 'Relief Society room seating capacity: next steps', null),
+  ('bishopric', 'Action / discussion items', 'discussion', 'Ward website / bulletin', null),
+  ('bishopric', 'Calendar', 'calendar', 'Tithing declaration (Sundays and Tuesdays)', '2026-11-22'),
+  ('bishopric', 'Calendar', 'calendar', 'Ward Christmas party', '2026-12-04'),
+  ('bishopric', 'Ward ordinations & advancements', 'discussion', 'Advancement interviews in December', null),
+  ('ward-council', 'General business', 'discussion', 'Updates to the prayer roll?', null),
+  ('ward-council', 'General business', 'discussion', 'Sunday chair set-up in the Relief Society room', null),
+  ('ward-council', 'Elders Quorum', 'discussion', 'Quorum temple day: 2nd Tuesday', null),
+  ('ward-council', 'Relief Society', 'discussion', 'Room for the combined Sunday lesson', null),
+  ('ward-council', 'Young Women', 'discussion', 'Summer camp planning', null),
+  ('ward-council', 'Primary', 'discussion', 'Primary sacrament program rehearsal', null),
+  ('ward-council', 'Ward Mission', 'discussion', 'Does each organization have a household of focus?', null),
+  ('ward-council', 'Activities Committee', 'discussion', 'Ward Christmas party on December 4th', null)
+) as i (slug, section, kind, body, event_date)
+join public.agenda_templates t on t.slug = i.slug
+join public.agenda_sections s on s.template_id = t.id and s.title = i.section;
+
+-- Sister Young attends ward council, so she sees that agenda and the prayer roll but nothing else.
+insert into public.agenda_attendees (template_id, user_id)
+select id, '00000000-0000-0000-0000-00000000000f' from public.agenda_templates where slug = 'ward-council';
+
+insert into public.agendas (template_id, meeting_date, opening_prayer, spiritual_thought)
+select id, '2026-11-08', 'Sister Young', 'Brother Lane: handbook chapter 29' from public.agenda_templates where slug = 'ward-council';
 
 insert into public.prayer_roll (name) values ('Example family'), ('Brother Example');

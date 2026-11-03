@@ -6,7 +6,8 @@ import type { Enums } from './database.types'
 export type AppRole = Enums<'app_role'>
 
 export const canSeeCallings = (roles: AppRole[]) => roles.includes('bishopric')
-export const canSeeAgenda = (roles: AppRole[]) => roles.includes('bishopric')
+/** Agendas follow attendance, not roles: RLS returns only the templates someone may open. */
+export const canSeeAgenda = (templates: readonly unknown[]) => templates.length > 0
 export const canPlanMeetings = (roles: AppRole[]) => roles.includes('bishopric')
 export const canSuggest = (roles: AppRole[]) => roles.includes('leader') || roles.includes('bishopric')
 export const canEditSchedule = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
@@ -15,9 +16,9 @@ export const isMember = (roles: AppRole[]) => roles.some((r) => r !== 'leader')
 
 export type NavLink = { to: string; label: string }
 
-export function navFor(roles: AppRole[]): NavLink[] {
+export function navFor(roles: AppRole[], templates: readonly unknown[] = []): NavLink[] {
   const links: NavLink[] = []
-  if (canSeeAgenda(roles)) links.push({ to: '/agenda', label: 'Agenda' })
+  if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Agenda' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
   if (canSeeCallings(roles)) links.push({ to: '/callings', label: 'Callings' })
   if (canSuggest(roles) && !canSeeCallings(roles)) links.push({ to: '/suggest', label: 'Suggest a name' })
@@ -26,6 +27,6 @@ export function navFor(roles: AppRole[]): NavLink[] {
 }
 
 /** Where to land after sign-in. */
-export function homeFor(roles: AppRole[]): string {
-  return navFor(roles)[0]?.to ?? '/no-access'
+export function homeFor(roles: AppRole[], templates: readonly unknown[] = []): string {
+  return navFor(roles, templates)[0]?.to ?? '/no-access'
 }

@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { AppRole } from '../lib/access'
-import { loadMe, type Profile } from '../lib/queries'
+import { loadMe, type AgendaTemplate, type Profile } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 
 type AuthState = {
@@ -9,10 +9,12 @@ type AuthState = {
   session: Session | null
   profile: Profile | null
   roles: AppRole[]
+  /** The meetings whose agendas this user can open. */
+  templates: AgendaTemplate[]
   signOut: () => Promise<void>
 }
 
-type Me = { userId: string; profile: Profile | null; roles: AppRole[] }
+type Me = { userId: string; profile: Profile | null; roles: AppRole[]; templates: AgendaTemplate[] }
 
 const AuthContext = createContext<AuthState | null>(null)
 
@@ -40,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadMe(supabase, userId)
       .then((loaded) => !cancelled && setMe({ userId, ...loaded }))
       // Treat a failed lookup as "no roles" rather than spinning forever.
-      .catch(() => !cancelled && setMe({ userId, profile: null, roles: [] }))
+      .catch(() => !cancelled && setMe({ userId, profile: null, roles: [], templates: [] }))
     return () => {
       cancelled = true
     }
@@ -56,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ loading, session, profile: current?.profile ?? null, roles: current?.roles ?? [], signOut }}>
+    <AuthContext.Provider value={{ loading, session, profile: current?.profile ?? null, roles: current?.roles ?? [], templates: current?.templates ?? [], signOut }}>
       {children}
     </AuthContext.Provider>
   )

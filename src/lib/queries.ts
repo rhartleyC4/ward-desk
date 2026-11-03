@@ -3,7 +3,7 @@
 
 import { addDays, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
-import type { Enums, Tables, TablesInsert, TablesUpdate } from './database.types'
+import type { Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
 
 type Result<T> = { data: T; error: { message: string } | null }
@@ -31,11 +31,12 @@ function check({ error }: { error: { message: string } | null }): void {
 export type Profile = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' | 'short_name'>
 
 export async function loadMe(client: Client, userId: string) {
-  const [profile, roles] = await Promise.all([
+  const [profile, roles, templates] = await Promise.all([
     client.from('profiles').select('id, email, display_name, short_name').eq('id', userId).maybeSingle(),
     client.from('roles').select('role').eq('user_id', userId),
+    loadAgendaTemplates(client),
   ])
-  return { profile: maybe(profile), roles: must(roles).map((r) => r.role) }
+  return { profile: maybe(profile), roles: must(roles).map((r) => r.role), templates }
 }
 
 export async function loadProfiles(client: Client): Promise<Profile[]> {
@@ -168,19 +169,27 @@ export async function submitSuggestion(client: Client, s: { calling_title: strin
 
 export type Agenda = Tables<'agendas'>
 export type AgendaItem = Tables<'agenda_items'>
+export type AgendaSection = Tables<'agenda_sections'>
+export type AgendaTemplate = Tables<'agenda_templates'> & { sections: AgendaSection[] }
 export type Interview = Tables<'interviews'>
 export type PrayerName = Tables<'prayer_roll'>
 
-/** Everything the agenda for one Sunday pulls together. */
-export async function loadAgenda(client: Client, date: IsoDate) {
+/** The meetings this user attends, each with its sections in order. RLS hides the rest. */
+export async function loadAgendaTemplates(client: Client): Promise<AgendaTemplate[]> {
+  const rows = must(await client.from('agenda_templates').select('*, sections:agenda_sections(*)').order('position'))
+  return rows.map((t) => ({ ...t, sections: [...t.sections].sort((a, b) => a.position - b.position) }))
+}
+
+/** Everything one meeting's agenda pulls together. Sections the user can't see come back empty. */
+export async function loadAgenda(client: Client, template: AgendaTemplate, date: IsoDate) {
   const horizon = addDays(date, 9 * 7)
   const [agenda, sacrament, callings, interviews, items, prayer, schedule, absences, profiles, bishopric] = await Promise.all([
-    client.from('agendas').select('*').eq('meeting_date', date).maybeSingle(),
+    client.from('agendas').select('*').eq('template_id', template.id).eq('meeting_date', date).maybeSingle(),
     loadSacrament(client, date, horizon),
     loadCallings(client),
     // A day either side so the time-zone conversion in agenda.ts can pick the right ones.
     client.from('interviews').select('*').gte('scheduled_at', addDays(date, -1)).lt('scheduled_at', addDays(date, 2)).order('scheduled_at'),
-    client.from('agenda_items').select('*').order('created_at'),
+    client.from('agenda_items').select('*').in('section_id', template.sections.map((s) => s.id)).order('created_at'),
     client.from('prayer_roll').select('*').is('removed_on', null).order('added_on'),
     loadSchedule(client),
     loadAbsences(client, addDays(date, -7)),
@@ -205,14 +214,17 @@ export type AgendaData = Awaited<ReturnType<typeof loadAgenda>>
 
 export async function saveAgendaHeader(
   client: Client,
+  templateId: string,
   date: IsoDate,
   fields: Pick<TablesInsert<'agendas'>, 'opening_prayer' | 'spiritual_thought' | 'closing_prayer' | 'notes'>,
 ) {
-  check(await client.from('agendas').upsert({ meeting_date: date, ...fields }, { onConflict: 'meeting_date' }))
+  check(await client.from('agendas').upsert({ template_id: templateId, meeting_date: date, ...fields }, { onConflict: 'template_id,meeting_date' }))
 }
 
-export async function addAgendaItem(client: Client, item: { kind: Enums<'agenda_item_kind'>; body: string; event_date?: IsoDate | null }) {
-  check(await client.from('agenda_items').insert(item))
+export async function addAgendaItem(client: Client, section: Pick<AgendaSection, 'id' | 'kind'>, body: string, eventDate: IsoDate | null = null) {
+  // `kind` only matters to frontends from before templates; the section decides where the item shows.
+  const kind = section.kind === 'calendar' ? 'calendar' : 'discussion'
+  check(await client.from('agenda_items').insert({ section_id: section.id, kind, body, event_date: eventDate }))
 }
 
 export async function resolveAgendaItem(client: Client, id: string, on: IsoDate) {

@@ -1,5 +1,5 @@
 // Minimal rows for component tests. Invented names only.
-import type { AgendaData, Meeting, ProgramItem, Profile } from '../lib/queries'
+import type { AgendaData, AgendaSection, AgendaTemplate, Meeting, ProgramItem, Profile } from '../lib/queries'
 
 export const profiles: Profile[] = [
   { id: 'b', email: 'bishop@ward.test', display_name: 'Bishop Avery', short_name: 'Bishop' },
@@ -45,12 +45,42 @@ export function programItem(meetingId: string, position: number, extra: Partial<
 
 const ts = '2026-10-01T00:00:00Z'
 
+function template(id: string, slug: string, name: string, weeks: number[] | null, sections: [AgendaSection['kind'], string][]): AgendaTemplate {
+  return {
+    id, slug, name, position: 0, weekday: 0, weeks_of_month: weeks, start_time: null, created_at: ts,
+    sections: sections.map(([kind, title], i) => ({ id: `${id}-s${i + 1}`, template_id: id, position: i + 1, kind, title })),
+  }
+}
+
+/** Mirrors the bishopric template seeded in the migration. Section ids are `bishopric-s<position>`. */
+export const bishopricTemplate = template('bishopric', 'bishopric', 'Bishopric Meeting', null, [
+  ['interviews', 'Interviews & appointments'],
+  ['items', 'Action / discussion items'],
+  ['sacrament', 'Upcoming sacrament meetings'],
+  ['calendar', 'Calendar'],
+  ['items', 'Ward ordinations & advancements'],
+  ['items', 'Ward missionary opportunities'],
+  ['callings', 'Callings needed (to discuss)'],
+  ['releases', 'Releases today'],
+  ['sustainings', 'Sustainings today'],
+  ['closing_prayer', 'Closing prayer'],
+  ['prayer_roll', 'Prayer roll'],
+])
+
+export const wardCouncilTemplate = template('council', 'ward-council', 'Ward Council', [2, 4], [
+  ['prayer_roll', 'Prayer roll'],
+  ['items', 'General business'],
+  ['assignments', 'Upcoming assignments'],
+  ['items', 'Relief Society'],
+  ['closing_prayer', 'Closing prayer'],
+])
+
 export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
   const m1 = meeting('2026-11-01', { meeting_type: 'fast_sunday' })
   const m2 = meeting('2026-11-08')
   return {
     agenda: {
-      id: 'a1', meeting_date: '2026-11-01', start_time: '08:30:00', opening_prayer: 'Brother Ortiz',
+      id: 'a1', template_id: 'bishopric', meeting_date: '2026-11-01', start_time: '08:30:00', opening_prayer: 'Brother Ortiz',
       spiritual_thought: 'Handbook updates', closing_prayer: 'Brother Lane', notes: null, created_at: ts,
     },
     meetings: [m1, m2],
@@ -69,8 +99,9 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
       { id: 'i1', interviewer_id: 'l', scheduled_at: '2026-11-01T17:00:00Z', person_name: 'Brother Park', purpose: 'calling', candidate_id: null, location: null, status: 'scheduled', notes: null, created_at: ts },
     ],
     agendaItems: [
-      { id: 'd1', kind: 'discussion', body: 'Fifth Sunday topic', event_date: null, resolved_on: null, created_by: 'b', created_at: ts },
-      { id: 'e1', kind: 'calendar', body: 'Ward Christmas party', event_date: '2026-12-04', resolved_on: null, created_by: 'b', created_at: ts },
+      { id: 'd1', section_id: 'bishopric-s2', kind: 'discussion', body: 'Fifth Sunday topic', event_date: null, resolved_on: null, created_by: 'b', created_at: ts },
+      { id: 'e1', section_id: 'bishopric-s4', kind: 'calendar', body: 'Ward Christmas party', event_date: '2026-12-04', resolved_on: null, created_by: 'b', created_at: ts },
+      { id: 'rs1', section_id: 'council-s4', kind: 'discussion', body: 'Room for the combined lesson', event_date: null, resolved_on: null, created_by: 'b', created_at: ts },
     ],
     prayerRoll: [{ id: 'p1', name: 'Example family', added_on: '2026-10-01', removed_on: null }],
     events: [

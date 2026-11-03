@@ -35,6 +35,8 @@ Roles live in the `roles` table, not in Google. Access is enforced by Row Level 
 | bishopric | The bishop, 1st and 2nd counselors, executive secretary and ward clerk. View and decide on calling proposals, schedule interviews, manage meetings |
 | leader | Other called leaders. Submit name suggestions only; **cannot** see calling proposals |
 
+Meeting agendas follow attendance, not roles. The bishopric sees every agenda. Anyone else sees only the meetings they're listed for in `agenda_attendees`, plus the shared prayer roll if one of those agendas shows it. A leader who attends ward council can read and edit the ward council agenda, but still can't see interviews or callings.
+
 Each bishopric member's profile also has an `office` (bishop, first or second counselor, executive secretary, ward clerk) that only an admin can set. The Conducting and Interviewer pickers list only the bishop and counselors.
 
 Adjust these as the real needs become clear.
@@ -47,6 +49,7 @@ Adjust these as the real needs become clear.
 | Bishopric Schedule | **Schedule** page (`recurring_events`, `rotations`, `stewardships`) |
 | Travel | **Away** page (`absences`). Warns when whoever is conducting is away |
 | Weekly agenda tab (copied every Sunday) | **Agenda** page, assembled live. Upcoming sacrament meetings, interviews, the callings table, releases, and sustainings fill in automatically. Discussion and calendar items carry forward until marked done. |
+| Ward council agenda sheet | **Agenda** page, Ward Council tab. Same idea: the prayer roll and assignments fill in, and each organization's items carry forward until marked done. |
 | Callings Needed table | **Callings** page (`calling_needs`, `calling_candidates`). Accepted names with a sustain date show up under "Sustainings today" |
 
 ## Setup
@@ -180,6 +183,37 @@ Do these in order when passing the app to a successor:
 7. Hand over secrets securely (password manager, not email or chat)
 8. Confirm the successor can sign in, see the right data, and receive a test notification and sign-in email
 9. Remove your own admin access once they confirm
+
+## Agenda templates
+
+Each meeting with an agenda is a row in `agenda_templates`: its name, URL slug, and when it meets (weekday, plus which weeks of the month, or every week). Its layout is an ordered list of rows in `agenda_sections`. Each section has a title and a kind:
+
+| Kind | Shows |
+|------|-------|
+| `items` | Open items for that section, carried forward until marked done |
+| `calendar` | Dated items, dropped once the date passes |
+| `interviews` | That day's interviews, rotations due this month, and a form to add an interview |
+| `assignments` | Rotations due this month |
+| `sacrament` | Upcoming sacrament meetings |
+| `callings`, `releases`, `sustainings` | From the Callings page |
+| `prayer_roll` | The prayer roll, shared by every agenda that shows it |
+| `closing_prayer` | The closing prayer from the agenda header |
+
+To add a meeting (youth council, for example), have an admin insert a template, its sections and its attendees in the SQL editor, or ship them in a migration. Nothing in the app needs to change. There's no screen for editing templates yet.
+
+```sql
+with t as (
+  insert into public.agenda_templates (slug, name, position, weekday, weeks_of_month, start_time)
+  values ('youth-council', 'Youth Council', 3, 0, '{3}', '09:30') returning id
+)
+insert into public.agenda_sections (template_id, position, kind, title)
+select id, s.position, s.kind::public.agenda_section_kind, s.title from t,
+  (values (1, 'items', 'Activities'), (2, 'calendar', 'Calendar'), (3, 'closing_prayer', 'Closing prayer')) as s (position, kind, title);
+
+insert into public.agenda_attendees (template_id, user_id)
+select t.id, p.id from public.agenda_templates t, public.profiles p
+where t.slug = 'youth-council' and p.email = 'leader@example.com';
+```
 
 ## Maintenance notes
 

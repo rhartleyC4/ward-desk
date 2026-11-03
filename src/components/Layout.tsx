@@ -22,9 +22,9 @@ import { PasskeyOffer } from './PasskeyOffer'
 import { ThemeToggle } from './ThemeToggle'
 
 export function Layout() {
-  const { roles, profile, signOut } = useAuth()
+  const { roles, templates, profile, signOut } = useAuth()
   const { pathname } = useLocation()
-  const links = navFor(roles)
+  const links = navFor(roles, templates)
   const current = links.find((l) => pathname === l.to || pathname.startsWith(`${l.to}/`))?.to ?? false
 
   return (

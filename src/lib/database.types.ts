@@ -43,16 +43,42 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"agenda_items": {
+                },"agenda_attendees": {
                   Row: {
-                    "body": string,"created_at": string,"created_by": string | null,"event_date": string | null,"id": string,"kind": Database["public"]['Enums']["agenda_item_kind"],"resolved_on": string | null
+                    "template_id": string,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "body": string,"created_at"?: string,"created_by"?: string | null,"event_date"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["agenda_item_kind"],"resolved_on"?: string | null
+                    "template_id": string,"user_id": string
                   }
                   Update: {
-                    "body"?: string,"created_at"?: string,"created_by"?: string | null,"event_date"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["agenda_item_kind"],"resolved_on"?: string | null
+                    "template_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "agenda_attendees_template_id_fkey"
+      columns: ["template_id"]
+isOneToOne: false
+      referencedRelation: "agenda_templates"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "agenda_attendees_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"agenda_items": {
+                  Row: {
+                    "body": string,"created_at": string,"created_by": string | null,"event_date": string | null,"id": string,"kind": Database["public"]['Enums']["agenda_item_kind"],"resolved_on": string | null,"section_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "body": string,"created_at"?: string,"created_by"?: string | null,"event_date"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["agenda_item_kind"],"resolved_on"?: string | null,"section_id": string
+                  }
+                  Update: {
+                    "body"?: string,"created_at"?: string,"created_by"?: string | null,"event_date"?: string | null,"id"?: string,"kind"?: Database["public"]['Enums']["agenda_item_kind"],"resolved_on"?: string | null,"section_id"?: string
                   }
                   Relationships: [
                     {
@@ -61,21 +87,67 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "agenda_items_section_id_fkey"
+      columns: ["section_id"]
+isOneToOne: false
+      referencedRelation: "agenda_sections"
+      referencedColumns: ["id"]
     }
                   ]
-                },"agendas": {
+                },"agenda_sections": {
                   Row: {
-                    "closing_prayer": string | null,"created_at": string,"id": string,"meeting_date": string,"notes": string | null,"opening_prayer": string | null,"spiritual_thought": string | null,"start_time": string | null
+                    "id": string,"kind": Database["public"]['Enums']["agenda_section_kind"],"position": number,"template_id": string,"title": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "closing_prayer"?: string | null,"created_at"?: string,"id"?: string,"meeting_date": string,"notes"?: string | null,"opening_prayer"?: string | null,"spiritual_thought"?: string | null,"start_time"?: string | null
+                    "id"?: string,"kind": Database["public"]['Enums']["agenda_section_kind"],"position": number,"template_id": string,"title": string
                   }
                   Update: {
-                    "closing_prayer"?: string | null,"created_at"?: string,"id"?: string,"meeting_date"?: string,"notes"?: string | null,"opening_prayer"?: string | null,"spiritual_thought"?: string | null,"start_time"?: string | null
+                    "id"?: string,"kind"?: Database["public"]['Enums']["agenda_section_kind"],"position"?: number,"template_id"?: string,"title"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "agenda_sections_template_id_fkey"
+      columns: ["template_id"]
+isOneToOne: false
+      referencedRelation: "agenda_templates"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"agenda_templates": {
+                  Row: {
+                    "created_at": string,"id": string,"name": string,"position": number,"slug": string,"start_time": string | null,"weekday": number,"weeks_of_month": (number)[] | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"name": string,"position"?: number,"slug": string,"start_time"?: string | null,"weekday"?: number,"weeks_of_month"?: (number)[] | null
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"name"?: string,"position"?: number,"slug"?: string,"start_time"?: string | null,"weekday"?: number,"weeks_of_month"?: (number)[] | null
                   }
                   Relationships: [
                     
+                  ]
+                },"agendas": {
+                  Row: {
+                    "closing_prayer": string | null,"created_at": string,"id": string,"meeting_date": string,"notes": string | null,"opening_prayer": string | null,"spiritual_thought": string | null,"start_time": string | null,"template_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "closing_prayer"?: string | null,"created_at"?: string,"id"?: string,"meeting_date": string,"notes"?: string | null,"opening_prayer"?: string | null,"spiritual_thought"?: string | null,"start_time"?: string | null,"template_id"?: string
+                  }
+                  Update: {
+                    "closing_prayer"?: string | null,"created_at"?: string,"id"?: string,"meeting_date"?: string,"notes"?: string | null,"opening_prayer"?: string | null,"spiritual_thought"?: string | null,"start_time"?: string | null,"template_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "agendas_template_id_fkey"
+      columns: ["template_id"]
+isOneToOne: false
+      referencedRelation: "agenda_templates"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"allowlist": {
                   Row: {
@@ -345,7 +417,19 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "has_any_role":
+            "attends":
+{ Args: { "template": string }; Returns: boolean
+                           },
+"attends_section":
+{ Args: { "section": string }; Returns: boolean
+                           },
+"bishopric_template":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"can_use_prayer_roll":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"has_any_role":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "has_role":
@@ -353,10 +437,13 @@ isOneToOne: false
                            },
 "is_planner":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"legacy_agenda_section":
+{ Args: { "item_kind": Database["public"]['Enums']["agenda_item_kind"] }; Returns: string
                            }
           }
           Enums: {
-            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"ward_clerk","candidate_status": "suggested"|"discussing"|"approved"|"extended"|"accepted"|"declined"|"sustained"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","need_status": "open"|"filled"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other"
+            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"ward_clerk","candidate_status": "suggested"|"discussing"|"approved"|"extended"|"accepted"|"declined"|"sustained"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","need_status": "open"|"filled"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -476,7 +563,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "ward_clerk"],"candidate_status": ["suggested", "discussing", "approved", "extended", "accepted", "declined", "sustained", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"need_status": ["open", "filled", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"]
+            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "ward_clerk"],"candidate_status": ["suggested", "discussing", "approved", "extended", "accepted", "declined", "sustained", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"need_status": ["open", "filled", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"]
           }
         }
 } as const

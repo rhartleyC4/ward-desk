@@ -34,14 +34,14 @@ import {
 } from '../lib/agenda'
 import { longDate, type IsoDate } from '../lib/dates'
 import type { Enums } from '../lib/database.types'
-import type { AgendaData } from '../lib/queries'
+import type { AgendaData, AgendaSection, AgendaTemplate } from '../lib/queries'
 import { awayOn, eventsOn, formatTime, rotationsDue } from '../lib/schedule'
 import { nativeSelect } from '../theme'
 import { Muted, SectionCard } from './Layout'
 
 export type AgendaActions = {
   saveHeader: (fields: { opening_prayer: string | null; spiritual_thought: string | null; closing_prayer: string | null }) => void
-  addItem: (kind: Enums<'agenda_item_kind'>, body: string, eventDate: IsoDate | null) => void
+  addItem: (section: AgendaSection, body: string, eventDate: IsoDate | null) => void
   resolveItem: (id: string) => void
   addPrayerName: (name: string) => void
   removePrayerName: (id: string) => void
@@ -102,7 +102,7 @@ function AddInterview({ date, data, onAdd }: { date: IsoDate; data: AgendaData; 
   )
 }
 
-function AddLine({ label, onAdd, withDate }: { label: string; onAdd: (text: string, date: IsoDate | null) => void; withDate?: boolean }) {
+function AddLine({ label, name = label, onAdd, withDate }: { label: string; name?: string; onAdd: (text: string, date: IsoDate | null) => void; withDate?: boolean }) {
   const [text, setText] = useState('')
   const [date, setDate] = useState('')
   const submit = (e: FormEvent) => {
@@ -117,7 +117,7 @@ function AddLine({ label, onAdd, withDate }: { label: string; onAdd: (text: stri
       {withDate && (
         <TextField type="date" value={date} onChange={(e) => setDate(e.target.value)} slotProps={{ htmlInput: { 'aria-label': 'Date' } }} sx={{ width: 170, flexShrink: 0 }} />
       )}
-      <TextField value={text} onChange={(e) => setText(e.target.value)} placeholder={label} slotProps={{ htmlInput: { 'aria-label': label } }} />
+      <TextField value={text} onChange={(e) => setText(e.target.value)} placeholder={label} slotProps={{ htmlInput: { 'aria-label': name } }} />
       <Button type="submit" variant="outlined">
         Add
       </Button>
@@ -125,8 +125,9 @@ function AddLine({ label, onAdd, withDate }: { label: string; onAdd: (text: stri
   )
 }
 
-function ItemList({ date, data, kind, actions, addLabel }: { date: IsoDate; data: AgendaData; kind: Enums<'agenda_item_kind'>; actions: AgendaActions; addLabel: string }) {
-  const items = openItems(date, data.agendaItems, kind)
+function ItemList({ date, data, section, actions }: { date: IsoDate; data: AgendaData; section: AgendaSection; actions: AgendaActions }) {
+  const items = openItems(date, data.agendaItems, section)
+  const dated = section.kind === 'calendar'
   return (
     <>
       {items.length ? (
@@ -158,12 +159,12 @@ function ItemList({ date, data, kind, actions, addLabel }: { date: IsoDate; data
       ) : (
         <Muted>Nothing open.</Muted>
       )}
-      <AddLine label={addLabel} withDate={kind === 'calendar'} onAdd={(text, d) => actions.addItem(kind, text, d)} />
+      <AddLine label={dated ? 'New calendar item' : 'New item'} name={`New item for ${section.title}`} withDate={dated} onAdd={(text, d) => actions.addItem(section, text, d)} />
     </>
   )
 }
 
-function Header({ date, data, actions }: { date: IsoDate; data: AgendaData; actions: AgendaActions }) {
+function Header({ template, date, data, actions }: { template: AgendaTemplate; date: IsoDate; data: AgendaData; actions: AgendaActions }) {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({
     opening_prayer: data.agenda?.opening_prayer ?? '',
@@ -176,7 +177,7 @@ function Header({ date, data, actions }: { date: IsoDate; data: AgendaData; acti
   return (
     <Card component="section" sx={{ mb: 1.5 }}>
       <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-        <Typography variant="h1">Bishopric Meeting Agenda</Typography>
+        <Typography variant="h1">{template.name} Agenda</Typography>
         <Typography sx={{ mt: 0.5 }}>
           <strong>{longDate(date)}</strong>
           {events.length > 0 && (
@@ -242,165 +243,216 @@ function NameList({ items }: { items: string[] }) {
   )
 }
 
-/** The weekly agenda, assembled from live data instead of a copied sheet tab. */
-export function AgendaView({ date, data, actions, timeZone }: { date: IsoDate; data: AgendaData; actions: AgendaActions; timeZone: string }) {
+/** One section of an agenda, filled from live data according to its kind. */
+function Section({ section, date, data, actions, timeZone }: { section: AgendaSection; date: IsoDate; data: AgendaData; actions: AgendaActions; timeZone: string }) {
   const who = (id: string | null) => personLabel(id, data.profiles) || 'Unassigned'
-  const interviews = interviewsOn(date, data.interviews, timeZone)
-  const needs = callingsNeeded(data.needs, data.candidates)
-  const suggestions = unsortedSuggestions(data.candidates)
-  const releases = releasesOn(date, data.needs)
-  const sustainings = sustainingsOn(date, data.needs, data.candidates)
   const rotations = rotationsDue(date, data.rotations)
-  const away = awayOn(date, data.absences)
+  const rotationLine = (r: (typeof rotations)[number]) => (r.assignee_id ? `${r.title} — ${who(r.assignee_id)}` : r.assignee_label ? `${r.title} — ${r.assignee_label}` : r.title)
+
+  switch (section.kind) {
+    case 'items':
+    case 'calendar':
+      return (
+        <SectionCard title={section.title}>
+          <ItemList date={date} data={data} section={section} actions={actions} />
+        </SectionCard>
+      )
+
+    case 'interviews': {
+      const interviews = interviewsOn(date, data.interviews, timeZone)
+      return (
+        <SectionCard title={section.title}>
+          {interviews.length ? (
+            interviews.map((g) => (
+              <Box key={g.interviewerId ?? 'none'} sx={{ mb: 1 }}>
+                <Typography variant="h3">{who(g.interviewerId)}</Typography>
+                <Table size="small">
+                  <TableBody>
+                    {g.slots.map((s, i) => (
+                      <TableRow key={i}>
+                        <TableCell sx={{ width: '6rem', whiteSpace: 'nowrap' }}>{s.time}</TableCell>
+                        <TableCell>{s.label}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Box>
+            ))
+          ) : (
+            <Muted>No interviews scheduled today.</Muted>
+          )}
+          {rotations.length > 0 && (
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              <Box component="span" sx={{ color: 'text.secondary' }}>
+                Due this month:
+              </Box>{' '}
+              {rotations.map((r) => (r.assignee_id ? `${r.title} — ${who(r.assignee_id)}` : r.title)).join('; ')}
+            </Typography>
+          )}
+          <AddInterview date={date} data={data} onAdd={actions.addInterview} />
+        </SectionCard>
+      )
+    }
+
+    case 'assignments':
+      return (
+        <SectionCard title={section.title}>
+          {rotations.length ? <NameList items={rotations.map(rotationLine)} /> : <Muted>Nothing due this month.</Muted>}
+        </SectionCard>
+      )
+
+    case 'sacrament':
+      return (
+        <SectionCard title={section.title}>
+          <NameList items={upcomingMeetings(date, data.meetings).map((m) => sacramentLine(m, data.items, data.profiles))} />
+        </SectionCard>
+      )
+
+    case 'callings': {
+      const needs = callingsNeeded(data.needs, data.candidates)
+      const suggestions = unsortedSuggestions(data.candidates)
+      return (
+        <SectionCard title={section.title}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Calling</TableCell>
+                  <TableCell>Release</TableCell>
+                  <TableCell>Names to consider</TableCell>
+                  <TableCell>Appr?</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {needs.map(({ need, candidates, approved }) => (
+                  <TableRow key={need.id}>
+                    <TableCell>{need.calling_title}</TableCell>
+                    <TableCell>{need.release_name ?? ''}</TableCell>
+                    <TableCell>{candidates.map((c) => c.person_name).join(', ')}</TableCell>
+                    <TableCell>{approved ? 'Y' : ''}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          {suggestions.length > 0 && (
+            <Typography variant="body2" sx={{ mt: 1 }}>
+              <Box component="span" sx={{ color: 'text.secondary' }}>
+                New suggestions:
+              </Box>{' '}
+              {suggestions.map((s) => `${s.person_name} for ${s.calling_title}`).join('; ')}
+            </Typography>
+          )}
+        </SectionCard>
+      )
+    }
+
+    case 'releases':
+      return (
+        <SectionCard title={`${section.title} (${longDate(date)})`}>
+          <NameList items={releasesOn(date, data.needs).map((r) => `${r.release_name}, ${r.calling_title}`)} />
+        </SectionCard>
+      )
+
+    case 'sustainings':
+      return (
+        <SectionCard title={`${section.title} (${longDate(date)})`}>
+          <NameList items={sustainingsOn(date, data.needs, data.candidates).map((s) => `${s.name}, ${s.calling}`)} />
+        </SectionCard>
+      )
+
+    case 'closing_prayer':
+      return (
+        <Card sx={{ mb: 1.5 }}>
+          <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+            <Typography variant="body2">
+              <Box component="span" sx={{ color: 'text.secondary' }}>
+                {section.title}:
+              </Box>{' '}
+              {data.agenda?.closing_prayer || '—'}
+            </Typography>
+          </CardContent>
+        </Card>
+      )
+
+    case 'prayer_roll':
+      return (
+        <SectionCard title={section.title}>
+          <PrayerRoll data={data} actions={actions} />
+        </SectionCard>
+      )
+  }
+}
+
+function PrayerRoll({ data, actions }: { data: AgendaData; actions: AgendaActions }) {
   const [newPrayer, setNewPrayer] = useState('')
+  return (
+    <>
+      <List dense disablePadding>
+        {data.prayerRoll.map((p) => (
+          <ListItem
+            key={p.id}
+            disableGutters
+            secondaryAction={
+              <IconButton edge="end" size="small" aria-label="Remove" onClick={() => actions.removePrayerName(p.id)}>
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            }
+          >
+            <ListItemText primary={p.name} />
+          </ListItem>
+        ))}
+      </List>
+      <Stack
+        component="form"
+        direction="row"
+        spacing={1}
+        sx={{ mt: 1.5 }}
+        onSubmit={(e) => {
+          e.preventDefault()
+          if (!newPrayer.trim()) return
+          actions.addPrayerName(newPrayer.trim())
+          setNewPrayer('')
+        }}
+      >
+        <TextField value={newPrayer} onChange={(e) => setNewPrayer(e.target.value)} placeholder="Name" slotProps={{ htmlInput: { 'aria-label': 'Prayer roll name' } }} />
+        <Button type="submit" variant="outlined">
+          Add
+        </Button>
+      </Stack>
+    </>
+  )
+}
+
+/** A meeting's agenda, laid out by its template and assembled from live data instead of a copied sheet tab. */
+export function AgendaView({
+  template,
+  date,
+  data,
+  actions,
+  timeZone,
+}: {
+  template: AgendaTemplate
+  date: IsoDate
+  data: AgendaData
+  actions: AgendaActions
+  timeZone: string
+}) {
+  const away = awayOn(date, data.absences)
 
   return (
     <>
-      <Header key={data.agenda?.id ?? date} date={date} data={data} actions={actions} />
+      <Header key={`${template.id}-${data.agenda?.id ?? date}`} template={template} date={date} data={data} actions={actions} />
 
       {away.length > 0 && (
         <Alert severity="warning" role="status" sx={{ mb: 1.5 }}>
-          Away today: {away.map((a) => `${who(a.user_id)}${a.location ? ` (${a.location})` : ''}`).join(', ')}
+          Away today: {away.map((a) => `${personLabel(a.user_id, data.profiles) || 'Unassigned'}${a.location ? ` (${a.location})` : ''}`).join(', ')}
         </Alert>
       )}
 
-      <SectionCard title="Interviews & appointments">
-        {interviews.length ? (
-          interviews.map((g) => (
-            <Box key={g.interviewerId ?? 'none'} sx={{ mb: 1 }}>
-              <Typography variant="h3">{who(g.interviewerId)}</Typography>
-              <Table size="small">
-                <TableBody>
-                  {g.slots.map((s, i) => (
-                    <TableRow key={i}>
-                      <TableCell sx={{ width: '6rem', whiteSpace: 'nowrap' }}>{s.time}</TableCell>
-                      <TableCell>{s.label}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          ))
-        ) : (
-          <Muted>No interviews scheduled today.</Muted>
-        )}
-        {rotations.length > 0 && (
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            <Box component="span" sx={{ color: 'text.secondary' }}>
-              Due this month:
-            </Box>{' '}
-            {rotations.map((r) => (r.assignee_id ? `${r.title} — ${who(r.assignee_id)}` : r.title)).join('; ')}
-          </Typography>
-        )}
-        <AddInterview date={date} data={data} onAdd={actions.addInterview} />
-      </SectionCard>
-
-      <SectionCard title="Action / discussion items">
-        <ItemList date={date} data={data} kind="discussion" actions={actions} addLabel="New discussion item" />
-      </SectionCard>
-
-      <SectionCard title="Upcoming sacrament meetings">
-        <NameList items={upcomingMeetings(date, data.meetings).map((m) => sacramentLine(m, data.items, data.profiles))} />
-      </SectionCard>
-
-      <SectionCard title="Calendar">
-        <ItemList date={date} data={data} kind="calendar" actions={actions} addLabel="New calendar item" />
-      </SectionCard>
-
-      <SectionCard title="Ward ordinations & advancements">
-        <ItemList date={date} data={data} kind="ordination" actions={actions} addLabel="New ordination item" />
-      </SectionCard>
-
-      <SectionCard title="Ward missionary opportunities">
-        <ItemList date={date} data={data} kind="missionary" actions={actions} addLabel="New missionary item" />
-      </SectionCard>
-
-      <SectionCard title="Callings needed (to discuss)">
-        <TableContainer>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Calling</TableCell>
-                <TableCell>Release</TableCell>
-                <TableCell>Names to consider</TableCell>
-                <TableCell>Appr?</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {needs.map(({ need, candidates, approved }) => (
-                <TableRow key={need.id}>
-                  <TableCell>{need.calling_title}</TableCell>
-                  <TableCell>{need.release_name ?? ''}</TableCell>
-                  <TableCell>{candidates.map((c) => c.person_name).join(', ')}</TableCell>
-                  <TableCell>{approved ? 'Y' : ''}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {suggestions.length > 0 && (
-          <Typography variant="body2" sx={{ mt: 1 }}>
-            <Box component="span" sx={{ color: 'text.secondary' }}>
-              New suggestions:
-            </Box>{' '}
-            {suggestions.map((s) => `${s.person_name} for ${s.calling_title}`).join('; ')}
-          </Typography>
-        )}
-      </SectionCard>
-
-      <SectionCard title={`Releases today (${longDate(date)})`}>
-        <NameList items={releases.map((r) => `${r.release_name}, ${r.calling_title}`)} />
-      </SectionCard>
-
-      <SectionCard title={`Sustainings today (${longDate(date)})`}>
-        <NameList items={sustainings.map((s) => `${s.name}, ${s.calling}`)} />
-      </SectionCard>
-
-      <Card sx={{ mb: 1.5 }}>
-        <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-          <Typography variant="body2">
-            <Box component="span" sx={{ color: 'text.secondary' }}>
-              Closing prayer:
-            </Box>{' '}
-            {data.agenda?.closing_prayer || '—'}
-          </Typography>
-        </CardContent>
-      </Card>
-
-      <SectionCard title="Prayer roll">
-        <List dense disablePadding>
-          {data.prayerRoll.map((p) => (
-            <ListItem
-              key={p.id}
-              disableGutters
-              secondaryAction={
-                <IconButton edge="end" size="small" aria-label="Remove" onClick={() => actions.removePrayerName(p.id)}>
-                  <CloseIcon fontSize="small" />
-                </IconButton>
-              }
-            >
-              <ListItemText primary={p.name} />
-            </ListItem>
-          ))}
-        </List>
-        <Stack
-          component="form"
-          direction="row"
-          spacing={1}
-          sx={{ mt: 1.5 }}
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!newPrayer.trim()) return
-            actions.addPrayerName(newPrayer.trim())
-            setNewPrayer('')
-          }}
-        >
-          <TextField value={newPrayer} onChange={(e) => setNewPrayer(e.target.value)} placeholder="Name" slotProps={{ htmlInput: { 'aria-label': 'Prayer roll name' } }} />
-          <Button type="submit" variant="outlined">
-            Add
-          </Button>
-        </Stack>
-      </SectionCard>
+      {template.sections.map((section) => (
+        <Section key={section.id} section={section} date={date} data={data} actions={actions} timeZone={timeZone} />
+      ))}
     </>
   )
 }

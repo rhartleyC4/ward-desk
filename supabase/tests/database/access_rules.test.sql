@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(35);
+select plan(48);
 
 -- Act as a seeded user for the rest of the transaction, or until the next call.
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
@@ -98,6 +98,7 @@ select is((select count(*)::int from public.interviews), 0, 'leader cannot see i
 select is((select count(*)::int from public.agendas), 0, 'leader cannot see agendas');
 select is((select count(*)::int from public.agenda_items), 0, 'leader cannot see agenda items');
 select is((select count(*)::int from public.prayer_roll), 0, 'leader cannot see the prayer roll');
+select is((select count(*)::int from public.agenda_templates), 0, 'leader who attends no meeting sees no agenda templates');
 select is((select count(*)::int from public.allowlist), 0, 'leader cannot see the allowlist');
 select is(
   (select array_agg(distinct role)::text from public.roles where user_id <> (select auth.uid())),
@@ -159,6 +160,52 @@ select throws_ok(
   $$ update public.profiles set office = 'bishop' where id = (select auth.uid()) $$,
   '42501', null,
   'bishopric member cannot change their own office'
+);
+
+select is((select count(*)::int from public.agenda_templates), 2, 'bishopric sees every agenda template');
+select lives_ok(
+  $$ insert into public.agendas (template_id, meeting_date) select id, '2026-11-08' from public.agenda_templates where slug = 'bishopric' $$,
+  'bishopric meeting and ward council agendas can share a date'
+);
+select is(
+  (select s.title from public.agenda_items i join public.agenda_sections s on s.id = i.section_id where i.body = 'New discussion item'),
+  'Action / discussion items',
+  'an item sent without a section lands in the bishopric discussion items'
+);
+
+-- ---------------------------------------------------------------------------
+-- Ward council attendee: that agenda and the prayer roll, nothing else
+-- ---------------------------------------------------------------------------
+
+select pg_temp.act_as('bishop@ward.test');
+create temp table bishopric_section as select public.legacy_agenda_section('discussion') as id;
+grant select on bishopric_section to authenticated;
+
+select pg_temp.act_as('rspres@ward.test');
+
+select is((select array_agg(slug)::text from public.agenda_templates), '{ward-council}', 'attendee sees only the ward council template');
+select is((select count(*)::int from public.agendas), 1, 'attendee sees only ward council agendas');
+select is((select count(*)::int from public.agenda_items), 8, 'attendee sees only ward council items');
+select lives_ok(
+  $$ insert into public.agenda_items (section_id, body) select id, 'Youth camp dates' from public.agenda_sections where title = 'Young Women' $$,
+  'attendee adds an item to their meeting'
+);
+select throws_ok(
+  $$ insert into public.agenda_items (section_id, body) select id, 'Not allowed' from bishopric_section $$,
+  '42501', null,
+  'attendee cannot add to the bishopric agenda'
+);
+select is((select count(*)::int from public.prayer_roll), 2, 'attendee uses the shared prayer roll');
+select is((select count(*)::int from public.interviews), 0, 'attendee cannot see interviews');
+select throws_ok(
+  $$ insert into public.agenda_attendees (template_id, user_id) select id, (select auth.uid()) from public.agenda_templates $$,
+  '42501', null,
+  'attendee cannot change who attends'
+);
+select throws_ok(
+  $$ insert into public.agenda_sections (template_id, position, kind, title) select id, 99, 'callings', 'Callings' from public.agenda_templates $$,
+  '42501', null,
+  'attendee cannot change the template'
 );
 
 select pg_temp.act_as('bishop@ward.test');

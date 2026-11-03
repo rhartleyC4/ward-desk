@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { awayOn, eventsOn, formatTime, isAway, rotationsDue, type Absence, type RecurringEvent, type Rotation } from './schedule'
+import {
+  awayOn,
+  eventsOn,
+  followingMeeting,
+  formatTime,
+  isAway,
+  meetsOn,
+  nextMeeting,
+  previousMeeting,
+  rotationsDue,
+  type Absence,
+  type MeetingPattern,
+  type RecurringEvent,
+  type Rotation,
+} from './schedule'
 
 const events: RecurringEvent[] = [
   { title: 'Welfare', weekday: 0, week_of_month: 1, start_time: '09:15:00' },
@@ -62,5 +76,40 @@ describe('formatTime', () => {
     expect(formatTime('08:30:00')).toBe('8:30')
     expect(formatTime('12:40:00')).toBe('12:40')
     expect(formatTime(null)).toBe('')
+  })
+})
+
+describe('meeting patterns', () => {
+  const weekly: MeetingPattern = { weekday: 0, weeks_of_month: null }
+  const council: MeetingPattern = { weekday: 0, weeks_of_month: [2, 4] }
+
+  it('matches every Sunday or only the listed Sundays of the month', () => {
+    expect(meetsOn(weekly, '2026-11-01')).toBe(true)
+    expect(meetsOn(weekly, '2026-11-03')).toBe(false)
+    expect(meetsOn(council, '2026-11-08')).toBe(true)
+    expect(meetsOn(council, '2026-11-15')).toBe(false)
+  })
+
+  it('finds the next meeting on or after a date', () => {
+    expect(nextMeeting(weekly, '2026-11-01')).toBe('2026-11-01')
+    expect(nextMeeting(weekly, '2026-11-03')).toBe('2026-11-08')
+    expect(nextMeeting(council, '2026-11-02')).toBe('2026-11-08')
+    expect(nextMeeting(council, '2026-11-23')).toBe('2026-12-13')
+  })
+
+  it('steps to the meeting before and after, skipping off weeks', () => {
+    expect(followingMeeting(weekly, '2026-11-01')).toBe('2026-11-08')
+    expect(previousMeeting(weekly, '2026-11-01')).toBe('2026-10-25')
+    expect(followingMeeting(council, '2026-11-08')).toBe('2026-11-22')
+    expect(followingMeeting(council, '2026-11-22')).toBe('2026-12-13')
+    expect(previousMeeting(council, '2026-12-13')).toBe('2026-11-22')
+    expect(previousMeeting(council, '2026-11-08')).toBe('2026-10-25')
+  })
+
+  it('works for meetings on other weekdays', () => {
+    const tuesday: MeetingPattern = { weekday: 2, weeks_of_month: [1] }
+    expect(nextMeeting(tuesday, '2026-11-01')).toBe('2026-11-03')
+    expect(followingMeeting(tuesday, '2026-11-03')).toBe('2026-12-01')
+    expect(previousMeeting(tuesday, '2026-11-03')).toBe('2026-10-06')
   })
 })

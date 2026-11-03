@@ -1,5 +1,5 @@
-// Assembles the weekly bishopric agenda from the underlying tables, replacing the
-// copy-a-new-tab-every-Sunday workflow. Pure functions so they can be unit tested.
+// Assembles meeting agendas from the underlying tables, replacing the
+// copy-a-new-tab-every-meeting workflow. Pure functions so they can be unit tested.
 
 import { addDays, shortDate, type IsoDate } from './dates'
 import type { Enums, Tables } from './database.types'
@@ -9,7 +9,8 @@ export type ProgramItem = Pick<Tables<'program_items'>, 'meeting_id' | 'position
 export type CallingNeed = Pick<Tables<'calling_needs'>, 'id' | 'calling_title' | 'release_name' | 'release_on' | 'status'>
 export type Candidate = Pick<Tables<'calling_candidates'>, 'id' | 'need_id' | 'calling_title' | 'person_name' | 'status' | 'sustain_on'>
 export type Interview = Pick<Tables<'interviews'>, 'interviewer_id' | 'scheduled_at' | 'person_name' | 'purpose' | 'status'>
-export type AgendaItem = Pick<Tables<'agenda_items'>, 'id' | 'kind' | 'body' | 'event_date' | 'resolved_on' | 'created_at'>
+export type AgendaItem = Pick<Tables<'agenda_items'>, 'id' | 'section_id' | 'body' | 'event_date' | 'resolved_on' | 'created_at'>
+export type AgendaSection = Pick<Tables<'agenda_sections'>, 'id' | 'kind'>
 export type Profile = Pick<Tables<'profiles'>, 'id' | 'display_name' | 'short_name'>
 
 const TYPE_LABELS: Record<Enums<'meeting_type'>, string> = {
@@ -57,12 +58,12 @@ export function upcomingMeetings(date: IsoDate, meetings: Meeting[], weeks = 9):
     .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date))
 }
 
-/** Items still open on this date: created on or before it and not resolved before it. */
-export function openItems(date: IsoDate, items: AgendaItem[], kind: Enums<'agenda_item_kind'>): AgendaItem[] {
+/** A section's items still open on this date: created on or before it and not resolved before it. */
+export function openItems(date: IsoDate, items: AgendaItem[], section: AgendaSection): AgendaItem[] {
   return items
-    .filter((i) => i.kind === kind)
+    .filter((i) => i.section_id === section.id)
     .filter((i) => i.created_at.slice(0, 10) <= date && (!i.resolved_on || i.resolved_on >= date))
-    .filter((i) => kind !== 'calendar' || !i.event_date || i.event_date >= date)
+    .filter((i) => section.kind !== 'calendar' || !i.event_date || i.event_date >= date)
     .sort((a, b) => (a.event_date ?? a.created_at).localeCompare(b.event_date ?? b.created_at))
 }
 

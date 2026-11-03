@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { Layout, Loading } from './components/Layout'
 import { canSeeAgenda, canSeeCallings, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
+import type { AgendaTemplate } from './lib/queries'
 import { AccountPage } from './pages/AccountPage'
 import { AgendaPage } from './pages/AgendaPage'
 import { AwayPage } from './pages/AwayPage'
@@ -14,22 +15,25 @@ import { SacramentPage } from './pages/SacramentPage'
 import { SchedulePage } from './pages/SchedulePage'
 import { SuggestPage } from './pages/SuggestPage'
 
-function Guard({ allow, children }: { allow: (roles: AppRole[]) => boolean; children: ReactNode }) {
-  const { roles } = useAuth()
-  return allow(roles) ? children : <Navigate to={homeFor(roles)} replace />
+function Guard({ allow, children }: { allow: (roles: AppRole[], templates: AgendaTemplate[]) => boolean; children: ReactNode }) {
+  const { roles, templates } = useAuth()
+  return allow(roles, templates) ? children : <Navigate to={homeFor(roles, templates)} replace />
 }
 
+const attendsAMeeting = (_: AppRole[], templates: AgendaTemplate[]) => canSeeAgenda(templates)
+
 function AppRoutes() {
-  const { loading, session, roles } = useAuth()
+  const { loading, session, roles, templates } = useAuth()
   if (loading) return <Loading />
   if (!session) return <LoginPage />
 
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to={homeFor(roles)} replace />} />
-        <Route path="agenda" element={<Guard allow={canSeeAgenda}><AgendaPage /></Guard>} />
-        <Route path="agenda/:date" element={<Guard allow={canSeeAgenda}><AgendaPage /></Guard>} />
+        <Route index element={<Navigate to={homeFor(roles, templates)} replace />} />
+        <Route path="agenda" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
+        <Route path="agenda/:slug" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
+        <Route path="agenda/:slug/:date" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
         <Route path="sacrament" element={<Guard allow={isMember}><SacramentPage /></Guard>} />
         <Route path="callings" element={<Guard allow={canSeeCallings}><CallingsPage /></Guard>} />
         <Route path="suggest" element={<Guard allow={canSuggest}><SuggestPage /></Guard>} />

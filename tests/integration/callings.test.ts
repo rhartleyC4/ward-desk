@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { unsortedSuggestions } from '../../src/lib/agenda'
-import { addCandidate, addNeed, loadAgenda, loadCallings, submitSuggestion, updateCandidate } from '../../src/lib/queries'
+import { addCandidate, addNeed, loadAgenda, loadAgendaTemplates, loadCallings, submitSuggestion, updateCandidate } from '../../src/lib/queries'
 import { signIn } from './helpers'
 
 const TAG = `it-${Date.now()}`
@@ -34,7 +34,9 @@ describe('callings confidentiality', () => {
     expect(callings.needs).toEqual([])
     expect(callings.candidates).toEqual([])
 
-    const agenda = await loadAgenda(leader, '2026-11-01')
+    expect(await loadAgendaTemplates(leader)).toEqual([])
+    const [bishopric] = await loadAgendaTemplates(await signIn('bishop'))
+    const agenda = await loadAgenda(leader, bishopric, '2026-11-01')
     expect(agenda.agenda).toBeNull()
     expect(agenda.interviews).toEqual([])
     expect(agenda.agendaItems).toEqual([])
@@ -52,7 +54,8 @@ describe('callings confidentiality', () => {
 
     await updateCandidate(bishop, candidate.id, { status: 'accepted', sustain_on: '2030-06-02' })
 
-    const { candidates } = await loadAgenda(bishop, '2030-06-02')
+    const [bishopric] = await loadAgendaTemplates(bishop)
+    const { candidates } = await loadAgenda(bishop, bishopric, '2030-06-02')
     const { sustainingsOn } = await import('../../src/lib/agenda')
     const { needs } = await loadCallings(bishop)
     expect(sustainingsOn('2030-06-02', needs, candidates)).toContainEqual({ name: `${TAG} Brother West`, calling: `${TAG} Activities Committee` })
