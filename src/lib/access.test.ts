@@ -21,6 +21,11 @@ describe('navFor', () => {
     expect(labels(['admin'])).not.toContain('Callings')
   })
 
+  it('lets only admins manage sign-in access', () => {
+    expect(labels(['admin', 'bishopric'], bishopric)).toContain('Access')
+    expect(labels(['bishopric'], bishopric)).not.toContain('Access')
+  })
+
   it('shows nothing without a role', () => {
     expect(labels([])).toEqual([])
   })

@@ -3,6 +3,7 @@
 
 import { addDays, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
+import type { AppRole } from './access'
 import type { Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
 
@@ -299,6 +300,35 @@ export async function addAttendee(client: Client, templateId: string, userId: st
 
 export async function removeAttendee(client: Client, templateId: string, userId: string) {
   check(await client.from('agenda_attendees').delete().eq('template_id', templateId).eq('user_id', userId))
+}
+
+// ---------------------------------------------------------------------------
+// Sign-in access (admins only)
+// ---------------------------------------------------------------------------
+
+export type Invite = Pick<Tables<'allowlist'>, 'email' | 'initial_roles' | 'created_at'>
+
+/** Everyone allowed to sign in, with the profile of those who already have. */
+export async function loadAccess(client: Client) {
+  const [invites, profiles] = await Promise.all([
+    client.from('allowlist').select('email, initial_roles, created_at').order('email'),
+    loadProfiles(client),
+  ])
+  return { invites: must(invites) as Invite[], profiles }
+}
+
+export async function addInvite(client: Client, email: string, roles: AppRole[]) {
+  check(await client.from('allowlist').insert({ email: email.trim().toLowerCase(), initial_roles: roles }))
+}
+
+/** Also changes the roles of an account that has already signed in. */
+export async function setInviteRoles(client: Client, email: string, roles: AppRole[]) {
+  check(await client.from('allowlist').update({ initial_roles: roles }).eq('email', email))
+}
+
+/** Also takes away every role from an account that has already signed in. */
+export async function removeInvite(client: Client, email: string) {
+  check(await client.from('allowlist').delete().eq('email', email))
 }
 
 // ---------------------------------------------------------------------------

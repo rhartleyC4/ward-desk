@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(57);
+select plan(64);
 
 -- Act as a seeded user for the rest of the transaction, or until the next call.
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
@@ -268,6 +268,52 @@ select throws_ok(
   $$ select public.delete_agenda_section(id) from public.agenda_sections where title = 'Primary' $$,
   '42501', null,
   'a leader cannot delete sections, even in a meeting they attend'
+);
+
+-- ---------------------------------------------------------------------------
+-- Admins manage who may sign in, and changes reach existing accounts
+-- ---------------------------------------------------------------------------
+
+select pg_temp.act_as('first@ward.test');
+
+select throws_ok(
+  $$ insert into public.allowlist (email, initial_roles) values ('friend@ward.test', '{bishopric}') $$,
+  '42501', null,
+  'bishopric who is not admin cannot add to the allowlist'
+);
+
+select pg_temp.act_as('bishop@ward.test');
+
+select lives_ok(
+  $$ insert into public.allowlist (email, initial_roles) values ('newcomer@ward.test', '{leader}') $$,
+  'admin adds an email to the allowlist'
+);
+select is(
+  (select invited_by from public.allowlist where email = 'newcomer@ward.test'),
+  (select auth.uid()), 'the allowlist records who added the email'
+);
+
+update public.allowlist set initial_roles = '{bishopric}' where email = 'LEADER@ward.test';
+select is(
+  (select array_agg(r.role)::text from public.roles r join public.profiles p on p.id = r.user_id where p.email = 'leader@ward.test'),
+  '{bishopric}', 'changing roles on the allowlist updates someone who already signed in'
+);
+
+delete from public.allowlist where email = 'rspres@ward.test';
+select is(
+  (select count(*)::int from public.roles r join public.profiles p on p.id = r.user_id where p.email = 'rspres@ward.test'),
+  0, 'removing an email takes away that account''s roles'
+);
+
+select throws_ok(
+  $$ delete from public.allowlist where email = 'bishop@ward.test' $$,
+  '42501', null,
+  'admin cannot remove their own email'
+);
+select throws_ok(
+  $$ update public.allowlist set initial_roles = '{bishopric}' where email = 'bishop@ward.test' $$,
+  '42501', null,
+  'admin cannot drop their own admin role'
 );
 
 select * from finish();
