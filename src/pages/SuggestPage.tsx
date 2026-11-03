@@ -4,6 +4,7 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
+import { CallingField } from '../components/CallingField'
 import { ErrorNote, SectionCard } from '../components/Layout'
 import { submitSuggestion } from '../lib/queries'
 import { supabase } from '../lib/supabase'
@@ -40,7 +41,7 @@ export function SuggestPage() {
         </Alert>
       )}
       <Stack component="form" onSubmit={submit} spacing={1.5}>
-        <TextField label="Calling" required value={form.calling_title} onChange={(e) => setForm({ ...form, calling_title: e.target.value })} />
+        <CallingField required value={form.calling_title} onChange={(calling_title) => setForm({ ...form, calling_title })} />
         <TextField label="Name" required value={form.person_name} onChange={(e) => setForm({ ...form, person_name: e.target.value })} />
         <TextField label="Notes (optional)" multiline minRows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         <Button type="submit" variant="contained" disabled={save.busy}>

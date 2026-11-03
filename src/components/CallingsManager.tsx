@@ -15,6 +15,7 @@ import type { IsoDate } from '../lib/dates'
 import type { Enums, TablesUpdate } from '../lib/database.types'
 import type { Appointment, CallingNeed, Candidate, Profile } from '../lib/queries'
 import { nativeSelect } from '../theme'
+import { CallingField } from './CallingField'
 import { Muted } from './Layout'
 
 const STATUSES: { value: Enums<'candidate_status'>; label: string }[] = [
@@ -200,7 +201,7 @@ function AddNeed({ onAdd }: { onAdd: CallingsActions['addNeed'] }) {
       </Typography>
       <Grid container spacing={1.5}>
         <Grid size={{ xs: 12, sm: 5 }}>
-          <TextField label="Calling" value={form.calling_title} onChange={(e) => setForm({ ...form, calling_title: e.target.value })} />
+          <CallingField value={form.calling_title} onChange={(calling_title) => setForm({ ...form, calling_title })} />
         </Grid>
         <Grid size={{ xs: 12, sm: 5 }}>
           <TextField label="Releasing (optional)" value={form.release_name} onChange={(e) => setForm({ ...form, release_name: e.target.value })} />
