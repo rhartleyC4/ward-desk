@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(68);
+select plan(69);
 
 -- Act as a seeded user for the rest of the transaction, or until the next call.
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
@@ -13,6 +13,12 @@ begin
   perform set_config('role', 'authenticated', true);
 end;
 $$;
+
+select is(
+  (select array_agg(p.office::text order by p.office)::text from public.profiles p join public.allowlist a using (email) where a.initial_office = p.office),
+  '{bishop,first_counselor,second_counselor,executive_secretary,ward_clerk}',
+  'seeded positions live on the allowlist, matching the profiles'
+);
 
 -- ---------------------------------------------------------------------------
 -- Allowlist sign-up trigger

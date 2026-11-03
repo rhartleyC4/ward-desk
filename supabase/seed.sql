@@ -3,17 +3,17 @@
 -- or use the practice password "gp7" (integration tests do this). The training site loads this
 -- seed too, so trainees sign in with it. Never reuse it anywhere real.
 
-insert into public.allowlist (email, initial_roles) values
-  ('bishop@ward.test', '{admin,bishopric}'),
-  ('first@ward.test', '{bishopric}'),
-  ('second@ward.test', '{bishopric}'),
-  ('secretary@ward.test', '{bishopric}'),
-  ('clerk@ward.test', '{bishopric}'),
-  ('leader@ward.test', '{leader}'),
-  ('rspres@ward.test', '{leader}');
+insert into public.allowlist (email, initial_roles, initial_office) values
+  ('bishop@ward.test', '{admin,bishopric}', 'bishop'),
+  ('first@ward.test', '{bishopric}', 'first_counselor'),
+  ('second@ward.test', '{bishopric}', 'second_counselor'),
+  ('secretary@ward.test', '{bishopric}', 'executive_secretary'),
+  ('clerk@ward.test', '{bishopric}', 'ward_clerk'),
+  ('leader@ward.test', '{leader}', null),
+  ('rspres@ward.test', '{leader}', null);
 
 -- Create the auth users up front so seed rows can reference them.
--- The on_auth_user_created trigger fills in profiles and roles from the allowlist.
+-- The on_auth_user_created trigger fills in profiles, roles and positions from the allowlist.
 insert into auth.users (instance_id, id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, encrypted_password, confirmation_token, recovery_token, email_change_token_new, email_change)
 select '00000000-0000-0000-0000-000000000000', u.id, 'authenticated', 'authenticated', u.email, now(),
        '{"provider":"email","providers":["email"]}', jsonb_build_object('full_name', u.full_name), now(), now(), extensions.crypt('gp7', extensions.gen_salt('bf')), '', '', '', ''
@@ -31,11 +31,11 @@ insert into auth.identities (id, user_id, provider_id, provider, identity_data, 
 select gen_random_uuid(), id, id::text, 'email', jsonb_build_object('sub', id::text, 'email', email, 'email_verified', true), now(), now(), now()
 from auth.users where email like '%@ward.test';
 
-update public.profiles set short_name = 'Bishop', office = 'bishop' where email = 'bishop@ward.test';
-update public.profiles set short_name = 'Lane', office = 'first_counselor' where email = 'first@ward.test';
-update public.profiles set short_name = 'Ortiz', office = 'second_counselor' where email = 'second@ward.test';
-update public.profiles set short_name = 'Quinn', office = 'executive_secretary' where email = 'secretary@ward.test';
-update public.profiles set short_name = 'Pike', office = 'ward_clerk' where email = 'clerk@ward.test';
+update public.profiles set short_name = 'Bishop' where email = 'bishop@ward.test';
+update public.profiles set short_name = 'Lane' where email = 'first@ward.test';
+update public.profiles set short_name = 'Ortiz' where email = 'second@ward.test';
+update public.profiles set short_name = 'Quinn' where email = 'secretary@ward.test';
+update public.profiles set short_name = 'Pike' where email = 'clerk@ward.test';
 
 -- Sacrament tab ---------------------------------------------------------------
 
