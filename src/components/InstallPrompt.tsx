@@ -98,14 +98,14 @@ export function InstallPrompt() {
           <li>
             Tap Share
             <IosShareIcon aria-hidden sx={inline} />
-            in the browser. In Safari, tap ••• first if you don't see it.
+            in the browser (if it's not there, tap ••• first).
           </li>
           <li>
-            Choose Add to Home Screen
+            Tap View More, then scroll down to Add to Home Screen
             <AddBoxOutlinedIcon aria-hidden sx={inline} />
-            then tap Add.
+            and tap it.
           </li>
-          <li>Open Ward Desk from its icon from now on.</li>
+          <li>Tap Add, then open Ward Desk from its icon from now on.</li>
         </Box>
       ) : (
         <Box component="ol" sx={{ m: 0, pl: 2.5 }}>
