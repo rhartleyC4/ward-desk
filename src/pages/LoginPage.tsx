@@ -1,3 +1,4 @@
+import FingerprintIcon from '@mui/icons-material/Fingerprint'
 import Alert from '@mui/material/Alert'
 import Autocomplete from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
@@ -13,6 +14,8 @@ import { ErrorNote } from '../components/Layout'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { friendlyAuthError } from '../lib/authErrors'
 import { isTrainingSite } from '../lib/env'
+import { PasskeyCancelled, passkeysSupported, rememberPasskeyChoice } from '../lib/passkeys'
+import { signInWithPasskey } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 
 // The seeded accounts in supabase/seed.sql. Keep the two in sync.
@@ -31,6 +34,7 @@ export function LoginPage() {
   const [sent, setSent] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [noPasskey, setNoPasskey] = useState(false)
 
   const sendLink = async () => {
     setBusy(true)
@@ -50,6 +54,23 @@ export function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false)
     if (error) setError(friendlyAuthError(error.message))
+  }
+
+  const passkeySignIn = async () => {
+    setBusy(true)
+    setError(null)
+    setNoPasskey(false)
+    try {
+      const userId = await signInWithPasskey(supabase)
+      // This device has a passkey, so don't offer to set one up after signing in.
+      rememberPasskeyChoice(userId, 'ready')
+    } catch (e) {
+      // Closing the prompt and having no passkey look the same to the browser.
+      if (e instanceof PasskeyCancelled) setNoPasskey(true)
+      else setError((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   // The seeded @ward.test accounts can't receive email, so they sign in with the seed password:
@@ -131,6 +152,16 @@ export function LoginPage() {
                 <Button variant="outlined" onClick={google}>
                   Sign in with Google
                 </Button>
+              )}
+              {passkeysSupported() && (
+                <Button variant="outlined" startIcon={<FingerprintIcon />} disabled={busy} onClick={() => void passkeySignIn()}>
+                  Face ID or fingerprint
+                </Button>
+              )}
+              {noPasskey && (
+                <Typography variant="body2" color="text.secondary">
+                  No Face ID or fingerprint sign-in on this device yet? Sign in another way first, then turn it on when asked.
+                </Typography>
               )}
             </Stack>
           )}

@@ -1,3 +1,4 @@
+import FingerprintIcon from '@mui/icons-material/Fingerprint'
 import LogoutIcon from '@mui/icons-material/Logout'
 import Alert from '@mui/material/Alert'
 import AppBar from '@mui/material/AppBar'
@@ -16,6 +17,7 @@ import type { ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { navFor } from '../lib/access'
+import { PasskeyOffer } from './PasskeyOffer'
 import { ThemeToggle } from './ThemeToggle'
 
 export function Layout() {
@@ -46,6 +48,11 @@ export function Layout() {
             {profile?.display_name}
           </Typography>
           <ThemeToggle />
+          <Tooltip title="Face ID and fingerprint sign-in">
+            <IconButton color="inherit" aria-label="Face ID and fingerprint sign-in" component={NavLink} to="/account">
+              <FingerprintIcon />
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Sign out">
             <IconButton color="inherit" aria-label="Sign out" onClick={signOut}>
               <LogoutIcon />
@@ -54,6 +61,7 @@ export function Layout() {
         </Toolbar>
       </AppBar>
       <Container maxWidth="md" sx={{ py: 2 }}>
+        <PasskeyOffer />
         <Outlet />
       </Container>
     </Box>

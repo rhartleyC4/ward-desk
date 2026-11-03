@@ -2,6 +2,7 @@
 // integration tests can call the exact same queries signed in as different roles.
 
 import { addDays, type IsoDate } from './dates'
+import { toPasskeyError } from './passkeys'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
 
@@ -228,4 +229,32 @@ export async function addPrayerName(client: Client, name: string) {
 
 export async function removePrayerName(client: Client, id: string, on: IsoDate) {
   check(await client.from('prayer_roll').update({ removed_on: on }).eq('id', id))
+}
+
+// ---------------------------------------------------------------------------
+// Passkeys (Face ID / fingerprint sign-in)
+// ---------------------------------------------------------------------------
+
+export type Passkey = { id: string; friendly_name?: string; created_at: string; last_used_at?: string }
+
+/** Signs in with a passkey already saved on this device. Returns the signed-in user's id. */
+export async function signInWithPasskey(client: Client): Promise<string> {
+  const { data, error } = await client.auth.signInWithPasskey()
+  if (error) throw toPasskeyError(error)
+  return data.user?.id ?? ''
+}
+
+/** Saves a passkey on this device for the signed-in user, named after the device. */
+export async function registerPasskey(client: Client, name: string) {
+  const { data, error } = await client.auth.registerPasskey()
+  if (error) throw toPasskeyError(error)
+  if (!data.friendly_name) check(await client.auth.passkey.update({ passkeyId: data.id, friendlyName: name }))
+}
+
+export async function listPasskeys(client: Client): Promise<Passkey[]> {
+  return must(await client.auth.passkey.list())
+}
+
+export async function deletePasskey(client: Client, id: string) {
+  check(await client.auth.passkey.delete({ passkeyId: id }))
 }

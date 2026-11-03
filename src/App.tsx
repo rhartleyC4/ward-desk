@@ -5,6 +5,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { Layout, Loading } from './components/Layout'
 import { canSeeAgenda, canSeeCallings, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
+import { AccountPage } from './pages/AccountPage'
 import { AgendaPage } from './pages/AgendaPage'
 import { AwayPage } from './pages/AwayPage'
 import { CallingsPage } from './pages/CallingsPage'
@@ -34,6 +35,7 @@ function AppRoutes() {
         <Route path="suggest" element={<Guard allow={canSuggest}><SuggestPage /></Guard>} />
         <Route path="away" element={<Guard allow={isMember}><AwayPage /></Guard>} />
         <Route path="schedule" element={<Guard allow={isMember}><SchedulePage /></Guard>} />
+        <Route path="account" element={<AccountPage />} />
         <Route
           path="no-access"
           element={

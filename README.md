@@ -152,6 +152,21 @@ Optional. Email links work without it, but Google sign-in means most people neve
 
 The allowlist still applies. A Google account whose email isn't on the allowlist is refused, and the same address can sign in with either Google or an email link. Google's sign-in screen says "continue to `<ref>.supabase.co`". Showing your own domain there needs Supabase's paid custom-domain add-on.
 
+### Face ID and fingerprint sign-in (passkeys)
+
+After someone signs in once with an email link or Google, the app offers to "Turn on" Face ID or fingerprint sign-in for that device. After that, they tap **Face ID or fingerprint** on the sign-in screen and skip the email. This matters most on iPhone: an email link opens in Safari, not in the Home Screen app, so a link sign-in never reaches the installed app, but a passkey sign-in happens inside it. Each person can see and remove their devices with the fingerprint button in the top bar. Passkeys sync through iCloud Keychain or Google Password Manager, so a new phone usually has them already.
+
+Turn passkeys on in each Supabase project's Auth settings, with that site's own domain. A passkey only works on the domain it was made for, so staging and production passkeys are separate:
+
+| Setting | Staging | Production |
+|---|---|---|
+| Passkeys | Enabled | Enabled |
+| Relying party ID | `gp7-training.warddesk.app` | `gp7.warddesk.app` |
+| Origins | `https://gp7-training.warddesk.app` | `https://gp7.warddesk.app` |
+| Display name | `Ward Desk` | `Ward Desk` |
+
+Locally, `supabase/config.toml` already turns them on for `localhost`. Open the app at `http://localhost:5173` (not `127.0.0.1`) to try them. Passkeys only work on HTTPS or localhost, so a phone on your local network can't test them; use staging. The allowlist still applies, since only someone already signed in can add a passkey.
+
 ## Handoff checklist
 
 Do these in order when passing the app to a successor:
