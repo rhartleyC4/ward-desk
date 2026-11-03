@@ -476,6 +476,9 @@ isOneToOne: false
 "legacy_agenda_section":
 { Args: { "item_kind": Database["public"]['Enums']["agenda_item_kind"] }; Returns: string
                            },
+"merge_calling":
+{ Args: { "keep_id": string,"stray_id": string }; Returns: undefined
+                           },
 "reorder_agenda_sections":
 { Args: { "section_ids": (string)[],"template": string }; Returns: undefined
                            }

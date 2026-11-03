@@ -168,6 +168,14 @@ export async function updateCallingListEntry(client: Client, id: string, changes
   check(await client.from('callings').update(changes.title === undefined ? changes : { ...changes, title: tidyTitle(changes.title) }).eq('id', id))
 }
 
+/**
+ * Admins only. Folds a stray title into the right one: open callings and unsorted suggestions take
+ * the right title, filled ones keep theirs, and the stray entry leaves the list.
+ */
+export async function mergeCalling(client: Client, strayId: string, keepId: string) {
+  check(await client.rpc('merge_calling', { stray_id: strayId, keep_id: keepId }))
+}
+
 /** Admins only. Callings already entered keep their title. */
 export async function removeFromCallingList(client: Client, id: string) {
   check(await client.from('callings').delete().eq('id', id))

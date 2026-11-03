@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(21);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -89,6 +89,48 @@ select is(
   '{"Primary Class Teacher","primary teacher"}', 'open needs take the new name; a filled one keeps its history'
 );
 select is((select count(*)::int from public.callings where title = 'Interpreter'), 0, 'the removed entry is gone for everyone');
+
+-- ---------------------------------------------------------------------------
+-- Merging a stray title into the right one
+-- ---------------------------------------------------------------------------
+
+insert into public.calling_needs (calling_title) values ('YW Sec');
+insert into public.calling_needs (calling_title, status) values ('YW Sec', 'filled');
+insert into public.calling_candidates (calling_title, person_name) values ('yw sec', 'Sister Merge');
+create temp table merge_ids as
+  select (select id from public.callings where title = 'YW Sec') as stray, (select id from public.callings where title = 'Young Women Secretary') as keep;
+grant select on merge_ids to authenticated;
+
+select throws_ok(
+  $$ select public.merge_calling(stray, keep) from merge_ids $$,
+  '42501', null,
+  'bishopric who is not admin cannot merge'
+);
+
+select pg_temp.act_as('listadmin@ward.test');
+
+select throws_ok(
+  $$ select public.merge_calling(keep, keep) from merge_ids $$,
+  'P0001', null,
+  'a calling cannot merge into itself'
+);
+select lives_ok($$ select public.merge_calling(stray, keep) from merge_ids $$, 'admin merges a stray title');
+
+select pg_temp.act_as('first@ward.test');
+
+select is((select count(*)::int from public.callings where title = 'YW Sec'), 0, 'the stray title leaves the list');
+select is(
+  (select count(*)::int from public.calling_needs where status = 'open' and calling_title = 'Young Women Secretary' and calling_id = (select keep from merge_ids)),
+  1, 'the open calling takes the right title'
+);
+select is(
+  (select calling_title from public.calling_needs where status = 'filled' and calling_id = (select keep from merge_ids)),
+  'YW Sec', 'a filled calling keeps its title but points at the right entry'
+);
+select is(
+  (select calling_title from public.calling_candidates where person_name = 'Sister Merge'),
+  'Young Women Secretary', 'an unsorted suggestion takes the right title'
+);
 
 select * from finish();
 rollback;

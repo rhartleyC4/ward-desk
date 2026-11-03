@@ -1,3 +1,4 @@
+import CallMergeIcon from '@mui/icons-material/CallMerge'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -9,12 +10,14 @@ import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import { groupCallings, ORGANIZATIONS, tidyTitle, UNREVIEWED, type ListedCalling } from '../lib/callings'
-import { addToCallingList, loadCallingList, removeFromCallingList, updateCallingListEntry } from '../lib/queries'
+import { addToCallingList, loadCallingList, mergeCalling, removeFromCallingList, updateCallingListEntry } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 import { nativeSelect } from '../theme'
 
-const friendly = (message: string) => (/duplicate key/i.test(message) ? 'That title is already on the list. Remove the extra one instead.' : message)
+const friendly = (message: string) => (/duplicate key/i.test(message) ? 'That title is already on the list. Merge this one into it instead.' : message)
+
+type Groups = ReturnType<typeof groupCallings>
 
 /** Handbook organizations plus any an admin has used, for the organization picker. */
 const organizationsIn = (list: ListedCalling[]) => [...new Set([...ORGANIZATIONS, ...list.flatMap((c) => (c.organization ? [c.organization] : []))])]
@@ -38,19 +41,63 @@ function OrganizationSelect({ label, value, organizations, onChange }: { label: 
   )
 }
 
+/** Picks the right title to fold a stray one into, grouped like the list. */
+function MergeInto({ calling, groups, busy, onMerge, onCancel }: { calling: ListedCalling; groups: Groups; busy: boolean; onMerge: (keep: ListedCalling) => void; onCancel: () => void }) {
+  const [keepId, setKeepId] = useState('')
+  const keep = groups.flatMap((g) => g.callings).find((c) => c.id === keepId)
+  return (
+    <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center', pl: { sm: 2 } }}>
+      <Box sx={{ flex: '1 1 260px' }}>
+        <TextField
+          select
+          label="Merge into"
+          slotProps={{ ...nativeSelect, htmlInput: { 'aria-label': `Merge ${calling.title} into` } }}
+          value={keepId}
+          onChange={(e) => setKeepId(e.target.value)}
+        >
+          <option value="">Choose the right title</option>
+          {groups.map(({ group, callings }) => {
+            const others = callings.filter((c) => c.id !== calling.id)
+            return (
+              others.length > 0 && (
+                <optgroup key={group} label={group}>
+                  {others.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </optgroup>
+              )
+            )
+          })}
+        </TextField>
+      </Box>
+      <Button variant="contained" disabled={!keep || busy} onClick={() => keep && onMerge(keep)}>
+        Merge
+      </Button>
+      <Button onClick={onCancel}>Cancel</Button>
+    </Stack>
+  )
+}
+
 function CallingRow({
   calling,
   organizations,
+  groups,
   busy,
   onSave,
+  onMerge,
   onRemove,
 }: {
   calling: ListedCalling
   organizations: string[]
+  groups: Groups
   busy: boolean
   onSave: (changes: { title?: string; organization?: string | null }) => Promise<boolean>
+  onMerge: (keep: ListedCalling) => void
   onRemove: () => void
 }) {
+  const [merging, setMerging] = useState(false)
   const [title, setTitle] = useState(calling.title)
   const saveTitle = () => {
     const next = tidyTitle(title)
@@ -59,37 +106,47 @@ function CallingRow({
     else if (next !== calling.title) onSave({ title: next }).then((ok) => !ok && setTitle(calling.title))
   }
   return (
-    <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-      <Box sx={{ flex: '1 1 220px' }}>
-        <TextField
-          label="Title"
-          value={title}
-          slotProps={{ htmlInput: { 'aria-label': `Title for ${calling.title}` } }}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={saveTitle}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              saveTitle()
-            }
-          }}
-        />
-      </Box>
-      <Box sx={{ flex: '1 1 160px', maxWidth: { sm: 220 } }}>
-        <OrganizationSelect
-          label={`Organization for ${calling.title}`}
-          value={calling.organization}
-          organizations={organizations}
-          onChange={(organization) => onSave({ organization })}
-        />
-      </Box>
-      <Tooltip title="Remove">
-        <span>
-          <IconButton size="small" aria-label={`Remove ${calling.title}`} disabled={busy} onClick={onRemove}>
-            <DeleteOutlinedIcon fontSize="small" />
-          </IconButton>
-        </span>
-      </Tooltip>
+    <Stack spacing={1}>
+      <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Box sx={{ flex: '1 1 220px' }}>
+          <TextField
+            label="Title"
+            value={title}
+            slotProps={{ htmlInput: { 'aria-label': `Title for ${calling.title}` } }}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={saveTitle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                saveTitle()
+              }
+            }}
+          />
+        </Box>
+        <Box sx={{ flex: '1 1 160px', maxWidth: { sm: 220 } }}>
+          <OrganizationSelect
+            label={`Organization for ${calling.title}`}
+            value={calling.organization}
+            organizations={organizations}
+            onChange={(organization) => onSave({ organization })}
+          />
+        </Box>
+        <Stack direction="row">
+          <Tooltip title="Merge into another title">
+            <IconButton size="small" aria-label={`Merge ${calling.title}`} aria-pressed={merging} color={merging ? 'primary' : 'default'} onClick={() => setMerging(!merging)}>
+              <CallMergeIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Remove">
+            <span>
+              <IconButton size="small" aria-label={`Remove ${calling.title}`} disabled={busy} onClick={onRemove}>
+                <DeleteOutlinedIcon fontSize="small" />
+              </IconButton>
+            </span>
+          </Tooltip>
+        </Stack>
+      </Stack>
+      {merging && <MergeInto calling={calling} groups={groups} busy={busy} onMerge={onMerge} onCancel={() => setMerging(false)} />}
     </Stack>
   )
 }
@@ -125,6 +182,7 @@ export function CallingListPage() {
   }
 
   const organizations = organizationsIn(data)
+  const all = groupCallings(data)
   const needle = find.trim().toLowerCase()
   const groups = groupCallings(needle ? data.filter((c) => c.title.toLowerCase().includes(needle)) : data)
   // Titles waiting for review go first here, since tidying them is what this page is for.
@@ -138,7 +196,7 @@ export function CallingListPage() {
       <Box sx={{ mb: 2 }}>
         <Muted>
           These are the titles the Calling box suggests. When the bishopric types a title that isn't here, it shows up under {UNREVIEWED}. Fix its spelling,
-          file it under an organization, or remove it. Renaming a title also renames the open callings that use it. Filled ones keep the title they had.
+          file it under an organization, merge it into the right title, or remove it. Renaming a title also renames the open callings that use it. Filled ones keep the title they had.
         </Muted>
       </Box>
       <ErrorNote error={save.error} />
@@ -176,8 +234,17 @@ export function CallingListPage() {
                 key={`${calling.id}-${calling.title}`}
                 calling={calling}
                 organizations={organizations}
+                groups={all}
                 busy={save.busy}
                 onSave={(changes) => run(() => updateCallingListEntry(supabase, calling.id, changes))}
+                onMerge={(keep) => {
+                  if (
+                    window.confirm(
+                      `Merge ${calling.title} into ${keep.title}? Open callings and new suggestions using ${calling.title} become ${keep.title}, and ${calling.title} leaves the list.`,
+                    )
+                  )
+                    run(() => mergeCalling(supabase, calling.id, keep.id))
+                }}
                 onRemove={() => {
                   if (window.confirm(`Remove ${calling.title} from the list? Callings already entered keep their title.`))
                     run(() => removeFromCallingList(supabase, calling.id))

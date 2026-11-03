@@ -8,6 +8,7 @@ import {
   loadAgendaTemplates,
   loadCallingList,
   loadCallings,
+  mergeCalling,
   removeFromCallingList,
   submitSuggestion,
   updateCandidate,
@@ -115,5 +116,21 @@ describe('calling list', () => {
     const entry = (await loadCallingList(bishop)).find((c) => c.title === `${TAG} Choir Librarian`)!
     await removeFromCallingList(bishop, entry.id)
     expect((await loadCallingList(bishop)).some((c) => c.id === entry.id)).toBe(false)
+  })
+
+  it('merges a stray title into the right one, renaming the open calling', async () => {
+    const first = await signIn('first')
+    await addNeed(first, { calling_title: `${TAG} Prim Pres` })
+    await addToCallingList(await signIn('bishop'), { title: `${TAG} Primary President`, organization: 'Primary' })
+    const list = await loadCallingList(first)
+    const stray = list.find((c) => c.title === `${TAG} Prim Pres`)!
+    const keep = list.find((c) => c.title === `${TAG} Primary President`)!
+
+    await expect(mergeCalling(first, stray.id, keep.id)).rejects.toThrow(/admins/)
+    await mergeCalling(await signIn('bishop'), stray.id, keep.id)
+
+    expect((await loadCallingList(first)).some((c) => c.id === stray.id)).toBe(false)
+    const need = (await loadCallings(first)).needs.find((n) => n.calling_id === keep.id)!
+    expect(need.calling_title).toBe(`${TAG} Primary President`)
   })
 })
