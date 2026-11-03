@@ -1,5 +1,6 @@
 import AddBoxOutlinedIcon from '@mui/icons-material/AddBoxOutlined'
 import IosShareIcon from '@mui/icons-material/IosShare'
+import MoreVertIcon from '@mui/icons-material/MoreVert'
 import Alert from '@mui/material/Alert'
 import AlertTitle from '@mui/material/AlertTitle'
 import Box from '@mui/material/Box'
@@ -83,7 +84,16 @@ export function InstallPrompt() {
       sx={{ mb: 1.5 }}
     >
       <AlertTitle>Add Ward Desk to your home screen</AlertTitle>
-      {platform === 'ios' ? (
+      {installEvent ? (
+        <>
+          It opens like any other app and keeps you signed in.
+          <Box sx={{ mt: 1 }}>
+            <Button variant="contained" size="small" onClick={install}>
+              Install
+            </Button>
+          </Box>
+        </>
+      ) : platform === 'ios' ? (
         <Box component="ol" sx={{ m: 0, pl: 2.5 }}>
           <li>
             Tap Share
@@ -98,14 +108,15 @@ export function InstallPrompt() {
           <li>Open Ward Desk from its icon from now on.</li>
         </Box>
       ) : (
-        <>
-          It opens like any other app and keeps you signed in.
-          <Box sx={{ mt: 1 }}>
-            <Button variant="contained" size="small" onClick={install}>
-              Install
-            </Button>
-          </Box>
-        </>
+        <Box component="ol" sx={{ m: 0, pl: 2.5 }}>
+          <li>
+            Open the browser menu
+            <MoreVertIcon aria-hidden sx={inline} />
+            (on Samsung Internet, it's ≡ at the bottom).
+          </li>
+          <li>Choose Install app or Add to Home screen, then confirm.</li>
+          <li>Open Ward Desk from its icon from now on.</li>
+        </Box>
       )}
     </Alert>
   )

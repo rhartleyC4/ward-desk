@@ -1,5 +1,5 @@
 /** How the app can be added to this device's home screen. */
-export type InstallPlatform = 'installed' | 'ios' | 'other'
+export type InstallPlatform = 'installed' | 'ios' | 'android' | 'other'
 
 export interface DeviceInfo {
   userAgent: string
@@ -11,12 +11,14 @@ export interface DeviceInfo {
 /**
  * iPhones and iPads have no install prompt, so they get written steps instead.
  * iPadOS reports itself as a Mac, so a touch screen is what gives it away.
+ * Android browsers don't always offer a prompt either, so they get steps too.
  * Everything else ('other') installs through the browser's own prompt, when it offers one.
  */
 export function installPlatform({ userAgent, maxTouchPoints, standalone }: DeviceInfo): InstallPlatform {
   if (standalone) return 'installed'
   if (/iPhone|iPad|iPod/.test(userAgent)) return 'ios'
   if (/Macintosh/.test(userAgent) && maxTouchPoints > 1) return 'ios'
+  if (/Android/.test(userAgent)) return 'android'
   return 'other'
 }
 

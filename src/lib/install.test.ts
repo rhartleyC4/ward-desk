@@ -23,7 +23,7 @@ describe('installPlatform', () => {
     expect(installPlatform({ userAgent: IPAD, maxTouchPoints: 0, standalone: false })).toBe('other')
   })
 
-  it('treats Android as other, since its browser offers its own prompt', () => {
-    expect(installPlatform({ userAgent: ANDROID, maxTouchPoints: 5, standalone: false })).toBe('other')
+  it('treats Android phones as Android', () => {
+    expect(installPlatform({ userAgent: ANDROID, maxTouchPoints: 5, standalone: false })).toBe('android')
   })
 })

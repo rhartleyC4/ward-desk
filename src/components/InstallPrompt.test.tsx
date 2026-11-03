@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { InstallPrompt } from './InstallPrompt'
 
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1'
+const ANDROID = 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -28,7 +29,17 @@ describe('InstallPrompt', () => {
     expect(screen.queryByRole('button', { name: 'Install' })).not.toBeInTheDocument()
   })
 
-  it('shows nothing until the browser offers to install', () => {
+  it('shows menu steps on Android until the browser offers its own prompt', () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(ANDROID)
+    render(<InstallPrompt />)
+    expect(screen.getByText(/install app or add to home screen/i)).toBeInTheDocument()
+
+    fireInstallPrompt()
+    expect(screen.getByRole('button', { name: 'Install' })).toBeInTheDocument()
+    expect(screen.queryByText(/install app or add to home screen/i)).not.toBeInTheDocument()
+  })
+
+  it('shows nothing on a computer until the browser offers to install', () => {
     render(<InstallPrompt />)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
