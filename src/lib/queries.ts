@@ -244,6 +244,64 @@ export async function removePrayerName(client: Client, id: string, on: IsoDate) 
 }
 
 // ---------------------------------------------------------------------------
+// Managing meetings (agenda templates)
+// ---------------------------------------------------------------------------
+
+export type AgendaAttendee = Tables<'agenda_attendees'>
+export type MeetingSetup = Awaited<ReturnType<typeof loadMeetingSetup>>
+export type TemplateFields = Pick<TablesInsert<'agenda_templates'>, 'name' | 'weekday' | 'weeks_of_month' | 'start_time'>
+
+export async function loadMeetingSetup(client: Client) {
+  const [templates, attendees, profiles, bishopric] = await Promise.all([
+    loadAgendaTemplates(client),
+    client.from('agenda_attendees').select('*'),
+    loadProfiles(client),
+    client.from('roles').select('user_id').eq('role', 'bishopric'),
+  ])
+  // The bishopric sees every agenda already, so they aren't offered as attendees.
+  return { templates, attendees: must(attendees), profiles, bishopricIds: must(bishopric).map((r) => r.user_id) }
+}
+
+export async function createAgendaTemplate(client: Client, template: TemplateFields & { slug: string; position: number }) {
+  check(await client.from('agenda_templates').insert(template))
+}
+
+export async function updateAgendaTemplate(client: Client, id: string, changes: TemplateFields) {
+  check(await client.from('agenda_templates').update(changes).eq('id', id))
+}
+
+/** Refused for the bishopric meeting and for any meeting that already has agendas or items. */
+export async function deleteAgendaTemplate(client: Client, id: string) {
+  check(await client.rpc('delete_agenda_template', { template: id }))
+}
+
+export async function addAgendaSection(client: Client, section: Pick<TablesInsert<'agenda_sections'>, 'template_id' | 'position' | 'kind' | 'title'>) {
+  check(await client.from('agenda_sections').insert(section))
+}
+
+export async function renameAgendaSection(client: Client, id: string, title: string) {
+  check(await client.from('agenda_sections').update({ title }).eq('id', id))
+}
+
+/** Saves a meeting's sections in this order. */
+export async function reorderAgendaSections(client: Client, templateId: string, sectionIds: string[]) {
+  check(await client.rpc('reorder_agenda_sections', { template: templateId, section_ids: sectionIds }))
+}
+
+/** Refused while the section has open items; its resolved items are removed with it. */
+export async function deleteAgendaSection(client: Client, id: string) {
+  check(await client.rpc('delete_agenda_section', { section: id }))
+}
+
+export async function addAttendee(client: Client, templateId: string, userId: string) {
+  check(await client.from('agenda_attendees').insert({ template_id: templateId, user_id: userId }))
+}
+
+export async function removeAttendee(client: Client, templateId: string, userId: string) {
+  check(await client.from('agenda_attendees').delete().eq('template_id', templateId).eq('user_id', userId))
+}
+
+// ---------------------------------------------------------------------------
 // Passkeys (Face ID / fingerprint sign-in)
 // ---------------------------------------------------------------------------
 

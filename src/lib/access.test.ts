@@ -6,7 +6,7 @@ const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
 
 describe('navFor', () => {
   it('gives the bishopric everything', () => {
-    expect(labels(['bishopric'], bishopric)).toEqual(['Agenda', 'Sacrament', 'Callings', 'Away', 'Schedule'])
+    expect(labels(['bishopric'], bishopric)).toEqual(['Agenda', 'Sacrament', 'Callings', 'Away', 'Schedule', 'Meetings'])
   })
 
   it('limits called leaders to the suggestion form', () => {

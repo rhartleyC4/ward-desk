@@ -62,3 +62,16 @@ export function previousMeeting(pattern: MeetingPattern, date: IsoDate): IsoDate
   for (let i = 0; i < 10 && !meetsOn(pattern, prev); i++) prev = addDays(prev, -7)
   return prev
 }
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const NTH = ['', '1st', '2nd', '3rd', '4th', '5th']
+
+/** "Every Sunday", "2nd and 4th Sundays", "1st, 3rd and 5th Tuesdays". */
+export function describePattern(pattern: MeetingPattern): string {
+  const day = DAY_NAMES[pattern.weekday]
+  const weeks = [...(pattern.weeks_of_month ?? [])].sort()
+  if (!weeks.length) return `Every ${day}`
+  const nth = weeks.map((w) => NTH[w])
+  const list = nth.length > 1 ? `${nth.slice(0, -1).join(', ')} and ${nth[nth.length - 1]}` : nth[0]
+  return `${list} ${day}${nth.length > 1 ? 's' : ''}`
+}

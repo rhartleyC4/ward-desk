@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   awayOn,
+  describePattern,
   eventsOn,
   followingMeeting,
   formatTime,
@@ -111,5 +112,15 @@ describe('meeting patterns', () => {
     expect(nextMeeting(tuesday, '2026-11-01')).toBe('2026-11-03')
     expect(followingMeeting(tuesday, '2026-11-03')).toBe('2026-12-01')
     expect(previousMeeting(tuesday, '2026-11-03')).toBe('2026-10-06')
+  })
+})
+
+describe('describePattern', () => {
+  it('reads like the schedule tab', () => {
+    expect(describePattern({ weekday: 0, weeks_of_month: null })).toBe('Every Sunday')
+    expect(describePattern({ weekday: 0, weeks_of_month: [] })).toBe('Every Sunday')
+    expect(describePattern({ weekday: 0, weeks_of_month: [4, 2] })).toBe('2nd and 4th Sundays')
+    expect(describePattern({ weekday: 2, weeks_of_month: [1, 3, 5] })).toBe('1st, 3rd and 5th Tuesdays')
+    expect(describePattern({ weekday: 3, weeks_of_month: [1] })).toBe('1st Wednesday')
   })
 })

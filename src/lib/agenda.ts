@@ -132,3 +132,35 @@ export function interviewsOn(date: IsoDate, interviews: Interview[], timeZone: s
   }
   return [...groups.values()]
 }
+
+/** What each section kind shows, for the meeting setup page. */
+export const SECTION_KINDS: Record<Enums<'agenda_section_kind'>, string> = {
+  items: 'Items (carried forward until done)',
+  calendar: 'Calendar (dated items)',
+  assignments: 'Assignments due this month',
+  sacrament: 'Upcoming sacrament meetings',
+  interviews: 'Interviews and appointments',
+  callings: 'Callings needed',
+  releases: 'Releases that day',
+  sustainings: 'Sustainings that day',
+  prayer_roll: 'Prayer roll',
+  closing_prayer: 'Closing prayer',
+}
+
+/** A URL slug from a meeting name, made unique among the slugs already taken. */
+export function slugFor(name: string, taken: string[]): string {
+  const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'meeting'
+  let slug = base
+  for (let n = 2; taken.includes(slug); n++) slug = `${base}-${n}`
+  return slug
+}
+
+/** The ids in a new order after moving one up or down a place. */
+export function moveId(ids: string[], id: string, by: -1 | 1): string[] {
+  const from = ids.indexOf(id)
+  const to = from + by
+  if (from < 0 || to < 0 || to >= ids.length) return ids
+  const next = [...ids]
+  ;[next[from], next[to]] = [next[to], next[from]]
+  return next
+}

@@ -426,8 +426,17 @@ isOneToOne: false
 "bishopric_template":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"can_manage_meetings":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "can_use_prayer_roll":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"delete_agenda_section":
+{ Args: { "section": string }; Returns: undefined
+                           },
+"delete_agenda_template":
+{ Args: { "template": string }; Returns: undefined
                            },
 "has_any_role":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -440,6 +449,9 @@ isOneToOne: false
                            },
 "legacy_agenda_section":
 { Args: { "item_kind": Database["public"]['Enums']["agenda_item_kind"] }; Returns: string
+                           },
+"reorder_agenda_sections":
+{ Args: { "section_ids": (string)[],"template": string }; Returns: undefined
                            }
           }
           Enums: {

@@ -32,7 +32,7 @@ Roles live in the `roles` table, not in Google. Access is enforced by Row Level 
 | Role | Can do |
 |------|--------|
 | admin | Manage users, roles, settings |
-| bishopric | The bishop, 1st and 2nd counselors, executive secretary and ward clerk. View and decide on calling proposals, schedule interviews, manage meetings |
+| bishopric | The bishop, 1st and 2nd counselors, executive secretary and ward clerk. View and decide on calling proposals, schedule interviews, manage meetings and their agendas |
 | leader | Other called leaders. Submit name suggestions only; **cannot** see calling proposals |
 
 Meeting agendas follow attendance, not roles. The bishopric sees every agenda. Anyone else sees only the meetings they're listed for in `agenda_attendees`, plus the shared prayer roll if one of those agendas shows it. A leader who attends ward council can read and edit the ward council agenda, but still can't see interviews or callings.
@@ -199,21 +199,20 @@ Each meeting with an agenda is a row in `agenda_templates`: its name, URL slug, 
 | `prayer_roll` | The prayer roll, shared by every agenda that shows it |
 | `closing_prayer` | The closing prayer from the agenda header |
 
-To add a meeting (youth council, for example), have an admin insert a template, its sections and its attendees in the SQL editor, or ship them in a migration. Nothing in the app needs to change. There's no screen for editing templates yet.
+Interviews and callings stay confidential: those sections show nothing to attendees outside the bishopric.
 
-```sql
-with t as (
-  insert into public.agenda_templates (slug, name, position, weekday, weeks_of_month, start_time)
-  values ('youth-council', 'Youth Council', 3, 0, '{3}', '09:30') returning id
-)
-insert into public.agenda_sections (template_id, position, kind, title)
-select id, s.position, s.kind::public.agenda_section_kind, s.title from t,
-  (values (1, 'items', 'Activities'), (2, 'calendar', 'Calendar'), (3, 'closing_prayer', 'Closing prayer')) as s (position, kind, title);
+Manage them on the **Meetings** page. Anyone in the bishopric role (the bishop, counselors, executive secretary and ward clerk) and admins can use it; leaders can't. There you can:
 
-insert into public.agenda_attendees (template_id, user_id)
-select t.id, p.id from public.agenda_templates t, public.profiles p
-where t.slug = 'youth-council' and p.email = 'leader@example.com';
-```
+- create a meeting and set its day, weeks of the month and time
+- add sections, rename them, move them up or down, and remove them
+- choose who attends besides the bishopric
+
+The database enforces the same rule (`can_manage_meetings()`), plus two safeguards:
+
+- A section can only be removed once all its items are marked done. Its finished items are removed with it.
+- A meeting can only be deleted if it has never had an agenda or item. The bishopric meeting can never be deleted.
+
+A section's kind can't be changed after it's added. Add a new section and remove the old one instead.
 
 ## Maintenance notes
 

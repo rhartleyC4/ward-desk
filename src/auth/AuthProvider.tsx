@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { AppRole } from '../lib/access'
-import { loadMe, type AgendaTemplate, type Profile } from '../lib/queries'
+import { loadAgendaTemplates, loadMe, type AgendaTemplate, type Profile } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 
 type AuthState = {
@@ -11,6 +11,8 @@ type AuthState = {
   roles: AppRole[]
   /** The meetings whose agendas this user can open. */
   templates: AgendaTemplate[]
+  /** Re-reads the meetings after one is created or changed, so the Agenda tabs stay current. */
+  reloadTemplates: () => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -53,12 +55,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const current = userId && me?.userId === userId ? me : null
   const loading = !sessionKnown || (!!userId && !current)
 
+  const reloadTemplates = async () => {
+    const templates = await loadAgendaTemplates(supabase)
+    setMe((m) => (m ? { ...m, templates } : m))
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ loading, session, profile: current?.profile ?? null, roles: current?.roles ?? [], templates: current?.templates ?? [], signOut }}>
+    <AuthContext.Provider value={{ loading, session, profile: current?.profile ?? null, roles: current?.roles ?? [], templates: current?.templates ?? [], reloadTemplates, signOut }}>
       {children}
     </AuthContext.Provider>
   )

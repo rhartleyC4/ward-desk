@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(48);
+select plan(57);
 
 -- Act as a seeded user for the rest of the transaction, or until the next call.
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
@@ -214,6 +214,60 @@ select ok((select count(*) from public.allowlist) >= 5, 'admin manages the allow
 select lives_ok(
   $$ update public.profiles set office = 'ward_clerk' where email = 'secretary@ward.test' $$,
   'admin assigns offices'
+);
+
+-- ---------------------------------------------------------------------------
+-- Managing meetings: the bishopric, and nothing open is lost
+-- ---------------------------------------------------------------------------
+
+select pg_temp.act_as('clerk@ward.test');
+
+select lives_ok(
+  $$ select public.reorder_agenda_sections(id, array(select id from public.agenda_sections where template_id = t.id order by position desc))
+     from public.agenda_templates t where slug = 'ward-council' $$,
+  'ward clerk reorders sections in one call'
+);
+select is(
+  (select title from public.agenda_sections s join public.agenda_templates t on t.id = s.template_id where slug = 'ward-council' and s.position = 1),
+  'Closing prayer', 'reordering puts the sections in the given order'
+);
+select throws_ok(
+  $$ select public.delete_agenda_section(id) from public.agenda_sections where title = 'Relief Society' $$,
+  'P0001', 'This section still has open items. Mark them done first.',
+  'a section with open items cannot be deleted'
+);
+update public.agenda_items set resolved_on = '2026-11-08'
+  where section_id = (select id from public.agenda_sections where title = 'Relief Society');
+select lives_ok(
+  $$ select public.delete_agenda_section(id) from public.agenda_sections where title = 'Relief Society' $$,
+  'a section whose items are all done can be deleted'
+);
+select throws_ok(
+  $$ select public.delete_agenda_template(id) from public.agenda_templates where slug = 'ward-council' $$,
+  'P0001', null,
+  'a meeting with agendas cannot be deleted'
+);
+select throws_ok(
+  $$ select public.delete_agenda_template(public.bishopric_template()) $$,
+  'P0001', null,
+  'the bishopric meeting cannot be deleted'
+);
+
+select pg_temp.act_as('secretary@ward.test');
+select lives_ok(
+  $$ insert into public.agenda_templates (slug, name) values ('unused', 'Unused') $$,
+  'executive secretary creates a meeting'
+);
+select lives_ok(
+  $$ select public.delete_agenda_template(id) from public.agenda_templates where slug = 'unused' $$,
+  'an unused meeting can be deleted'
+);
+
+select pg_temp.act_as('rspres@ward.test');
+select throws_ok(
+  $$ select public.delete_agenda_section(id) from public.agenda_sections where title = 'Primary' $$,
+  '42501', null,
+  'a leader cannot delete sections, even in a meeting they attend'
 );
 
 select * from finish();

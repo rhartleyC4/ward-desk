@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   callingsNeeded,
   interviewsOn,
+  moveId,
+  slugFor,
   openItems,
   releasesOn,
   sacramentLine,
@@ -144,5 +146,23 @@ describe('interviewsOn', () => {
         ],
       },
     ])
+  })
+})
+
+describe('slugFor', () => {
+  it('makes a URL-safe slug that is not already taken', () => {
+    expect(slugFor('Youth Council', [])).toBe('youth-council')
+    expect(slugFor('  PEC / Welfare!  ', [])).toBe('pec-welfare')
+    expect(slugFor('Ward Council', ['ward-council'])).toBe('ward-council-2')
+    expect(slugFor('***', [])).toBe('meeting')
+  })
+})
+
+describe('moveId', () => {
+  it('swaps with the neighbor and ignores moves past either end', () => {
+    expect(moveId(['a', 'b', 'c'], 'b', -1)).toEqual(['b', 'a', 'c'])
+    expect(moveId(['a', 'b', 'c'], 'b', 1)).toEqual(['a', 'c', 'b'])
+    expect(moveId(['a', 'b', 'c'], 'a', -1)).toEqual(['a', 'b', 'c'])
+    expect(moveId(['a', 'b', 'c'], 'c', 1)).toEqual(['a', 'b', 'c'])
   })
 })
