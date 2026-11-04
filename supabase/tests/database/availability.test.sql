@@ -1,9 +1,10 @@
--- Appointment hours: who may read and change them, and what a row may hold.
+-- Appointment hours: who may read and change them, and what a row may hold. Also how long an
+-- appointment may be booked for.
 -- Run with `npm run test:db`. Relies on supabase/seed.sql.
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(13);
+select plan(18);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -76,6 +77,32 @@ select throws_ok(
 select lives_ok(
   $$ insert into public.availability_changes (user_id, on_date, starts_at, ends_at) select id, '2030-01-10', '18:00', '19:00' from public.profiles where email = 'bishop@ward.test' $$,
   'secretary gives the bishop different hours on a date'
+);
+
+-- ---------------------------------------------------------------------------
+-- Appointment lengths
+-- ---------------------------------------------------------------------------
+
+insert into public.interviews (person_name, purpose) values ('Length Default', 'calling');
+select is((select duration_minutes::int from public.interviews where person_name = 'Length Default'), 10, 'an appointment takes 10 minutes unless set');
+select lives_ok(
+  $$ update public.interviews set duration_minutes = 5 where person_name = 'Length Default' $$,
+  'extending a calling can take 5 minutes'
+);
+select throws_ok(
+  $$ insert into public.interviews (person_name, purpose, duration_minutes) values ('Length Short', 'temple_recommend', 5) $$,
+  '23514', null,
+  'a temple recommend interview takes at least 10 minutes'
+);
+select throws_ok(
+  $$ update public.interviews set duration_minutes = 12 where person_name = 'Length Default' $$,
+  '23514', null,
+  'lengths go in 5-minute steps'
+);
+select throws_ok(
+  $$ update public.interviews set duration_minutes = 0 where person_name = 'Length Default' $$,
+  '23514', null,
+  'an appointment takes some time'
 );
 
 select * from finish();

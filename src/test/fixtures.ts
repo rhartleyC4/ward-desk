@@ -101,7 +101,7 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
       { id: 'l3', title: 'RS Teacher', organization: null },
     ],
     appointments: [
-      { id: 'ap1', interviewer_id: 'l', scheduled_at: '2026-11-08T17:00:00Z', person_name: 'Sister Nash', purpose: 'calling', candidate_id: 'c3', location: null, status: 'scheduled', notes: null, created_at: ts },
+      { id: 'ap1', interviewer_id: 'l', scheduled_at: '2026-11-08T17:00:00Z', person_name: 'Sister Nash', purpose: 'calling', candidate_id: 'c3', location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10 },
     ],
     agendaItems: [
       { id: 'd1', section_id: 'bishopric-s1', kind: 'discussion', body: 'Fifth Sunday topic', event_date: null, resolved_on: null, created_by: 'b', created_at: ts },

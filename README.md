@@ -43,6 +43,8 @@ Who schedules appointments for whom lives in `secretary_assignments`, set on the
 
 The bishop and counselors keep appointment hours on the **Hours** page: usual weekly blocks (`availability`) plus single dates that differ (`availability_changes`), either different hours or not available at all. Away dates take a whole day out on top of that. A bishop or counselor who hasn't set usual hours lands on the Hours page at sign-in. Anyone in the bishopric can read and change everyone's hours, so a secretary can take out a day when a leader says he can't make it.
 
+Each appointment has a length (`interviews.duration_minutes`): 10 minutes unless the secretary changes it, in 5-minute steps, with at least 10 for a temple recommend interview. Open times (`src/lib/slots.ts`) fill each block of hours one appointment after another and start the next one right after whatever is booked ends, so lengthening or shortening a booking moves the open times around it.
+
 Adjust these as the real needs become clear.
 
 ## How it replaces the Google Sheet

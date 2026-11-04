@@ -322,7 +322,7 @@ export async function assignCallingAppointment(client: Client, candidate: Pick<C
   }
 }
 
-export async function updateAppointment(client: Client, id: string, changes: Pick<TablesUpdate<'interviews'>, 'scheduled_at' | 'status' | 'interviewer_id'>) {
+export async function updateAppointment(client: Client, id: string, changes: Pick<TablesUpdate<'interviews'>, 'scheduled_at' | 'status' | 'interviewer_id' | 'duration_minutes'>) {
   check(await client.from('interviews').update(changes).eq('id', id))
 }
 

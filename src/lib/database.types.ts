@@ -265,14 +265,14 @@ isOneToOne: false
                   ]
                 },"interviews": {
                   Row: {
-                    "candidate_id": string | null,"created_at": string,"id": string,"interviewer_id": string | null,"location": string | null,"notes": string | null,"person_name": string | null,"purpose": Database["public"]['Enums']["interview_purpose"],"scheduled_at": string | null,"status": Database["public"]['Enums']["interview_status"]
+                    "candidate_id": string | null,"created_at": string,"duration_minutes": number,"id": string,"interviewer_id": string | null,"location": string | null,"notes": string | null,"person_name": string | null,"purpose": Database["public"]['Enums']["interview_purpose"],"scheduled_at": string | null,"status": Database["public"]['Enums']["interview_status"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "candidate_id"?: string | null,"created_at"?: string,"id"?: string,"interviewer_id"?: string | null,"location"?: string | null,"notes"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
+                    "candidate_id"?: string | null,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"interviewer_id"?: string | null,"location"?: string | null,"notes"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
                   }
                   Update: {
-                    "candidate_id"?: string | null,"created_at"?: string,"id"?: string,"interviewer_id"?: string | null,"location"?: string | null,"notes"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
+                    "candidate_id"?: string | null,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"interviewer_id"?: string | null,"location"?: string | null,"notes"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
                   }
                   Relationships: [
                     {
