@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CallingNeed, Candidate } from './agenda'
-import { appointmentFor, appointmentPurpose, leadersScheduledBy, splitAppointments, toInputs, toTimestamp, whenLabel, type Appointment } from './appointments'
+import { appointmentFor, appointmentPurpose, defaultSecretaryFor, leadersScheduledBy, schedulersFrom, soleScheduler, splitAppointments, toInputs, toTimestamp, whenLabel, withDefaultSecretary, type Appointment } from './appointments'
 
 const appt = (id: string, extra: Partial<Appointment> = {}): Appointment => ({
   id,
@@ -89,5 +89,62 @@ describe('times', () => {
     const iso = toTimestamp('2026-11-08', '10:30')
     expect(toInputs(iso)).toEqual({ date: '2026-11-08', time: '10:30' })
     expect(toInputs(null)).toEqual({ date: '', time: '' })
+  })
+})
+
+describe('withDefaultSecretary', () => {
+  const leaders = ['b', 'l', 'o']
+  const exec = { id: 'exec', office: 'executive_secretary' as const }
+  const asst = { id: 'asst', office: null }
+
+  it('gives the only executive secretary every leader no one was picked for', () => {
+    expect(leadersScheduledBy('exec', withDefaultSecretary([], leaders, [exec]))).toEqual(['b', 'l', 'o'])
+    expect(leadersScheduledBy('exec', withDefaultSecretary([], leaders, [exec, asst]))).toEqual(['b', 'l', 'o'])
+  })
+
+  it('keeps the leaders someone was picked for', () => {
+    const picked = [{ leader_id: 'o', secretary_id: 'asst' }]
+    const all = withDefaultSecretary(picked, leaders, [exec, asst])
+    expect(leadersScheduledBy('exec', all)).toEqual(['b', 'l'])
+    expect(leadersScheduledBy('asst', all)).toEqual(['o'])
+    expect(defaultSecretaryFor('o', picked, [exec, asst])).toBeUndefined()
+    expect(defaultSecretaryFor('b', picked, [exec, asst])).toBe(exec)
+  })
+
+  it('picks no default when there are two executive secretaries, or none', () => {
+    const second = { id: 'exec2', office: 'executive_secretary' as const }
+    expect(withDefaultSecretary([], leaders, [exec, second])).toEqual([])
+    expect(withDefaultSecretary([], leaders, [asst])).toEqual([])
+  })
+})
+
+describe('soleScheduler', () => {
+  const exec = { id: 'exec', office: 'executive_secretary' as const }
+  const asst = { id: 'asst', office: null }
+  it('is true when the only executive secretary does all the scheduling', () => {
+    expect(soleScheduler([], [exec, asst])).toBe(true)
+    expect(soleScheduler([{ leader_id: 'b', secretary_id: 'exec' }], [exec, asst])).toBe(true)
+  })
+  it('is false with an assistant to share the leaders, even before any are picked', () => {
+    expect(soleScheduler([], [exec, { id: 'tate', office: 'assistant_executive_secretary' as const }])).toBe(false)
+  })
+
+  it('is false once someone else schedules for a leader, or with no single executive secretary', () => {
+    expect(soleScheduler([{ leader_id: 'o', secretary_id: 'asst' }], [exec, asst])).toBe(false)
+    expect(soleScheduler([], [asst])).toBe(false)
+    expect(soleScheduler([], [exec, { id: 'exec2', office: 'executive_secretary' as const }])).toBe(false)
+  })
+})
+
+describe('schedulersFrom', () => {
+  it('offers the secretaries and anyone already picked, not the clerk', () => {
+    const people = [
+      { id: 'exec', office: 'executive_secretary' as const },
+      { id: 'tate', office: 'assistant_executive_secretary' as const },
+      { id: 'pike', office: 'ward_clerk' as const },
+      { id: 'old', office: null },
+    ]
+    expect(schedulersFrom(people, []).map((p) => p.id)).toEqual(['exec', 'tate'])
+    expect(schedulersFrom(people, [{ leader_id: 'b', secretary_id: 'old' }]).map((p) => p.id)).toEqual(['exec', 'tate', 'old'])
   })
 })

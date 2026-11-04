@@ -70,11 +70,13 @@ export async function loadBishopric(client: Client): Promise<Profile[]> {
  * Bishopric members who aren't the bishop or a counselor (executive secretaries, clerk), who may
  * schedule appointments for them.
  */
-export async function loadSecretaries(client: Client): Promise<Profile[]> {
+export type Secretary = Profile & { office: Tables<'profiles'>['office'] }
+
+export async function loadSecretaries(client: Client): Promise<Secretary[]> {
   const ids = must(await client.from('roles').select('user_id').eq('role', 'bishopric')).map((r) => r.user_id)
   if (!ids.length) return []
   const rows = must(await client.from('profiles').select('id, email, display_name, short_name, office').in('id', ids).order('display_name'))
-  return rows.filter((p) => !['bishop', 'first_counselor', 'second_counselor'].includes(p.office ?? '')).map(({ office: _o, ...p }) => p)
+  return rows.filter((p) => !['bishop', 'first_counselor', 'second_counselor'].includes(p.office ?? ''))
 }
 
 // ---------------------------------------------------------------------------

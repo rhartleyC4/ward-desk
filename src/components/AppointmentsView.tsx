@@ -12,7 +12,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { personLabel } from '../lib/agenda'
-import { appointmentPurpose, leadersScheduledBy, splitAppointments, toInputs, toTimestamp, whenLabel } from '../lib/appointments'
+import { appointmentPurpose, defaultSecretaryFor, leadersScheduledBy, schedulersFrom, soleScheduler, splitAppointments, toInputs, toTimestamp, whenLabel, withDefaultSecretary } from '../lib/appointments'
 import type { Enums } from '../lib/database.types'
 import type { Appointment, AppointmentsData } from '../lib/queries'
 import { nativeSelect } from '../theme'
@@ -158,16 +158,19 @@ function AddAppointment({ data, onAdd }: { data: AppointmentsData; onAdd: Appoin
 }
 
 function WhoSchedules({ data, onChange }: { data: AppointmentsData; onChange: AppointmentsActions['setSecretary'] }) {
-  if (!data.secretaries.length) return <Muted>No executive secretaries yet. Anyone in the bishopric other than the bishop and counselors can schedule.</Muted>
+  const schedulers = schedulersFrom(data.secretaries, data.assignments)
+  if (!schedulers.length) return <Muted>No executive secretaries yet. An admin sets each person's office on the Access page.</Muted>
   return (
     <Stack divider={<Divider flexItem />} spacing={1.5}>
       {data.bishopric.map((leader) => {
         const label = personLabel(leader.id, data.profiles) || leader.display_name
+        const fallback = defaultSecretaryFor(leader.id, data.assignments, data.secretaries)
         return (
           <Box key={leader.id} role="group" aria-label={`Who schedules for ${label}`}>
             <Typography variant="h3">{leader.display_name}</Typography>
+            {fallback && <Muted>No one picked, so {fallback.display_name} schedules, as the only executive secretary.</Muted>}
             <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', columnGap: 2 }}>
-              {data.secretaries.map((s) => (
+              {schedulers.map((s) => (
                 <FormControlLabel
                   key={s.id}
                   label={s.display_name}
@@ -205,7 +208,7 @@ export function AppointmentsView({
   /** May change who schedules for whom. */
   canAssign: boolean
 }) {
-  const mine = leadersScheduledBy(userId, data.assignments)
+  const mine = leadersScheduledBy(userId, withDefaultSecretary(data.assignments, data.bishopric.map((l) => l.id), data.secretaries))
   const [scope, setScope] = useState<'mine' | 'all'>(mine.length ? 'mine' : 'all')
   const { toSchedule, scheduled } = splitAppointments(data.appointments, scope === 'mine' && mine.length ? mine : undefined)
   const mineLabel = mine.map((id) => personLabel(id, data.profiles)).filter(Boolean).join(', ')
@@ -214,7 +217,8 @@ export function AppointmentsView({
     <>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap', mb: 2 }}>
         <Typography variant="h1">Appointments</Typography>
-        {mine.length > 0 && (
+        {/* Nothing to switch between when this secretary covers every leader. */}
+        {mine.length > 0 && mine.length < data.bishopric.length && (
           <ToggleButtonGroup size="small" exclusive value={scope} onChange={(_, v) => v && setScope(v)} aria-label="Whose appointments">
             <ToggleButton value="mine">For {mineLabel}</ToggleButton>
             <ToggleButton value="all">Everyone</ToggleButton>
@@ -250,7 +254,7 @@ export function AppointmentsView({
         <AddAppointment data={data} onAdd={actions.add} />
       </SectionCard>
 
-      {canAssign && (
+      {canAssign && !soleScheduler(data.assignments, data.secretaries) && (
         <SectionCard title="Who schedules for whom">
           <WhoSchedules data={data} onChange={actions.setSecretary} />
         </SectionCard>

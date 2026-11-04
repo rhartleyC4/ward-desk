@@ -52,6 +52,8 @@ describe('homeFor', () => {
   it('lands the executive secretary on the home screen', () => {
     expect(navFor(['bishopric'], bishopric, 'executive_secretary')[0]).toEqual({ to: '/home', label: 'Home' })
     expect(homeFor(['bishopric'], bishopric, 'executive_secretary')).toBe('/home')
+    expect(homeFor(['bishopric'], bishopric, 'assistant_executive_secretary')).toBe('/home')
+    expect(homeFor(['bishopric'], bishopric, 'ward_clerk')).toBe('/agenda')
     expect(labels(['bishopric'], bishopric)).not.toContain('Home')
     expect(navFor(['leader'], [], 'executive_secretary').map((l) => l.label)).not.toContain('Home')
   })

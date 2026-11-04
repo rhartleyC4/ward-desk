@@ -32,8 +32,8 @@ function data(): AppointmentsData {
     candidates,
     bishopric: profiles,
     secretaries: [
-      { id: 'exec', email: 'secretary@ward.test', display_name: 'Brother Quinn', short_name: 'Quinn' },
-      { id: 'asst', email: 'assistant@ward.test', display_name: 'Brother Tate', short_name: 'Tate' },
+      { id: 'exec', email: 'secretary@ward.test', display_name: 'Brother Quinn', short_name: 'Quinn', office: 'executive_secretary' },
+      { id: 'asst', email: 'assistant@ward.test', display_name: 'Brother Tate', short_name: 'Tate', office: null },
     ],
     profiles,
   }
@@ -108,5 +108,38 @@ describe('AppointmentsView', () => {
     expect(a.setSecretary).toHaveBeenCalledWith('b', 'asst', true)
     await user.click(within(bishop).getByLabelText('Brother Quinn'))
     expect(a.setSecretary).toHaveBeenCalledWith('b', 'exec', false)
+  })
+
+  it('skips who schedules for whom, and the switch, when the only executive secretary does it all', () => {
+    const d = { ...data(), assignments: [{ leader_id: 'b', secretary_id: 'exec', created_at: ts }] }
+    render(<AppointmentsView data={d} userId="exec" actions={actions()} timeZone="America/Denver" canAssign />)
+    expect(screen.queryByRole('heading', { name: 'Who schedules for whom' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Whose appointments' })).not.toBeInTheDocument()
+    // He covers the counselors by default, so their appointments are on his list.
+    expect(screen.getByRole('article', { name: 'Sister Nash' })).toBeInTheDocument()
+  })
+
+  it('asks who schedules for whom once there is an assistant, defaulting to the executive secretary', () => {
+    const d = {
+      ...data(),
+      assignments: [],
+      secretaries: [
+        { id: 'exec', email: 'secretary@ward.test', display_name: 'Brother Quinn', short_name: 'Quinn', office: 'executive_secretary' as const },
+        { id: 'asst', email: 'assistant@ward.test', display_name: 'Brother Tate', short_name: 'Tate', office: 'assistant_executive_secretary' as const },
+        { id: 'clerk', email: 'clerk@ward.test', display_name: 'Brother Pike', short_name: 'Pike', office: 'ward_clerk' as const },
+      ],
+    }
+    render(<AppointmentsView data={d} userId="exec" actions={actions()} timeZone="America/Denver" canAssign />)
+    const bishop = screen.getByRole('group', { name: 'Who schedules for Bishop' })
+    expect(bishop).toHaveTextContent('No one picked, so Brother Quinn schedules')
+    expect(within(bishop).getByLabelText('Brother Tate')).not.toBeChecked()
+    expect(within(bishop).queryByLabelText('Brother Pike')).not.toBeInTheDocument()
+  })
+
+  it('says who covers a leader no one was picked for', () => {
+    const d = { ...data(), assignments: [{ leader_id: 'o', secretary_id: 'asst', created_at: ts }] }
+    render(<AppointmentsView data={d} userId="asst" actions={actions()} timeZone="America/Denver" canAssign />)
+    expect(screen.getByRole('group', { name: 'Who schedules for Bishop' })).toHaveTextContent('No one picked, so Brother Quinn schedules')
+    expect(screen.getByRole('group', { name: 'Who schedules for Ortiz' })).not.toHaveTextContent('No one picked')
   })
 })

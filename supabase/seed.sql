@@ -8,7 +8,7 @@ insert into public.allowlist (email, initial_roles, initial_office) values
   ('first@ward.test', '{bishopric}', 'first_counselor'),
   ('second@ward.test', '{bishopric}', 'second_counselor'),
   ('secretary@ward.test', '{bishopric}', 'executive_secretary'),
-  ('assistant@ward.test', '{bishopric}', null),
+  ('assistant@ward.test', '{bishopric}', 'assistant_executive_secretary'),
   ('clerk@ward.test', '{bishopric}', 'ward_clerk'),
   ('leader@ward.test', '{leader}', null),
   ('rspres@ward.test', '{leader}', null);

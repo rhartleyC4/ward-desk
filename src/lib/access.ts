@@ -27,8 +27,12 @@ export const isMember = (roles: AppRole[]) => roles.some((r) => r !== 'leader')
 
 type Office = Enums<'bishopric_office'> | null
 
-/** The executive secretary's home: who needs an appointment, open times, and the week ahead. */
-export const hasSecretaryHome = (roles: AppRole[], office: Office) => office === 'executive_secretary' && canSeeAppointments(roles)
+/** The offices that schedule appointments for the bishop and counselors. */
+export const SECRETARY_OFFICES: Enums<'bishopric_office'>[] = ['executive_secretary', 'assistant_executive_secretary']
+export const isSecretaryOffice = (office: Office) => !!office && SECRETARY_OFFICES.includes(office)
+
+/** The executive secretaries' home: who needs an appointment, open times, and the week ahead. */
+export const hasSecretaryHome = (roles: AppRole[], office: Office) => isSecretaryOffice(office) && canSeeAppointments(roles)
 
 export type NavLink = { to: string; label: string }
 

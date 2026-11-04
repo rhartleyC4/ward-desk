@@ -31,11 +31,15 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
     assignments: [
       { leader_id: 'b', secretary_id: 'exec', created_at: ts },
       { leader_id: 'l', secretary_id: 'exec', created_at: ts },
+      { leader_id: 'o', secretary_id: 'asst', created_at: ts },
     ],
     needs,
     candidates,
     bishopric: profiles,
-    secretaries: [{ id: 'exec', email: 'secretary@ward.test', display_name: 'Brother Quinn', short_name: 'Quinn' }],
+    secretaries: [
+      { id: 'exec', email: 'secretary@ward.test', display_name: 'Brother Quinn', short_name: 'Quinn', office: 'executive_secretary' },
+      { id: 'asst', email: 'assistant@ward.test', display_name: 'Brother Tate', short_name: 'Tate', office: null },
+    ],
     profiles,
     hours: [
       { id: 'h1', user_id: 'b', weekday: 0, starts_at: '09:00:00', ends_at: '10:00:00' },
@@ -214,6 +218,13 @@ describe('SecretaryHome', () => {
     expect(week).toHaveTextContent('Sun, November 8th: 9–10 AM')
     expect(week).toHaveTextContent('Tue, November 10th: Away (Moab)')
     expect(week).not.toHaveTextContent('Brother Ortiz')
+  })
+
+  it('covers every leader for the only executive secretary when no one else was picked', () => {
+    view(data({ assignments: [] }))
+    expect(screen.queryByText(/aren't assigned to schedule for anyone/)).not.toBeInTheDocument()
+    expect(within(section(/Needs an appointment/)).getByText('Sister Reed')).toBeInTheDocument()
+    expect(section(/Bishopric this week/)).toHaveTextContent('Brother Ortiz')
   })
 
   it('shows everyone to a secretary not yet assigned, and says so', () => {

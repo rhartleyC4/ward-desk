@@ -28,6 +28,7 @@ const OFFICES: { office: Enums<'bishopric_office'>; label: string }[] = [
   { office: 'first_counselor', label: 'First Counselor' },
   { office: 'second_counselor', label: 'Second Counselor' },
   { office: 'executive_secretary', label: 'Executive Secretary' },
+  { office: 'assistant_executive_secretary', label: 'Assistant Executive Secretary' },
   { office: 'ward_clerk', label: 'Ward Clerk' },
 ]
 

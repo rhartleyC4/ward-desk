@@ -22,6 +22,9 @@ describe('sign-in', () => {
     const second = await signIn('second')
     expect(await loadMe(second, second.userId)).toMatchObject({ office: 'second_counselor', hasHours: false })
 
+    const assistant = await signIn('assistant')
+    expect((await loadMe(assistant, assistant.userId)).office).toBe('assistant_executive_secretary')
+
     const leader = await signIn('leader')
     expect((await loadMe(leader, leader.userId)).roles).toEqual(['leader'])
   })

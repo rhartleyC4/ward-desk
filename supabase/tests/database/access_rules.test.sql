@@ -16,7 +16,7 @@ $$;
 
 select is(
   (select array_agg(p.office::text order by p.office)::text from public.profiles p join public.allowlist a using (email) where a.initial_office = p.office),
-  '{bishop,first_counselor,second_counselor,executive_secretary,ward_clerk}',
+  '{bishop,first_counselor,second_counselor,executive_secretary,assistant_executive_secretary,ward_clerk}',
   'seeded positions live on the allowlist, matching the profiles'
 );
 

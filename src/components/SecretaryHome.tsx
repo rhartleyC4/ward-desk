@@ -14,7 +14,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { NavLink } from 'react-router'
-import { appointmentPurpose, leadersScheduledBy, splitAppointments } from '../lib/appointments'
+import { appointmentPurpose, leadersScheduledBy, splitAppointments, withDefaultSecretary } from '../lib/appointments'
 import { dayLabel, daysFor, WEEKDAYS } from '../lib/availability'
 import { daysBetween, longDate, todayIso, weekday, type IsoDate } from '../lib/dates'
 import { audienceFor, type MessageTemplate } from '../lib/messages'
@@ -349,7 +349,7 @@ export function SecretaryHome({
   actions: SecretaryHomeActions
   busy: boolean
 }) {
-  const assigned = leadersScheduledBy(userId, data.assignments)
+  const assigned = leadersScheduledBy(userId, withDefaultSecretary(data.assignments, data.bishopric.map((l) => l.id), data.secretaries))
   const leaderIds = assigned.length ? data.bishopric.filter((l) => assigned.includes(l.id)).map((l) => l.id) : data.bishopric.map((l) => l.id)
   const { toSchedule, scheduled } = splitAppointments(data.appointments, leaderIds)
   const clashes = overlapping(data.appointments)

@@ -2,6 +2,7 @@
 // waiting to be scheduled. Pure functions so they can be unit tested.
 
 import type { CallingNeed, Candidate } from './agenda'
+import { isSecretaryOffice } from './access'
 import type { Enums, Tables } from './database.types'
 
 export type Appointment = Pick<Tables<'interviews'>, 'id' | 'interviewer_id' | 'scheduled_at' | 'person_name' | 'purpose' | 'candidate_id' | 'status' | 'created_at'>
@@ -24,6 +25,48 @@ export const NEEDS_APPOINTMENT: Candidate['status'][] = ['approved', 'extended']
 export function appointmentFor<T extends Appointment>(candidateId: string, appointments: T[]): T | undefined {
   const mine = appointments.filter((a) => a.candidate_id === candidateId && a.purpose === 'calling')
   return mine.find((a) => a.status === 'scheduled') ?? mine.filter((a) => a.status === 'completed').sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
+}
+
+/**
+ * Who schedules for each leader, filling in the gaps: a leader nobody has been picked for falls to
+ * the executive secretary when there's only one, so a ward with one secretary needs no setup.
+ * Leaders someone was picked for keep that choice.
+ */
+export function withDefaultSecretary(
+  assignments: SecretaryAssignment[],
+  leaderIds: string[],
+  secretaries: { id: string; office: Enums<'bishopric_office'> | null }[],
+): SecretaryAssignment[] {
+  const execs = secretaries.filter((s) => s.office === 'executive_secretary')
+  if (execs.length !== 1) return assignments
+  const uncovered = leaderIds.filter((id) => !assignments.some((a) => a.leader_id === id))
+  return [...assignments, ...uncovered.map((leader_id) => ({ leader_id, secretary_id: execs[0].id }))]
+}
+
+/** The executive secretary who covers a leader by default, when no one was picked for them. */
+export function defaultSecretaryFor<S extends { id: string; office: Enums<'bishopric_office'> | null }>(leaderId: string, assignments: SecretaryAssignment[], secretaries: S[]): S | undefined {
+  if (assignments.some((a) => a.leader_id === leaderId)) return undefined
+  const execs = secretaries.filter((s) => s.office === 'executive_secretary')
+  return execs.length === 1 ? execs[0] : undefined
+}
+
+type Office = { id: string; office: Enums<'bishopric_office'> | null }
+
+/**
+ * Who can be picked to schedule for a leader: the executive and assistant executive secretaries,
+ * plus anyone already picked, so an older choice still shows and can be undone.
+ */
+export function schedulersFrom<S extends Office>(secretaries: S[], assignments: SecretaryAssignment[]): S[] {
+  return secretaries.filter((s) => isSecretaryOffice(s.office) || assignments.some((a) => a.secretary_id === s.id))
+}
+
+/**
+ * Whether the only executive secretary does all the scheduling, with no assistant to split the
+ * leaders with, so there's no reason to ask who schedules for whom.
+ */
+export function soleScheduler(assignments: SecretaryAssignment[], secretaries: Office[]): boolean {
+  const schedulers = schedulersFrom(secretaries, assignments)
+  return schedulers.length === 1 && schedulers[0].office === 'executive_secretary'
 }
 
 /** The leaders this person schedules for. */
