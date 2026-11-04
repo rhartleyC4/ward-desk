@@ -4,7 +4,8 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { Layout, Loading } from './components/Layout'
-import { canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
+import { canEditHours, canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
+import { keepsHours } from './lib/availability'
 import type { AgendaTemplate } from './lib/queries'
 import { AccessPage } from './pages/AccessPage'
 import { AccountPage } from './pages/AccountPage'
@@ -12,6 +13,7 @@ import { AgendaPage } from './pages/AgendaPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
 import { CallingListPage } from './pages/CallingListPage'
 import { AwayPage } from './pages/AwayPage'
+import { HoursPage } from './pages/HoursPage'
 import { LoginPage } from './pages/LoginPage'
 import { MeetingsPage } from './pages/MeetingsPage'
 import { SacramentPage } from './pages/SacramentPage'
@@ -26,14 +28,14 @@ function Guard({ allow, children }: { allow: (roles: AppRole[], templates: Agend
 const attendsAMeeting = (_: AppRole[], templates: AgendaTemplate[]) => canSeeAgenda(templates)
 
 function AppRoutes() {
-  const { loading, session, roles, templates } = useAuth()
+  const { loading, session, roles, templates, office, hasHours } = useAuth()
   if (loading) return <Loading />
   if (!session) return <LoginPage />
 
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to={homeFor(roles, templates)} replace />} />
+        <Route index element={<Navigate to={homeFor(roles, templates, keepsHours(office) && !hasHours)} replace />} />
         <Route path="agenda" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
         <Route path="agenda/:slug" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
         <Route path="agenda/:slug/:date" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
@@ -42,6 +44,7 @@ function AppRoutes() {
         {/* Callings moved onto the bishopric agenda. */}
         <Route path="callings" element={<Navigate to="/agenda/bishopric" replace />} />
         <Route path="suggest" element={<Guard allow={canSuggest}><SuggestPage /></Guard>} />
+        <Route path="hours" element={<Guard allow={canEditHours}><HoursPage /></Guard>} />
         <Route path="away" element={<Guard allow={isMember}><AwayPage /></Guard>} />
         <Route path="schedule" element={<Guard allow={isMember}><SchedulePage /></Guard>} />
         <Route path="meetings" element={<Guard allow={canManageMeetings}><MeetingsPage /></Guard>} />

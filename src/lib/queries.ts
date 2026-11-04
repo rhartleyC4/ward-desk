@@ -1,6 +1,7 @@
 // All database access goes through here. Every function takes the client as a parameter so
 // integration tests can call the exact same queries signed in as different roles.
 
+import type { Block, DayChange, UsualHours } from './availability'
 import { tidyTitle, type ListedCalling } from './callings'
 import { addDays, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
@@ -32,12 +33,21 @@ function check({ error }: { error: { message: string } | null }): void {
 export type Profile = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' | 'short_name'>
 
 export async function loadMe(client: Client, userId: string) {
-  const [profile, roles, templates] = await Promise.all([
-    client.from('profiles').select('id, email, display_name, short_name').eq('id', userId).maybeSingle(),
+  const [profile, roles, templates, hours] = await Promise.all([
+    client.from('profiles').select('id, email, display_name, short_name, office').eq('id', userId).maybeSingle(),
     client.from('roles').select('role').eq('user_id', userId),
     loadAgendaTemplates(client),
+    client.from('availability').select('id', { count: 'exact', head: true }).eq('user_id', userId),
   ])
-  return { profile: maybe(profile), roles: must(roles).map((r) => r.role), templates }
+  const row = maybe(profile)
+  return {
+    profile: row && { id: row.id, email: row.email, display_name: row.display_name, short_name: row.short_name },
+    office: row?.office ?? null,
+    roles: must(roles).map((r) => r.role),
+    templates,
+    // RLS hides hours from anyone outside the bishopric, who keep none anyway.
+    hasHours: (hours.count ?? 0) > 0,
+  }
 }
 
 export async function loadProfiles(client: Client): Promise<Profile[]> {
@@ -64,6 +74,47 @@ export async function loadSecretaries(client: Client): Promise<Profile[]> {
   if (!ids.length) return []
   const rows = must(await client.from('profiles').select('id, email, display_name, short_name, office').in('id', ids).order('display_name'))
   return rows.filter((p) => !['bishop', 'first_counselor', 'second_counselor'].includes(p.office ?? '')).map(({ office: _o, ...p }) => p)
+}
+
+// ---------------------------------------------------------------------------
+// Appointment hours
+// ---------------------------------------------------------------------------
+
+/** Everyone's usual hours, the changed dates and away dates in a range, and who keeps hours. */
+export async function loadHours(client: Client, from: IsoDate, to: IsoDate) {
+  const [hours, changes, absences, leaders] = await Promise.all([
+    client.from('availability').select('id, user_id, weekday, starts_at, ends_at'),
+    client.from('availability_changes').select('id, user_id, on_date, starts_at, ends_at').gte('on_date', from).lte('on_date', to),
+    client.from('absences').select('*').lte('starts_on', to).gte('ends_on', from),
+    loadBishopric(client),
+  ])
+  return { hours: must(hours) as UsualHours[], changes: must(changes) as DayChange[], absences: must(absences), leaders }
+}
+
+export async function addUsualHours(client: Client, userId: string, weekday: number, block: Block) {
+  check(await client.from('availability').insert({ user_id: userId, weekday, ...block }))
+}
+
+export async function deleteUsualHours(client: Client, id: string) {
+  check(await client.from('availability').delete().eq('id', id))
+}
+
+/** Adds a block of time on one date; the date's usual hours no longer apply. */
+export async function addDayHours(client: Client, userId: string, date: IsoDate, block: Block) {
+  // Different hours mean the leader is available after all.
+  check(await client.from('availability_changes').delete().eq('user_id', userId).eq('on_date', date).is('starts_at', null))
+  check(await client.from('availability_changes').insert({ user_id: userId, on_date: date, ...block }))
+}
+
+/** Marks a leader not available on a date, dropping any changed hours for it. */
+export async function markDayOff(client: Client, userId: string, date: IsoDate) {
+  await resetDay(client, userId, date)
+  check(await client.from('availability_changes').insert({ user_id: userId, on_date: date }))
+}
+
+/** Back to the usual hours for a date. */
+export async function resetDay(client: Client, userId: string, date: IsoDate) {
+  check(await client.from('availability_changes').delete().eq('user_id', userId).eq('on_date', date))
 }
 
 // ---------------------------------------------------------------------------

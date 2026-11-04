@@ -15,6 +15,12 @@ describe('sign-in', () => {
     const me = await loadMe(bishop, bishop.userId)
     expect(me.profile?.display_name).toBe('Bishop Avery')
     expect(me.roles.sort()).toEqual(['admin', 'bishopric'])
+    expect(me.office).toBe('bishop')
+    expect(me.hasHours).toBe(true)
+
+    // Seed: the second counselor hasn't set his appointment hours, so he's asked to on sign-in.
+    const second = await signIn('second')
+    expect(await loadMe(second, second.userId)).toMatchObject({ office: 'second_counselor', hasHours: false })
 
     const leader = await signIn('leader')
     expect((await loadMe(leader, leader.userId)).roles).toEqual(['leader'])

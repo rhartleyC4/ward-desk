@@ -112,6 +112,19 @@ insert into public.absences (user_id, starts_on, ends_on, location) values
   ('00000000-0000-0000-0000-000000000002', '2026-11-20', '2026-11-23', 'Denver'),
   ('00000000-0000-0000-0000-000000000001', '2026-12-24', '2026-12-28', 'Family');
 
+-- Appointment hours ----------------------------------------------------------
+-- Bishop and first counselor have usual hours; the second counselor hasn't set his yet, so he's
+-- asked to on sign-in. The bishop has a meeting on 11/11, so that Wednesday is out.
+
+insert into public.availability (user_id, weekday, starts_at, ends_at) values
+  ('00000000-0000-0000-0000-00000000000b', 0, '09:00', '11:00'),
+  ('00000000-0000-0000-0000-00000000000b', 3, '19:00', '20:30'),
+  ('00000000-0000-0000-0000-000000000001', 0, '08:30', '09:30'),
+  ('00000000-0000-0000-0000-000000000001', 2, '19:00', '20:00');
+
+insert into public.availability_changes (user_id, on_date) values
+  ('00000000-0000-0000-0000-00000000000b', '2026-11-11');
+
 -- Callings -------------------------------------------------------------------
 -- The calling list comes from its migration. The needs below that aren't on it (Ward Missionaries,
 -- YW Secretary, Special Needs Sunday School) join it as "Added by the ward", for admins to tidy.

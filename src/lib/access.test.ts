@@ -6,7 +6,7 @@ const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
 
 describe('navFor', () => {
   it('gives the bishopric everything', () => {
-    expect(labels(['bishopric'], bishopric)).toEqual(['Agenda', 'Sacrament', 'Appointments', 'Away', 'Schedule', 'Meetings'])
+    expect(labels(['bishopric'], bishopric)).toEqual(['Agenda', 'Sacrament', 'Appointments', 'Hours', 'Away', 'Schedule', 'Meetings'])
   })
 
   it('limits called leaders to the suggestion form', () => {
@@ -41,5 +41,11 @@ describe('homeFor', () => {
     expect(homeFor(['admin', 'bishopric'], bishopric)).toBe('/agenda')
     expect(homeFor(['leader'])).toBe('/suggest')
     expect(homeFor([])).toBe('/no-access')
+  })
+
+  it('asks a bishop or counselor without appointment hours to set them first', () => {
+    expect(homeFor(['bishopric'], bishopric, true)).toBe('/hours')
+    expect(homeFor(['bishopric'], bishopric, false)).toBe('/agenda')
+    expect(homeFor(['leader'], [], true)).toBe('/suggest')
   })
 })

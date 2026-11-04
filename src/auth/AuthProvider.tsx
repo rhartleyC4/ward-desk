@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { AppRole } from '../lib/access'
+import type { Enums } from '../lib/database.types'
 import { loadAgendaTemplates, loadMe, type AgendaTemplate, type Profile } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 
@@ -9,6 +10,12 @@ type AuthState = {
   session: Session | null
   profile: Profile | null
   roles: AppRole[]
+  /** Bishop, counselor, executive secretary or clerk; null for everyone else. */
+  office: Enums<'bishopric_office'> | null
+  /** Whether this person has set usual appointment hours. The bishop and counselors are asked to on sign-in. */
+  hasHours: boolean
+  /** Records that this person's usual hours changed, so the sign-in prompt stops (or starts) showing. */
+  setHasHours: (hasHours: boolean) => void
   /** The meetings whose agendas this user can open. */
   templates: AgendaTemplate[]
   /** Re-reads the meetings after one is created or changed, so the Agenda tabs stay current. */
@@ -16,7 +23,7 @@ type AuthState = {
   signOut: () => Promise<void>
 }
 
-type Me = { userId: string; profile: Profile | null; roles: AppRole[]; templates: AgendaTemplate[] }
+type Me = { userId: string; profile: Profile | null; office: Enums<'bishopric_office'> | null; roles: AppRole[]; templates: AgendaTemplate[]; hasHours: boolean }
 
 const AuthContext = createContext<AuthState | null>(null)
 
@@ -44,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadMe(supabase, userId)
       .then((loaded) => !cancelled && setMe({ userId, ...loaded }))
       // Treat a failed lookup as "no roles" rather than spinning forever.
-      .catch(() => !cancelled && setMe({ userId, profile: null, roles: [], templates: [] }))
+      .catch(() => !cancelled && setMe({ userId, profile: null, office: null, roles: [], templates: [], hasHours: false }))
     return () => {
       cancelled = true
     }
@@ -60,12 +67,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMe((m) => (m ? { ...m, templates } : m))
   }
 
+  const setHasHours = (hasHours: boolean) => setMe((m) => (m ? { ...m, hasHours } : m))
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ loading, session, profile: current?.profile ?? null, roles: current?.roles ?? [], templates: current?.templates ?? [], reloadTemplates, signOut }}>
+    <AuthContext.Provider
+      value={{
+        loading,
+        session,
+        profile: current?.profile ?? null,
+        roles: current?.roles ?? [],
+        office: current?.office ?? null,
+        hasHours: current?.hasHours ?? false,
+        setHasHours,
+        templates: current?.templates ?? [],
+        reloadTemplates,
+        signOut,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

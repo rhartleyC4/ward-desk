@@ -163,6 +163,46 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"availability": {
+                  Row: {
+                    "created_at": string,"ends_at": string,"id": string,"starts_at": string,"user_id": string,"weekday": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"ends_at": string,"id"?: string,"starts_at": string,"user_id"?: string,"weekday": number
+                  }
+                  Update: {
+                    "created_at"?: string,"ends_at"?: string,"id"?: string,"starts_at"?: string,"user_id"?: string,"weekday"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "availability_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"availability_changes": {
+                  Row: {
+                    "created_at": string,"ends_at": string | null,"id": string,"on_date": string,"starts_at": string | null,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"ends_at"?: string | null,"id"?: string,"on_date": string,"starts_at"?: string | null,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"ends_at"?: string | null,"id"?: string,"on_date"?: string,"starts_at"?: string | null,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "availability_changes_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"calling_candidates": {
                   Row: {
                     "calling_title": string | null,"created_at": string,"id": string,"need_id": string | null,"notes": string | null,"person_name": string,"status": Database["public"]['Enums']["candidate_status"],"suggested_by": string | null,"sustain_on": string | null,"updated_at": string

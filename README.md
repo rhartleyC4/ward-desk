@@ -41,6 +41,8 @@ Each bishopric member's profile also has an `office` (bishop, first or second co
 
 Who schedules appointments for whom lives in `secretary_assignments`, set on the **Appointments** page. Any bishopric member who isn't the bishop or a counselor can be picked, and a leader can have more than one secretary. Each secretary's list starts with the leaders they cover.
 
+The bishop and counselors keep appointment hours on the **Hours** page: usual weekly blocks (`availability`) plus single dates that differ (`availability_changes`), either different hours or not available at all. Away dates take a whole day out on top of that. A bishop or counselor who hasn't set usual hours lands on the Hours page at sign-in. Anyone in the bishopric can read and change everyone's hours, so a secretary can take out a day when a leader says he can't make it.
+
 Adjust these as the real needs become clear.
 
 ## How it replaces the Google Sheet

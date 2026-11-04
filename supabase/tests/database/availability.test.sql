@@ -1,0 +1,82 @@
+-- Appointment hours: who may read and change them, and what a row may hold.
+-- Run with `npm run test:db`. Relies on supabase/seed.sql.
+begin;
+create extension if not exists pgtap with schema extensions;
+
+select plan(13);
+
+create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
+begin
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', (select id from auth.users where email = user_email), 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
+-- Called leader: sees and changes nothing
+-- ---------------------------------------------------------------------------
+
+select pg_temp.act_as('leader@ward.test');
+
+select is((select count(*)::int from public.availability), 0, 'leader cannot read anyone''s hours');
+select is((select count(*)::int from public.availability_changes), 0, 'leader cannot read changed days');
+select throws_ok(
+  $$ insert into public.availability (weekday, starts_at, ends_at) values (1, '19:00', '20:00') $$,
+  '42501', null,
+  'leader cannot add hours'
+);
+
+-- ---------------------------------------------------------------------------
+-- Second counselor: sets his own hours on first sign-in
+-- ---------------------------------------------------------------------------
+
+select pg_temp.act_as('second@ward.test');
+
+select is((select count(*)::int from public.availability where user_id = auth.uid()), 0, 'second counselor starts with no hours');
+select lives_ok(
+  $$ insert into public.availability (weekday, starts_at, ends_at) values (4, '19:00', '20:30') $$,
+  'counselor adds his usual hours, owned by him by default'
+);
+select is((select count(*)::int from public.availability where user_id = auth.uid()), 1, 'and sees them');
+select ok((select count(*) from public.availability where user_id <> auth.uid()) > 0, 'counselor reads the others'' hours');
+
+select throws_ok(
+  $$ insert into public.availability (weekday, starts_at, ends_at) values (4, '20:00', '19:00') $$,
+  '23514', null,
+  'hours must end after they start'
+);
+select throws_ok(
+  $$ insert into public.availability (weekday, starts_at, ends_at) values (7, '19:00', '20:00') $$,
+  '23514', null,
+  'weekday is 0 (Sunday) through 6'
+);
+
+-- ---------------------------------------------------------------------------
+-- Executive secretary: takes a day out for a leader
+-- ---------------------------------------------------------------------------
+
+select pg_temp.act_as('secretary@ward.test');
+
+select lives_ok(
+  $$ insert into public.availability_changes (user_id, on_date) select id, '2030-01-09' from public.profiles where email = 'bishop@ward.test' $$,
+  'secretary marks the bishop not available on a date'
+);
+select throws_ok(
+  $$ insert into public.availability_changes (user_id, on_date) select id, '2030-01-09' from public.profiles where email = 'bishop@ward.test' $$,
+  '23505', null,
+  'a day is marked not available once'
+);
+select throws_ok(
+  $$ insert into public.availability_changes (on_date, starts_at) values ('2030-01-10', '19:00') $$,
+  '23514', null,
+  'a changed day has both times or neither'
+);
+select lives_ok(
+  $$ insert into public.availability_changes (user_id, on_date, starts_at, ends_at) select id, '2030-01-10', '18:00', '19:00' from public.profiles where email = 'bishop@ward.test' $$,
+  'secretary gives the bishop different hours on a date'
+);
+
+select * from finish();
+rollback;

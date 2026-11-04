@@ -14,6 +14,8 @@ export const canSeeAgenda = (templates: readonly unknown[]) => templates.length 
 export const canPlanMeetings = (roles: AppRole[]) => roles.includes('bishopric')
 export const canSuggest = (roles: AppRole[]) => roles.includes('leader') || roles.includes('bishopric')
 export const canEditSchedule = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
+/** Set appointment hours, your own or (for secretaries) a leader's. Matches can_manage_meetings() on the hours tables. */
+export const canEditHours = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
 /** Create meetings, edit their sections and choose attendees. Matches can_manage_meetings() in the database. */
 export const canManageMeetings = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
 /** Decide who may sign in and with which roles. Matches the allowlist RLS policy. */
@@ -30,6 +32,7 @@ export function navFor(roles: AppRole[], templates: readonly unknown[] = []): Na
   if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Agenda' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
   if (canSeeAppointments(roles)) links.push({ to: '/appointments', label: 'Appointments' })
+  if (canEditHours(roles)) links.push({ to: '/hours', label: 'Hours' })
   if (canSuggest(roles) && !canSeeCallings(roles)) links.push({ to: '/suggest', label: 'Suggest a name' })
   if (isMember(roles)) links.push({ to: '/away', label: 'Away' }, { to: '/schedule', label: 'Schedule' })
   if (canManageMeetings(roles)) links.push({ to: '/meetings', label: 'Meetings' })
@@ -38,7 +41,8 @@ export function navFor(roles: AppRole[], templates: readonly unknown[] = []): Na
   return links
 }
 
-/** Where to land after sign-in. */
-export function homeFor(roles: AppRole[], templates: readonly unknown[] = []): string {
+/** Where to land after sign-in. A bishop or counselor who hasn't set appointment hours is asked to first. */
+export function homeFor(roles: AppRole[], templates: readonly unknown[] = [], needsHours = false): string {
+  if (needsHours && canEditHours(roles)) return '/hours'
   return navFor(roles, templates)[0]?.to ?? '/no-access'
 }
