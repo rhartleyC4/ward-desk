@@ -47,6 +47,8 @@ Each appointment has a length (`interviews.duration_minutes`): 10 minutes unless
 
 The executive secretary (`office = 'executive_secretary'`) lands on **Home**, "Your week": who needs an appointment with the leaders they schedule for, with open times by day at the chosen length and a button to book one; what's booked, with the length adjustable and a warning when one runs into the next; and each leader's hours for the next seven days. A secretary not yet assigned to any leader sees everyone.
 
+To reach someone, the secretary picks a few open times and writes a message from a template (`message_templates`, shared by the bishopric and edited on Home). Templates use variables such as `{first_name}`, `{leader}`, `{length}`, `{times}` and `{time}`, and should stay general rather than say what the appointment is for. **Copy** puts the text on the clipboard; **Open Messages** opens the phone's messaging app with the text filled in and no recipient, so no phone numbers are stored. Sending records `offered_at` and `offered_times`, so the list shows when times went out and the picker marks them when the reply comes in. Booked appointments have a confirmation message too.
+
 Adjust these as the real needs become clear.
 
 ## How it replaces the Google Sheet

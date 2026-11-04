@@ -3,6 +3,7 @@
 
 import type { Block, DayChange, UsualHours } from './availability'
 import { tidyTitle, type ListedCalling } from './callings'
+import type { MessageTemplate } from './messages'
 import { addDays, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
 import type { Tables, TablesInsert, TablesUpdate } from './database.types'
@@ -115,6 +116,30 @@ export async function markDayOff(client: Client, userId: string, date: IsoDate) 
 /** Back to the usual hours for a date. */
 export async function resetDay(client: Client, userId: string, date: IsoDate) {
   check(await client.from('availability_changes').delete().eq('user_id', userId).eq('on_date', date))
+}
+
+// ---------------------------------------------------------------------------
+// Message templates
+// ---------------------------------------------------------------------------
+
+export async function loadTemplates(client: Client): Promise<MessageTemplate[]> {
+  return must(await client.from('message_templates').select('id, name, kind, body').order('kind').order('name'))
+}
+
+/** Adds a template, or changes one when an id is given. */
+export async function saveTemplate(client: Client, template: Omit<MessageTemplate, 'id'> & { id?: string }) {
+  const { id, ...fields } = template
+  const row = { ...fields, name: fields.name.trim() }
+  check(id ? await client.from('message_templates').update({ ...row, updated_at: new Date().toISOString() }).eq('id', id) : await client.from('message_templates').insert(row))
+}
+
+export async function deleteTemplate(client: Client, id: string) {
+  check(await client.from('message_templates').delete().eq('id', id))
+}
+
+/** Records the times sent to choose from, so the list can say they were offered. */
+export async function markOffered(client: Client, id: string, times: string[]) {
+  check(await client.from('interviews').update({ offered_at: new Date().toISOString(), offered_times: times }).eq('id', id))
 }
 
 // ---------------------------------------------------------------------------

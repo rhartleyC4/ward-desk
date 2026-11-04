@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { dayFor } from '../../src/lib/availability'
-import { addAppointment, addDayHours, addUsualHours, deleteUsualHours, loadAppointments, loadHours, markDayOff, resetDay, updateAppointment } from '../../src/lib/queries'
+import { addAppointment, addDayHours, addUsualHours, deleteTemplate, deleteUsualHours, loadAppointments, loadHours, loadTemplates, markDayOff, markOffered, resetDay, saveTemplate, updateAppointment } from '../../src/lib/queries'
 import { openSlots, wardTimestamp } from '../../src/lib/slots'
 import { signIn } from './helpers'
 
@@ -44,6 +44,26 @@ describe('appointment hours', () => {
     const { appointments } = await loadAppointments(secretary)
     await updateAppointment(secretary, appointments.find((a) => a.person_name === `${TAG} Long`)!.id, { duration_minutes: 40 })
     expect(await next()).toBe('19:40')
+  })
+
+  it('records the times offered, and shares templates the secretary writes', async () => {
+    const secretary = await signIn('secretary')
+    const second = await signIn('second')
+    await addAppointment(secretary, { interviewer_id: second.userId, person_name: `${TAG} Offered`, purpose: 'calling' })
+    const id = (await loadAppointments(secretary)).appointments.find((a) => a.person_name === `${TAG} Offered`)!.id
+    const times = [wardTimestamp(WED, '19:00', TZ), wardTimestamp(WED, '19:10', TZ)]
+    await markOffered(secretary, id, times)
+    const offered = (await loadAppointments(secretary)).appointments.find((a) => a.id === id)!
+    expect(offered.offered_at).not.toBeNull()
+    expect(offered.offered_times.map((t) => new Date(t).toISOString())).toEqual(times)
+
+    await saveTemplate(secretary, { name: `${TAG} template`, kind: 'offer', body: 'Hi {first_name}' })
+    const mine = (await loadTemplates(second)).find((t) => t.name === `${TAG} template`)!
+    await saveTemplate(second, { ...mine, body: 'Hello {first_name}' })
+    expect((await loadTemplates(secretary)).find((t) => t.id === mine.id)?.body).toBe('Hello {first_name}')
+    await deleteTemplate(secretary, mine.id)
+    expect((await loadTemplates(secretary)).some((t) => t.id === mine.id)).toBe(false)
+    expect(await loadTemplates(await signIn('leader'))).toEqual([])
   })
 
   it('lets the secretary change one date and put it back', async () => {

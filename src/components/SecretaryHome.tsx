@@ -14,17 +14,23 @@ import { NavLink } from 'react-router'
 import { appointmentPurpose, leadersScheduledBy, splitAppointments } from '../lib/appointments'
 import { dayLabel, daysFor, WEEKDAYS } from '../lib/availability'
 import { daysBetween, longDate, todayIso, weekday, type IsoDate } from '../lib/dates'
+import type { MessageTemplate } from '../lib/messages'
 import type { Appointment, AppointmentsData } from '../lib/queries'
 import { adjustMinutes, bookedRange, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, type Slot } from '../lib/slots'
 import type { HoursData } from './HoursView'
 import { Muted, SectionCard } from './Layout'
+import { MessagePanel, TemplatesEditor } from './Messages'
 
-export type SecretaryHomeData = AppointmentsData & HoursData
+export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[] }
 
 export type SecretaryHomeActions = {
   book: (id: string, at: string, minutes: number) => Promise<boolean>
   setLength: (id: string, minutes: number) => void
   complete: (id: string) => void
+  /** Records the times sent in a message. */
+  offer: (id: string, times: string[]) => void
+  saveTemplate: (t: Omit<MessageTemplate, 'id'> & { id?: string }) => Promise<boolean>
+  deleteTemplate: (id: string) => void
 }
 
 /** How far ahead open times are offered. */
@@ -32,7 +38,7 @@ export const DAYS_AHEAD = 14
 /** Days with open times shown before "More days". */
 const FIRST_DAYS = 3
 
-type Ctx = { data: SecretaryHomeData; today: IsoDate; now: Date; timeZone: string; actions: SecretaryHomeActions; busy: boolean }
+type Ctx = { data: SecretaryHomeData; today: IsoDate; now: Date; timeZone: string; myName: string; actions: SecretaryHomeActions; busy: boolean }
 
 const leaderName = (id: string | null, data: SecretaryHomeData) => data.bishopric.find((l) => l.id === id)?.display_name ?? 'Unassigned'
 const shortDay = (date: IsoDate) => `${WEEKDAYS[weekday(date)].slice(0, 3)}, ${longDate(date)}`
@@ -56,11 +62,15 @@ function LengthControl({ minutes, onChange, appointment, busy }: { minutes: numb
   )
 }
 
-/** Open times for one appointment, by day, at the length chosen. Picking one and booking it saves both. */
+/**
+ * Open times for one appointment, by day, at the length chosen. Pick one to book it, or a few to
+ * offer in a message. Times offered before are marked, so the reply is easy to find.
+ */
 function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx }) {
   const { data, today, now, timeZone, actions, busy } = ctx
   const [minutes, setMinutes] = useState(a.duration_minutes)
-  const [picked, setPicked] = useState<Slot | null>(null)
+  const [picked, setPicked] = useState<Slot[]>([])
+  const [writing, setWriting] = useState(false)
   const [allDays, setAllDays] = useState(false)
   const leaderId = a.interviewer_id!
   const leader = leaderName(leaderId, data)
@@ -69,13 +79,41 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
   const days = slotsByDay(slots)
   const shown = allDays ? days : days.slice(0, FIRST_DAYS)
   const hasHours = data.hours.some((h) => h.user_id === leaderId)
-  // A picked time that no longer fits (the length grew into the next booking) is dropped.
-  const stillOpen = picked && slots.some((s) => s.at === picked.at)
+  const offered = new Set(a.offered_times.map((t) => new Date(t).toISOString()))
+  // Picked times that no longer fit (the length grew into the next booking) are dropped.
+  const chosen = picked.filter((p) => slots.some((s) => s.at === p.at)).sort((x, y) => x.at.localeCompare(y.at))
+  const last = picked.at(-1)
 
   const changeLength = (m: number) => {
     setMinutes(m)
-    setPicked(null)
+    setPicked([])
+    setWriting(false)
   }
+  const toggle = (s: Slot) => setPicked((p) => (p.some((x) => x.at === s.at) ? p.filter((x) => x.at !== s.at) : [...p, s]))
+
+  const actionsRow = chosen.length > 0 && (
+    <Box sx={{ mt: 1 }}>
+      <Stack direction="row" useFlexGap sx={{ gap: 1, flexWrap: 'wrap' }}>
+        {chosen.length === 1 && (
+          <Button variant="contained" disabled={busy} onClick={() => actions.book(a.id, chosen[0].at, minutes)}>
+            Book {slotLabel(chosen[0])}
+          </Button>
+        )}
+        <Button variant={chosen.length === 1 ? 'outlined' : 'contained'} onClick={() => setWriting(!writing)}>
+          {writing ? 'Hide message' : `Message ${chosen.length === 1 ? 'this time' : `these ${chosen.length} times`}`}
+        </Button>
+      </Stack>
+      {writing && (
+        <MessagePanel
+          key={chosen.map((c) => c.at).join()}
+          kind="offer"
+          templates={data.templates}
+          values={{ name: a.person_name ?? '', leader, minutes, myName: ctx.myName, times: chosen.map(slotLabel) }}
+          onSent={() => actions.offer(a.id, chosen.map((c) => c.at))}
+        />
+      )}
+    </Box>
+  )
 
   return (
     <Box sx={{ mt: 1, pl: { sm: 1 } }}>
@@ -89,6 +127,7 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
         <Muted>No open {minutesLabel(minutes)} times with {leader} in the next two weeks.</Muted>
       ) : (
         <>
+          <Muted>Pick one time to book it, or a few to offer.{offered.size > 0 && ' Times already offered are marked with a dot.'}</Muted>
           {shown.map((day) => (
             <Box key={day.date} sx={{ mt: 1 }}>
               <Typography variant="body2" color="text.secondary">
@@ -96,29 +135,27 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
               </Typography>
               <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', gap: 0.75, mt: 0.5 }}>
                 {day.slots.map((s) => {
-                  const on = picked?.at === s.at
+                  const on = picked.some((p) => p.at === s.at)
+                  const wasOffered = offered.has(s.at)
                   return (
                     <Chip
                       key={s.at}
-                      label={slotLabel(s).split(' at ')[1]}
+                      label={`${wasOffered ? '• ' : ''}${slotLabel(s).split(' at ')[1]}`}
                       clickable
-                      color={on ? 'primary' : 'default'}
+                      color={on ? 'primary' : wasOffered ? 'info' : 'default'}
                       variant={on ? 'filled' : 'outlined'}
                       aria-pressed={on}
-                      aria-label={slotLabel(s)}
-                      onClick={() => setPicked(on ? null : s)}
+                      aria-label={`${slotLabel(s)}${wasOffered ? ', offered' : ''}`}
+                      onClick={() => toggle(s)}
                     />
                   )
                 })}
               </Stack>
-              {/* Right under the day picked, so it's in reach on a phone. */}
-              {stillOpen && picked.date === day.date && (
-                <Button variant="contained" sx={{ mt: 1 }} disabled={busy} onClick={() => actions.book(a.id, picked.at, minutes)}>
-                  Book {slotLabel(picked)}
-                </Button>
-              )}
+              {/* Right under the day last picked, so it's in reach on a phone. */}
+              {last?.date === day.date && actionsRow}
             </Box>
           ))}
+          {last && !shown.some((d) => d.date === last.date) && actionsRow}
           {days.length > FIRST_DAYS && (
             <Button size="small" sx={{ mt: 1 }} onClick={() => setAllDays(!allDays)}>
               {allDays ? 'Fewer days' : `More days (${days.length - FIRST_DAYS})`}
@@ -144,6 +181,7 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)} · {waiting < 1 ? 'added today' : `waiting ${waiting} day${waiting === 1 ? '' : 's'}`}
+            {a.offered_at && ` · offered ${shortDay(todayIso(new Date(a.offered_at)))}`}
           </Typography>
         </Box>
         <Button size="small" variant={open ? 'text' : 'outlined'} onClick={() => setOpen(!open)}>
@@ -156,14 +194,16 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
 }
 
 function BookedRow({ appointment: a, ctx, clash }: { appointment: Appointment; ctx: Ctx; clash: boolean }) {
+  const [writing, setWriting] = useState(false)
   const name = a.person_name ?? 'Unnamed'
   const past = new Date(a.scheduled_at!) < ctx.now
+  const when = wardParts(a.scheduled_at!, ctx.timeZone)
   return (
     <Box component="article" aria-label={name}>
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography>
-            <strong>{shortDay(wardParts(a.scheduled_at!, ctx.timeZone).date)}</strong> {bookedRange(a.scheduled_at!, a.duration_minutes, ctx.timeZone)} · {name}
+            <strong>{shortDay(when.date)}</strong> {bookedRange(a.scheduled_at!, a.duration_minutes, ctx.timeZone)} · {name}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {leaderName(a.interviewer_id, ctx.data)} · {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)}
@@ -181,11 +221,23 @@ function BookedRow({ appointment: a, ctx, clash }: { appointment: Appointment; c
         </Box>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
           <LengthControl minutes={a.duration_minutes} onChange={(m) => ctx.actions.setLength(a.id, m)} appointment={a} busy={ctx.busy} />
+          {!past && (
+            <Button size="small" onClick={() => setWriting(!writing)}>
+              {writing ? 'Hide' : 'Message'}
+            </Button>
+          )}
           <Button size="small" startIcon={<CheckIcon />} disabled={ctx.busy} onClick={() => ctx.actions.complete(a.id)}>
             Done
           </Button>
         </Stack>
       </Stack>
+      {writing && (
+        <MessagePanel
+          kind="confirm"
+          templates={ctx.data.templates}
+          values={{ name: a.person_name ?? '', leader: leaderName(a.interviewer_id, ctx.data), minutes: a.duration_minutes, myName: ctx.myName, time: slotLabel(when) }}
+        />
+      )}
     </Box>
   )
 }
@@ -227,12 +279,31 @@ function WeekGlance({ leaderIds, ctx }: { leaderIds: string[]; ctx: Ctx }) {
  * booked, and when each leader is free this week. Shows the leaders this secretary schedules for,
  * or everyone if they haven't been assigned any.
  */
-export function SecretaryHome({ data, userId, today, now, timeZone, actions, busy }: { data: SecretaryHomeData; userId: string; today: IsoDate; now: Date; timeZone: string; actions: SecretaryHomeActions; busy: boolean }) {
+export function SecretaryHome({
+  data,
+  userId,
+  myName,
+  today,
+  now,
+  timeZone,
+  actions,
+  busy,
+}: {
+  data: SecretaryHomeData
+  userId: string
+  /** How messages are signed. */
+  myName: string
+  today: IsoDate
+  now: Date
+  timeZone: string
+  actions: SecretaryHomeActions
+  busy: boolean
+}) {
   const assigned = leadersScheduledBy(userId, data.assignments)
   const leaderIds = assigned.length ? data.bishopric.filter((l) => assigned.includes(l.id)).map((l) => l.id) : data.bishopric.map((l) => l.id)
   const { toSchedule, scheduled } = splitAppointments(data.appointments, leaderIds)
   const clashes = overlapping(data.appointments)
-  const ctx: Ctx = { data, today, now, timeZone, actions, busy }
+  const ctx: Ctx = { data, today, now, timeZone, myName, actions, busy }
 
   return (
     <>
@@ -279,6 +350,10 @@ export function SecretaryHome({ data, userId, today, now, timeZone, actions, bus
         }
       >
         <WeekGlance leaderIds={leaderIds} ctx={ctx} />
+      </SectionCard>
+
+      <SectionCard title="Message templates">
+        <TemplatesEditor templates={data.templates} onSave={actions.saveTemplate} onDelete={actions.deleteTemplate} busy={busy} />
       </SectionCard>
     </>
   )

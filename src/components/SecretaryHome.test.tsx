@@ -14,7 +14,7 @@ const ts = '2026-11-05T12:00:00Z'
 type Appt = SecretaryHomeData['appointments'][number]
 const appt = (id: string, interviewer: string, name: string, extra: Partial<Appt> = {}): Appt => ({
   id, interviewer_id: interviewer, scheduled_at: null, person_name: name, purpose: 'calling', candidate_id: null,
-  location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10, ...extra,
+  location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], ...extra,
 })
 
 function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
@@ -45,19 +45,23 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
     changes: [],
     absences: [{ id: 'x', user_id: 'l', starts_on: '2026-11-10', ends_on: '2026-11-10', location: 'Moab', created_at: ts }],
     leaders: profiles,
+    templates: [
+      { id: 't1', name: 'Offer times', kind: 'offer', body: 'Hi {first_name}, {leader} would like to meet for {length}:\n{times}\n{my_name}' },
+      { id: 't2', name: 'Confirm time', kind: 'confirm', body: 'Hi {first_name}, see {leader} on {time}.' },
+    ],
     ...extra,
   }
 }
 
 function actions(): SecretaryHomeActions {
-  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), complete: vi.fn() }
+  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), complete: vi.fn(), offer: vi.fn(), saveTemplate: vi.fn().mockResolvedValue(true), deleteTemplate: vi.fn() }
 }
 
 const view = (d = data(), userId = 'exec') => {
   const a = actions()
   render(
     <MemoryRouter>
-      <SecretaryHome data={d} userId={userId} today={TODAY} now={NOW} timeZone={TZ} actions={a} busy={false} />
+      <SecretaryHome data={d} userId={userId} myName="Brother Quinn" today={TODAY} now={NOW} timeZone={TZ} actions={a} busy={false} />
     </MemoryRouter>,
   )
   return a
@@ -90,6 +94,67 @@ describe('SecretaryHome', () => {
     await userEvent.click(within(nash).getByRole('button', { name: 'Wed, November 11th at 7 PM' }))
     await userEvent.click(within(nash).getByRole('button', { name: 'Book Wed, November 11th at 7 PM' }))
     expect(a.book).toHaveBeenCalledWith('a1', '2026-11-12T02:00:00.000Z', 5)
+  })
+
+  it('writes a message offering the times picked, ready to copy or open in Messages', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    const a = view()
+    const nash = screen.getByRole('article', { name: 'Sister Nash' })
+    await userEvent.click(within(nash).getByRole('button', { name: 'Find a time' }))
+    await userEvent.click(within(nash).getByRole('button', { name: 'Sun, November 8th at 9:25 AM' }))
+    await userEvent.click(within(nash).getByRole('button', { name: 'Wed, November 11th at 7 PM' }))
+    expect(within(nash).queryByRole('button', { name: /^Book/ })).not.toBeInTheDocument()
+
+    await userEvent.click(within(nash).getByRole('button', { name: 'Message these 2 times' }))
+    const text = 'Hi Sister Nash, Bishop Avery would like to meet for 10 minutes:\n• Sun, November 8th at 9:25 AM\n• Wed, November 11th at 7 PM\nBrother Quinn'
+    expect(within(nash).getByLabelText('Message')).toHaveValue(text)
+    expect(within(nash).getByRole('link', { name: 'Open Messages' })).toHaveAttribute('href', `sms:?&body=${encodeURIComponent(text)}`)
+
+    await userEvent.click(within(nash).getByRole('button', { name: 'Copy' }))
+    expect(writeText).toHaveBeenCalledWith(text)
+    expect(a.offer).toHaveBeenCalledWith('a1', ['2026-11-08T16:25:00.000Z', '2026-11-12T02:00:00.000Z'])
+    expect(within(nash).getByRole('button', { name: 'Copied' })).toBeInTheDocument()
+  })
+
+  it('selects the text to copy by hand when the browser refuses', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockRejectedValue(new Error('denied')) }, configurable: true })
+    const a = view()
+    const nash = screen.getByRole('article', { name: 'Sister Nash' })
+    await userEvent.click(within(nash).getByRole('button', { name: 'Find a time' }))
+    await userEvent.click(within(nash).getByRole('button', { name: 'Sun, November 8th at 9:25 AM' }))
+    await userEvent.click(within(nash).getByRole('button', { name: 'Message this time' }))
+    await userEvent.click(within(nash).getByRole('button', { name: 'Copy' }))
+    expect(within(nash).getByText(/wouldn't copy/)).toBeInTheDocument()
+    expect(within(nash).getByLabelText('Message')).toHaveFocus()
+    expect(a.offer).not.toHaveBeenCalled()
+  })
+
+  it('marks times already offered and when', async () => {
+    view(data({ appointments: [appt('a1', 'b', 'Sister Nash', { offered_at: '2026-11-06T18:00:00Z', offered_times: ['2026-11-08T16:20:00+00:00'] })] }))
+    const nash = screen.getByRole('article', { name: 'Sister Nash' })
+    expect(nash).toHaveTextContent('offered Fri, November 6th')
+    await userEvent.click(within(nash).getByRole('button', { name: 'Find a time' }))
+    expect(within(nash).getByRole('button', { name: 'Sun, November 8th at 9:20 AM, offered' })).toHaveTextContent('• 9:20 AM')
+  })
+
+  it('writes a confirmation for a booked time', async () => {
+    view(data({ appointments: [appt('a4', 'b', 'Brother Hale', { scheduled_at: '2026-11-11T02:30:00Z' })] }))
+    const hale = screen.getByRole('article', { name: 'Brother Hale' })
+    await userEvent.click(within(hale).getByRole('button', { name: 'Message' }))
+    expect(within(hale).getByLabelText('Message')).toHaveValue('Hi Brother Hale, see Bishop Avery on Tue, November 10th at 7:30 PM.')
+  })
+
+  it('lets the secretary add a template and warns about a mistyped variable', async () => {
+    const a = view()
+    const card = section(/Message templates/)
+    await userEvent.click(within(card).getByRole('button', { name: 'Add a template' }))
+    const form = within(card).getByRole('form', { name: 'New template' })
+    await userEvent.type(within(form).getByLabelText('Name'), 'Short')
+    await userEvent.type(within(form).getByLabelText('Text'), 'Hi {{frist_name}')
+    expect(within(form).getByText(/Not a variable: \{frist_name\}/)).toBeInTheDocument()
+    await userEvent.click(within(form).getByRole('button', { name: 'Save' }))
+    expect(a.saveTemplate).toHaveBeenCalledWith({ name: 'Short', kind: 'offer', body: 'Hi {frist_name}' })
   })
 
   it('keeps a temple recommend interview at 10 minutes or more', async () => {

@@ -11,8 +11,12 @@ export function HomePage() {
   const { profile } = useAuth()
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
-    const [appointments, hours] = await Promise.all([q.loadAppointments(supabase), q.loadHours(supabase, today, addDays(today, DAYS_AHEAD - 1))])
-    return { ...appointments, ...hours }
+    const [appointments, hours, templates] = await Promise.all([
+      q.loadAppointments(supabase),
+      q.loadHours(supabase, today, addDays(today, DAYS_AHEAD - 1)),
+      q.loadTemplates(supabase),
+    ])
+    return { ...appointments, ...hours, templates }
   }, [today])
   const save = useAction()
   // Times before this are past. Fixed for the visit; reopening the page moves it on.
@@ -31,12 +35,15 @@ export function HomePage() {
     book: (id, at, minutes) => run(() => q.updateAppointment(supabase, id, { scheduled_at: at, duration_minutes: minutes })),
     setLength: (id, minutes) => void run(() => q.updateAppointment(supabase, id, { duration_minutes: minutes })),
     complete: (id) => void run(() => q.updateAppointment(supabase, id, { status: 'completed' })),
+    offer: (id, times) => void run(() => q.markOffered(supabase, id, times)),
+    saveTemplate: (t) => run(() => q.saveTemplate(supabase, t)),
+    deleteTemplate: (id) => void run(() => q.deleteTemplate(supabase, id)),
   }
 
   return (
     <>
       <ErrorNote error={save.error} />
-      <SecretaryHome data={data} userId={profile?.id ?? ''} today={today} now={now} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
+      <SecretaryHome data={data} userId={profile?.id ?? ''} myName={profile?.display_name ?? ''} today={today} now={now} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
     </>
   )
 }

@@ -1,10 +1,10 @@
 -- Appointment hours: who may read and change them, and what a row may hold. Also how long an
--- appointment may be booked for.
+-- appointment may be booked for, and the message templates the secretaries share.
 -- Run with `npm run test:db`. Relies on supabase/seed.sql.
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(18);
+select plan(24);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -103,6 +103,32 @@ select throws_ok(
   $$ update public.interviews set duration_minutes = 0 where person_name = 'Length Default' $$,
   '23514', null,
   'an appointment takes some time'
+);
+
+-- ---------------------------------------------------------------------------
+-- Message templates
+-- ---------------------------------------------------------------------------
+
+select is((select count(*)::int from public.message_templates where created_by is null), 2, 'the ward starts with an offer and a confirm template');
+select lives_ok(
+  $$ insert into public.message_templates (name, kind, body) values ('Short offer', 'offer', 'Hi {first_name}: {times}') $$,
+  'secretary adds a template'
+);
+select throws_ok(
+  $$ insert into public.message_templates (name, kind, body) values ('Empty', 'offer', '   ') $$,
+  '23514', null,
+  'a template needs some text'
+);
+
+select pg_temp.act_as('first@ward.test');
+select is((select count(*)::int from public.message_templates where name = 'Short offer'), 1, 'the rest of the bishopric shares the templates');
+
+select pg_temp.act_as('leader@ward.test');
+select is((select count(*)::int from public.message_templates), 0, 'called leaders cannot read templates');
+select throws_ok(
+  $$ insert into public.message_templates (name, kind, body) values ('Leader', 'offer', 'Hi') $$,
+  '42501', null,
+  'called leaders cannot add templates'
 );
 
 select * from finish();
