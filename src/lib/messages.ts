@@ -3,14 +3,17 @@
 
 import type { Enums, Tables } from './database.types'
 
-export type MessageTemplate = Pick<Tables<'message_templates'>, 'id' | 'name' | 'kind' | 'body'>
+export type MessageTemplate = Pick<Tables<'message_templates'>, 'id' | 'name' | 'kind' | 'audience' | 'body'>
 export type MessageKind = Enums<'message_kind'>
+export type MessageAudience = Enums<'message_audience'>
 
 export const KIND_LABELS: Record<MessageKind, string> = { offer: 'Offering times', confirm: 'Confirming a time' }
+export const AUDIENCE_LABELS: Record<MessageAudience, string> = { member: 'To the person', parent: 'To a parent of a youth' }
 
 /** The variables a template can use, with what each becomes. */
-export const VARIABLES: { name: string; meaning: string; kinds: MessageKind[] }[] = [
-  { name: 'first_name', meaning: 'First name, or "Sister Nash" when that is how the name was entered', kinds: ['offer', 'confirm'] },
+export const VARIABLES: { name: string; meaning: string; kinds: MessageKind[]; parentOnly?: boolean }[] = [
+  { name: 'first_name', meaning: 'First name, or "Sister Nash" when that is how the name was entered (the youth\'s, in a message to a parent)', kinds: ['offer', 'confirm'] },
+  { name: 'parent_name', meaning: 'The parent\'s name, like "Sister Quinn"', kinds: ['offer', 'confirm'], parentOnly: true },
   { name: 'name', meaning: 'Full name as entered', kinds: ['offer', 'confirm'] },
   { name: 'leader', meaning: 'Who they meet with, like "Bishop Avery"', kinds: ['offer', 'confirm'] },
   { name: 'length', meaning: 'How long, like "10 minutes"', kinds: ['offer', 'confirm'] },
@@ -19,7 +22,7 @@ export const VARIABLES: { name: string; meaning: string; kinds: MessageKind[] }[
   { name: 'my_name', meaning: 'Your name', kinds: ['offer', 'confirm'] },
 ]
 
-export type MessageValues = { name: string; leader: string; minutes: number; myName: string; times?: string[]; time?: string }
+export type MessageValues = { name: string; leader: string; minutes: number; myName: string; times?: string[]; time?: string; parentName?: string | null }
 
 /** Names entered with a title ("Sister Nash") keep it, since a bare "Sister" would read oddly. */
 const TITLES = ['brother', 'sister', 'bro', 'bro.', 'sis', 'sis.', 'elder', 'bishop', 'president']
@@ -54,6 +57,8 @@ export function fillTemplate(body: string, values: MessageValues): string {
     times: (values.times ?? []).map((t) => `• ${t}`).join('\n'),
     time: values.time ?? '',
     my_name: values.myName,
+    // "Hi there" reads fine when the parent's name hasn't been entered.
+    parent_name: values.parentName?.trim() || 'there',
   }
   return body.replace(/\{(\w+)\}/g, (whole, key: string) => (key in vars ? vars[key] : whole))
 }
@@ -63,3 +68,11 @@ export function fillTemplate(body: string, values: MessageValues): string {
  * phone numbers never need to be stored here. "sms:?&body=" works on both iPhone and Android.
  */
 export const smsLink = (text: string) => `sms:?&body=${encodeURIComponent(text)}`
+
+/** Who a message for this appointment goes to: a parent for a youth, otherwise the person. */
+export const audienceFor = (appointment: { is_youth: boolean }): MessageAudience => (appointment.is_youth ? 'parent' : 'member')
+
+/** The templates to offer for a message: the right kind and audience. */
+export function templatesFor(templates: MessageTemplate[], kind: MessageKind, audience: MessageAudience): MessageTemplate[] {
+  return templates.filter((t) => t.kind === kind && t.audience === audience)
+}

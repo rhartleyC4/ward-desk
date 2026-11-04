@@ -2,6 +2,9 @@ import AddIcon from '@mui/icons-material/Add'
 import CheckIcon from '@mui/icons-material/Check'
 import RemoveIcon from '@mui/icons-material/Remove'
 import Alert from '@mui/material/Alert'
+import Checkbox from '@mui/material/Checkbox'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import TextField from '@mui/material/TextField'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
@@ -14,7 +17,7 @@ import { NavLink } from 'react-router'
 import { appointmentPurpose, leadersScheduledBy, splitAppointments } from '../lib/appointments'
 import { dayLabel, daysFor, WEEKDAYS } from '../lib/availability'
 import { daysBetween, longDate, todayIso, weekday, type IsoDate } from '../lib/dates'
-import type { MessageTemplate } from '../lib/messages'
+import { audienceFor, type MessageTemplate } from '../lib/messages'
 import type { Appointment, AppointmentsData } from '../lib/queries'
 import { adjustMinutes, bookedRange, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, type Slot } from '../lib/slots'
 import type { HoursData } from './HoursView'
@@ -29,6 +32,8 @@ export type SecretaryHomeActions = {
   complete: (id: string) => void
   /** Records the times sent in a message. */
   offer: (id: string, times: string[]) => void
+  /** Marks an appointment as a youth's, so messages go to a parent. */
+  setYouth: (id: string, isYouth: boolean, parentName: string | null) => void
   saveTemplate: (t: Omit<MessageTemplate, 'id'> & { id?: string }) => Promise<boolean>
   deleteTemplate: (id: string) => void
 }
@@ -58,6 +63,42 @@ function LengthControl({ minutes, onChange, appointment, busy }: { minutes: numb
       <IconButton size="small" aria-label={`Longer for ${name}`} disabled={busy || longer === minutes} onClick={() => onChange(longer)}>
         <AddIcon fontSize="small" />
       </IconButton>
+    </Stack>
+  )
+}
+
+const YouthTag = () => <Chip size="small" color="warning" variant="outlined" label="youth · text parent" sx={{ ml: 1, verticalAlign: 'middle' }} />
+
+/**
+ * Whether this is a youth (under 18), whose parent gets the message, and the parent's name for
+ * the greeting. Saved as soon as it changes, so the next message uses it.
+ */
+function YouthFields({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx }) {
+  const [parent, setParent] = useState(a.parent_name ?? '')
+  const name = a.person_name ?? 'this person'
+  const saveParent = () => {
+    const next = parent.trim() || null
+    if (next !== a.parent_name) ctx.actions.setYouth(a.id, true, next)
+  }
+  return (
+    <Stack direction="row" useFlexGap sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap', mb: 1 }}>
+      <FormControlLabel
+        label="Youth under 18: message a parent"
+        control={<Checkbox checked={a.is_youth} disabled={ctx.busy} onChange={(e) => ctx.actions.setYouth(a.id, e.target.checked, a.parent_name)} />}
+      />
+      {a.is_youth && (
+        <TextField
+          label="Parent's name"
+          placeholder="Sister Quinn"
+          size="small"
+          value={parent}
+          onChange={(e) => setParent(e.target.value)}
+          onBlur={saveParent}
+          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+          slotProps={{ htmlInput: { 'aria-label': `Parent's name for ${name}` } }}
+          sx={{ flex: '1 1 12rem', maxWidth: 280 }}
+        />
+      )}
     </Stack>
   )
 }
@@ -105,10 +146,11 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
       </Stack>
       {writing && (
         <MessagePanel
-          key={chosen.map((c) => c.at).join()}
+          key={`${chosen.map((c) => c.at).join()}|${a.is_youth}|${a.parent_name}`}
           kind="offer"
+          audience={audienceFor(a)}
           templates={data.templates}
-          values={{ name: a.person_name ?? '', leader, minutes, myName: ctx.myName, times: chosen.map(slotLabel) }}
+          values={{ name: a.person_name ?? '', leader, minutes, myName: ctx.myName, times: chosen.map(slotLabel), parentName: a.parent_name }}
           onSent={() => actions.offer(a.id, chosen.map((c) => c.at))}
         />
       )}
@@ -117,6 +159,7 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
 
   return (
     <Box sx={{ mt: 1, pl: { sm: 1 } }}>
+      <YouthFields appointment={a} ctx={ctx} />
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Muted>Length</Muted>
         <LengthControl minutes={minutes} onChange={changeLength} appointment={a} busy={busy} />
@@ -178,6 +221,7 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
         <Box sx={{ minWidth: 0 }}>
           <Typography>
             {name} <Typography component="span" variant="body2" color="text.secondary">· {leaderName(a.interviewer_id, ctx.data)}</Typography>
+            {a.is_youth && <YouthTag />}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)} · {waiting < 1 ? 'added today' : `waiting ${waiting} day${waiting === 1 ? '' : 's'}`}
@@ -204,6 +248,7 @@ function BookedRow({ appointment: a, ctx, clash }: { appointment: Appointment; c
         <Box sx={{ minWidth: 0 }}>
           <Typography>
             <strong>{shortDay(when.date)}</strong> {bookedRange(a.scheduled_at!, a.duration_minutes, ctx.timeZone)} · {name}
+            {a.is_youth && <YouthTag />}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {leaderName(a.interviewer_id, ctx.data)} · {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)}
@@ -232,11 +277,16 @@ function BookedRow({ appointment: a, ctx, clash }: { appointment: Appointment; c
         </Stack>
       </Stack>
       {writing && (
-        <MessagePanel
-          kind="confirm"
-          templates={ctx.data.templates}
-          values={{ name: a.person_name ?? '', leader: leaderName(a.interviewer_id, ctx.data), minutes: a.duration_minutes, myName: ctx.myName, time: slotLabel(when) }}
-        />
+        <>
+          <YouthFields appointment={a} ctx={ctx} />
+          <MessagePanel
+            key={`${a.is_youth}|${a.parent_name}`}
+            kind="confirm"
+            audience={audienceFor(a)}
+            templates={ctx.data.templates}
+            values={{ name: a.person_name ?? '', leader: leaderName(a.interviewer_id, ctx.data), minutes: a.duration_minutes, myName: ctx.myName, time: slotLabel(when), parentName: a.parent_name }}
+          />
+        </>
       )}
     </Box>
   )

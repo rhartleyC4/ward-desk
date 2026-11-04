@@ -9,7 +9,7 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useRef, useState, type FormEvent } from 'react'
-import { fillTemplate, KIND_LABELS, smsLink, unknownVariables, VARIABLES, type MessageKind, type MessageTemplate, type MessageValues } from '../lib/messages'
+import { AUDIENCE_LABELS, fillTemplate, KIND_LABELS, smsLink, templatesFor, unknownVariables, VARIABLES, type MessageAudience, type MessageKind, type MessageTemplate, type MessageValues } from '../lib/messages'
 import { nativeSelect } from '../theme'
 import { Muted } from './Layout'
 
@@ -17,8 +17,22 @@ import { Muted } from './Layout'
  * A message filled in from a template, ready to copy or open in the phone's messaging app. The
  * text can be changed before sending; picking another template starts it over.
  */
-export function MessagePanel({ kind, values, templates, onSent, busy }: { kind: MessageKind; values: MessageValues; templates: MessageTemplate[]; onSent?: () => void; busy?: boolean }) {
-  const options = templates.filter((t) => t.kind === kind)
+export function MessagePanel({
+  kind,
+  audience,
+  values,
+  templates,
+  onSent,
+  busy,
+}: {
+  kind: MessageKind
+  audience: MessageAudience
+  values: MessageValues
+  templates: MessageTemplate[]
+  onSent?: () => void
+  busy?: boolean
+}) {
+  const options = templatesFor(templates, kind, audience)
   const [templateId, setTemplateId] = useState(options[0]?.id ?? '')
   const [draft, setDraft] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -26,7 +40,12 @@ export function MessagePanel({ kind, values, templates, onSent, busy }: { kind: 
   const field = useRef<HTMLTextAreaElement>(null)
   const template = options.find((t) => t.id === templateId) ?? options[0]
 
-  if (!template) return <Muted>No templates for {KIND_LABELS[kind].toLowerCase()} yet. Add one under Message templates.</Muted>
+  if (!template)
+    return (
+      <Muted>
+        No templates for {KIND_LABELS[kind].toLowerCase()} {audience === 'parent' ? 'to a parent' : 'to the person'} yet. Add one under Message templates.
+      </Muted>
+    )
 
   const text = draft ?? fillTemplate(template.body, values)
 
@@ -95,13 +114,13 @@ export function MessagePanel({ kind, values, templates, onSent, busy }: { kind: 
   )
 }
 
-type TemplateDraft = { id?: string; name: string; kind: MessageKind; body: string }
+type TemplateDraft = { id?: string; name: string; kind: MessageKind; audience: MessageAudience; body: string }
 
 function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDraft; onSave: (t: TemplateDraft) => Promise<boolean>; onCancel: () => void; busy: boolean }) {
   const [form, setForm] = useState(initial)
   const [error, setError] = useState<string | null>(null)
   const unknown = unknownVariables(form.body)
-  const usable = VARIABLES.filter((v) => v.kinds.includes(form.kind))
+  const usable = VARIABLES.filter((v) => v.kinds.includes(form.kind) && (!v.parentOnly || form.audience === 'parent'))
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -117,6 +136,10 @@ function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDr
         <TextField select label="Used for" slotProps={nativeSelect} value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as MessageKind })} sx={{ flex: '1 1 10rem' }}>
           <option value="offer">{KIND_LABELS.offer}</option>
           <option value="confirm">{KIND_LABELS.confirm}</option>
+        </TextField>
+        <TextField select label="Sent" slotProps={nativeSelect} value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value as MessageAudience })} sx={{ flex: '1 1 12rem' }}>
+          <option value="member">{AUDIENCE_LABELS.member}</option>
+          <option value="parent">{AUDIENCE_LABELS.parent}</option>
         </TextField>
       </Stack>
       <TextField label="Text" multiline minRows={4} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} sx={{ mt: 1.5 }} />
@@ -173,7 +196,10 @@ export function TemplatesEditor({
               <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {t.name} <Typography component="span" variant="body2" color="text.secondary">· {KIND_LABELS[t.kind]}</Typography>
+                    {t.name}{' '}
+                    <Typography component="span" variant="body2" color="text.secondary">
+                      · {KIND_LABELS[t.kind]} · {AUDIENCE_LABELS[t.audience].toLowerCase()}
+                    </Typography>
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>
                     {t.body}
@@ -191,7 +217,7 @@ export function TemplatesEditor({
         )}
       </Stack>
       {editing === 'new' ? (
-        <TemplateForm initial={{ name: '', kind: 'offer', body: '' }} onSave={onSave} onCancel={() => setEditing(null)} busy={busy} />
+        <TemplateForm initial={{ name: '', kind: 'offer', audience: 'member', body: '' }} onSave={onSave} onCancel={() => setEditing(null)} busy={busy} />
       ) : (
         <Button sx={{ mt: 1 }} onClick={() => setEditing('new')}>
           Add a template

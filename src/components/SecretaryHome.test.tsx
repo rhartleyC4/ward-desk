@@ -14,7 +14,7 @@ const ts = '2026-11-05T12:00:00Z'
 type Appt = SecretaryHomeData['appointments'][number]
 const appt = (id: string, interviewer: string, name: string, extra: Partial<Appt> = {}): Appt => ({
   id, interviewer_id: interviewer, scheduled_at: null, person_name: name, purpose: 'calling', candidate_id: null,
-  location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], ...extra,
+  location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], is_youth: false, parent_name: null, ...extra,
 })
 
 function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
@@ -46,15 +46,16 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
     absences: [{ id: 'x', user_id: 'l', starts_on: '2026-11-10', ends_on: '2026-11-10', location: 'Moab', created_at: ts }],
     leaders: profiles,
     templates: [
-      { id: 't1', name: 'Offer times', kind: 'offer', body: 'Hi {first_name}, {leader} would like to meet for {length}:\n{times}\n{my_name}' },
-      { id: 't2', name: 'Confirm time', kind: 'confirm', body: 'Hi {first_name}, see {leader} on {time}.' },
+      { id: 't1', name: 'Offer times', kind: 'offer', audience: 'member', body: 'Hi {first_name}, {leader} would like to meet for {length}:\n{times}\n{my_name}' },
+      { id: 't2', name: 'Confirm time', kind: 'confirm', audience: 'member', body: 'Hi {first_name}, see {leader} on {time}.' },
+      { id: 't3', name: 'Offer to a parent', kind: 'offer', audience: 'parent', body: 'Hi {parent_name}, {leader} would like to meet with {first_name}:\n{times}' },
     ],
     ...extra,
   }
 }
 
 function actions(): SecretaryHomeActions {
-  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), complete: vi.fn(), offer: vi.fn(), saveTemplate: vi.fn().mockResolvedValue(true), deleteTemplate: vi.fn() }
+  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), complete: vi.fn(), offer: vi.fn(), setYouth: vi.fn(), saveTemplate: vi.fn().mockResolvedValue(true), deleteTemplate: vi.fn() }
 }
 
 const view = (d = data(), userId = 'exec') => {
@@ -130,6 +131,32 @@ describe('SecretaryHome', () => {
     expect(a.offer).not.toHaveBeenCalled()
   })
 
+  it('writes to a parent for a youth', async () => {
+    view(data({ appointments: [appt('y1', 'b', 'Avery Quinn', { is_youth: true, parent_name: 'Sister Quinn' })] }))
+    const avery = screen.getByRole('article', { name: 'Avery Quinn' })
+    expect(within(avery).getByText('youth · text parent')).toBeInTheDocument()
+    await userEvent.click(within(avery).getByRole('button', { name: 'Find a time' }))
+    await userEvent.click(within(avery).getByRole('button', { name: 'Sun, November 8th at 9 AM' }))
+    await userEvent.click(within(avery).getByRole('button', { name: 'Message this time' }))
+    expect(within(avery).getByLabelText('Message')).toHaveValue('Hi Sister Quinn, Bishop Avery would like to meet with Avery:\n• Sun, November 8th at 9 AM')
+  })
+
+  it('marks someone a youth and saves the parent\'s name', async () => {
+    const a = view()
+    const nash = screen.getByRole('article', { name: 'Sister Nash' })
+    await userEvent.click(within(nash).getByRole('button', { name: 'Find a time' }))
+    await userEvent.click(within(nash).getByRole('checkbox', { name: /Youth under 18/ }))
+    expect(a.setYouth).toHaveBeenCalledWith('a1', true, null)
+  })
+
+  it('saves a parent\'s name when the field is left', async () => {
+    const a = view(data({ appointments: [appt('y1', 'b', 'Avery Quinn', { is_youth: true })] }))
+    const avery = screen.getByRole('article', { name: 'Avery Quinn' })
+    await userEvent.click(within(avery).getByRole('button', { name: 'Find a time' }))
+    await userEvent.type(within(avery).getByLabelText("Parent's name for Avery Quinn"), ' Brother Quinn {Enter}')
+    expect(a.setYouth).toHaveBeenCalledWith('y1', true, 'Brother Quinn')
+  })
+
   it('marks times already offered and when', async () => {
     view(data({ appointments: [appt('a1', 'b', 'Sister Nash', { offered_at: '2026-11-06T18:00:00Z', offered_times: ['2026-11-08T16:20:00+00:00'] })] }))
     const nash = screen.getByRole('article', { name: 'Sister Nash' })
@@ -154,7 +181,7 @@ describe('SecretaryHome', () => {
     await userEvent.type(within(form).getByLabelText('Text'), 'Hi {{frist_name}')
     expect(within(form).getByText(/Not a variable: \{frist_name\}/)).toBeInTheDocument()
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }))
-    expect(a.saveTemplate).toHaveBeenCalledWith({ name: 'Short', kind: 'offer', body: 'Hi {frist_name}' })
+    expect(a.saveTemplate).toHaveBeenCalledWith({ name: 'Short', kind: 'offer', audience: 'member', body: 'Hi {frist_name}' })
   })
 
   it('keeps a temple recommend interview at 10 minutes or more', async () => {

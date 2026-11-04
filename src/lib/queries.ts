@@ -123,7 +123,7 @@ export async function resetDay(client: Client, userId: string, date: IsoDate) {
 // ---------------------------------------------------------------------------
 
 export async function loadTemplates(client: Client): Promise<MessageTemplate[]> {
-  return must(await client.from('message_templates').select('id, name, kind, body').order('kind').order('name'))
+  return must(await client.from('message_templates').select('id, name, kind, audience, body').order('kind').order('audience').order('name'))
 }
 
 /** Adds a template, or changes one when an id is given. */
@@ -347,7 +347,7 @@ export async function assignCallingAppointment(client: Client, candidate: Pick<C
   }
 }
 
-export async function updateAppointment(client: Client, id: string, changes: Pick<TablesUpdate<'interviews'>, 'scheduled_at' | 'status' | 'interviewer_id' | 'duration_minutes'>) {
+export async function updateAppointment(client: Client, id: string, changes: Pick<TablesUpdate<'interviews'>, 'scheduled_at' | 'status' | 'interviewer_id' | 'duration_minutes' | 'is_youth' | 'parent_name'>) {
   check(await client.from('interviews').update(changes).eq('id', id))
 }
 

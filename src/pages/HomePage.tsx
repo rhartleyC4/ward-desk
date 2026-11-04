@@ -36,6 +36,7 @@ export function HomePage() {
     setLength: (id, minutes) => void run(() => q.updateAppointment(supabase, id, { duration_minutes: minutes })),
     complete: (id) => void run(() => q.updateAppointment(supabase, id, { status: 'completed' })),
     offer: (id, times) => void run(() => q.markOffered(supabase, id, times)),
+    setYouth: (id, isYouth, parentName) => void run(() => q.updateAppointment(supabase, id, { is_youth: isYouth, parent_name: parentName })),
     saveTemplate: (t) => run(() => q.saveTemplate(supabase, t)),
     deleteTemplate: (id) => void run(() => q.deleteTemplate(supabase, id)),
   }

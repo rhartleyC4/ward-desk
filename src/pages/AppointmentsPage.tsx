@@ -16,7 +16,8 @@ export function AppointmentsPage() {
     schedule: (id, scheduledAt) => run(() => q.updateAppointment(supabase, id, { scheduled_at: scheduledAt })),
     complete: (id) => run(() => q.updateAppointment(supabase, id, { status: 'completed' })),
     cancel: (id) => run(() => q.updateAppointment(supabase, id, { status: 'cancelled' })),
-    add: (appointment) => run(() => q.addAppointment(supabase, appointment)),
+    // Youth interviews are with youth, so their messages go to a parent.
+    add: (appointment) => run(() => q.addAppointment(supabase, { ...appointment, is_youth: appointment.purpose === 'youth' })),
     setSecretary: (leaderId, secretaryId, on) => run(() => (on ? q.addSecretary : q.removeSecretary)(supabase, leaderId, secretaryId)),
   }
 

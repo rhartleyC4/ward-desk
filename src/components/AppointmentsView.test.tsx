@@ -15,7 +15,7 @@ function data(): AppointmentsData {
   const { needs, candidates } = agendaData()
   const appt = (id: string, interviewer: string, name: string, extra: Partial<AppointmentsData['appointments'][number]> = {}) => ({
     id, interviewer_id: interviewer, scheduled_at: null, person_name: name, purpose: 'calling' as const, candidate_id: null,
-    location: null, status: 'scheduled' as const, notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], ...extra,
+    location: null, status: 'scheduled' as const, notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], is_youth: false, parent_name: null, ...extra,
   })
   return {
     appointments: [

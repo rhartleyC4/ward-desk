@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fillTemplate, firstName, lengthWords, smsLink, unknownVariables } from './messages'
+import { audienceFor, fillTemplate, firstName, lengthWords, smsLink, templatesFor, unknownVariables, type MessageTemplate } from './messages'
 
 const OFFER = 'Hi {first_name}, {leader} would like to meet with you for about {length}. Would one of these times work?\n{times}\nThanks, {my_name}'
 
@@ -47,9 +47,29 @@ describe('fillTemplate', () => {
   })
 })
 
+describe('messages to a parent', () => {
+  it('greets the parent and names the youth', () => {
+    const body = 'Hi {parent_name}, {leader} would like to meet with {first_name}.'
+    expect(fillTemplate(body, { name: 'Avery Quinn', parentName: 'Sister Quinn', leader: 'Bishop Avery', minutes: 10, myName: '' })).toBe(
+      'Hi Sister Quinn, Bishop Avery would like to meet with Avery.',
+    )
+    expect(fillTemplate(body, { name: 'Avery Quinn', parentName: '  ', leader: 'Bishop Avery', minutes: 10, myName: '' })).toBe('Hi there, Bishop Avery would like to meet with Avery.')
+  })
+
+  it('picks the parent templates for a youth', () => {
+    const t = (id: string, kind: MessageTemplate['kind'], audience: MessageTemplate['audience']): MessageTemplate => ({ id, name: id, kind, audience, body: '' })
+    const all = [t('o', 'offer', 'member'), t('op', 'offer', 'parent'), t('cp', 'confirm', 'parent')]
+    expect(audienceFor({ is_youth: true })).toBe('parent')
+    expect(audienceFor({ is_youth: false })).toBe('member')
+    expect(templatesFor(all, 'offer', 'parent').map((x) => x.id)).toEqual(['op'])
+    expect(templatesFor(all, 'offer', 'member').map((x) => x.id)).toEqual(['o'])
+  })
+})
+
 describe('unknownVariables', () => {
   it('finds typos once each', () => {
     expect(unknownVariables(OFFER)).toEqual([])
+    expect(unknownVariables('Hi {parent_name}')).toEqual([])
     expect(unknownVariables('Hi {frist_name} {frist_name} at {when}')).toEqual(['frist_name', 'when'])
   })
 })

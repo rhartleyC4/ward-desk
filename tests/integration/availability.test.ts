@@ -57,10 +57,10 @@ describe('appointment hours', () => {
     expect(offered.offered_at).not.toBeNull()
     expect(offered.offered_times.map((t) => new Date(t).toISOString())).toEqual(times)
 
-    await saveTemplate(secretary, { name: `${TAG} template`, kind: 'offer', body: 'Hi {first_name}' })
+    await saveTemplate(secretary, { name: `${TAG} template`, kind: 'offer', audience: 'parent', body: 'Hi {parent_name}' })
     const mine = (await loadTemplates(second)).find((t) => t.name === `${TAG} template`)!
-    await saveTemplate(second, { ...mine, body: 'Hello {first_name}' })
-    expect((await loadTemplates(secretary)).find((t) => t.id === mine.id)?.body).toBe('Hello {first_name}')
+    await saveTemplate(second, { ...mine, body: 'Hello {parent_name}' })
+    expect((await loadTemplates(secretary)).find((t) => t.id === mine.id)?.body).toBe('Hello {parent_name}')
     await deleteTemplate(secretary, mine.id)
     expect((await loadTemplates(secretary)).some((t) => t.id === mine.id)).toBe(false)
     expect(await loadTemplates(await signIn('leader'))).toEqual([])

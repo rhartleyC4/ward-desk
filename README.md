@@ -49,6 +49,8 @@ The executive secretary (`office = 'executive_secretary'`) lands on **Home**, "Y
 
 To reach someone, the secretary picks a few open times and writes a message from a template (`message_templates`, shared by the bishopric and edited on Home). Templates use variables such as `{first_name}`, `{leader}`, `{length}`, `{times}` and `{time}`, and should stay general rather than say what the appointment is for. **Copy** puts the text on the clipboard; **Open Messages** opens the phone's messaging app with the text filled in and no recipient, so no phone numbers are stored. Sending records `offered_at` and `offered_times`, so the list shows when times went out and the picker marks them when the reply comes in. Booked appointments have a confirmation message too.
 
+For a youth under 18 the secretary texts a parent instead. Ticking "Youth under 18" on an appointment (`interviews.is_youth`, set automatically for youth interviews) and entering the parent's name (`parent_name`) switches its messages to the templates written to a parent (`message_templates.audience = 'parent'`), where `{parent_name}` greets the parent and `{first_name}` is the youth's. Only the parent's name is kept, never a birthdate or phone number.
+
 Adjust these as the real needs become clear.
 
 ## How it replaces the Google Sheet
