@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DayChange, UsualHours } from './availability'
-import { adjustMinutes, minutesLabel, openSlots, slotLabel, slotsByDay, wardParts, wardTimestamp, type Booked, type SlotInput } from './slots'
+import { adjustMinutes, bookedRange, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, wardTimestamp, type Booked, type SlotInput } from './slots'
 
 const TZ = 'America/Denver'
 // 2026-11-08 is a Sunday; Denver is UTC-7 in November.
@@ -126,5 +126,23 @@ describe('slotsByDay and slotLabel', () => {
   it('reads a slot the way a message offers it', () => {
     expect(slotLabel({ date: '2026-11-08', time: '09:15' })).toBe('Sun, November 8th at 9:15 AM')
     expect(slotLabel({ date: '2026-11-11', time: '19:00' })).toBe('Wed, November 11th at 7 PM')
+  })
+})
+
+describe('booked appointments', () => {
+  it('shows the time range in the ward', () => {
+    expect(bookedRange('2026-11-08T16:00:00Z', 10, TZ)).toBe('9–9:10 AM')
+    expect(bookedRange('2026-11-08T18:50:00Z', 20, TZ)).toBe('11:50 AM–12:10 PM')
+  })
+
+  it('flags bookings that run into each other with the same leader', () => {
+    const booked = [
+      booking('a1', '2026-11-08T16:00:00Z', 20), // 9:00–9:20
+      booking('a2', '2026-11-08T16:15:00Z', 10), // 9:15–9:25, overlaps a1
+      booking('a3', '2026-11-08T16:25:00Z', 10), // starts as a2 ends
+      booking('a4', '2026-11-08T16:05:00Z', 10, { interviewer_id: 'l' }), // another leader
+      booking('a5', '2026-11-08T16:05:00Z', 10, { status: 'cancelled' }),
+    ]
+    expect([...overlapping(booked)].sort()).toEqual(['a1', 'a2'])
   })
 })

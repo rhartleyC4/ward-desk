@@ -44,8 +44,15 @@ describe('homeFor', () => {
   })
 
   it('asks a bishop or counselor without appointment hours to set them first', () => {
-    expect(homeFor(['bishopric'], bishopric, true)).toBe('/hours')
-    expect(homeFor(['bishopric'], bishopric, false)).toBe('/agenda')
-    expect(homeFor(['leader'], [], true)).toBe('/suggest')
+    expect(homeFor(['bishopric'], bishopric, 'second_counselor', true)).toBe('/hours')
+    expect(homeFor(['bishopric'], bishopric, 'second_counselor', false)).toBe('/agenda')
+    expect(homeFor(['leader'], [], null, true)).toBe('/suggest')
+  })
+
+  it('lands the executive secretary on the home screen', () => {
+    expect(navFor(['bishopric'], bishopric, 'executive_secretary')[0]).toEqual({ to: '/home', label: 'Home' })
+    expect(homeFor(['bishopric'], bishopric, 'executive_secretary')).toBe('/home')
+    expect(labels(['bishopric'], bishopric)).not.toContain('Home')
+    expect(navFor(['leader'], [], 'executive_secretary').map((l) => l.label)).not.toContain('Home')
   })
 })

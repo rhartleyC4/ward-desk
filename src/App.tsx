@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { Layout, Loading } from './components/Layout'
-import { canEditHours, canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
+import { canEditHours, hasSecretaryHome, canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
 import { keepsHours } from './lib/availability'
 import type { AgendaTemplate } from './lib/queries'
 import { AccessPage } from './pages/AccessPage'
@@ -13,6 +13,7 @@ import { AgendaPage } from './pages/AgendaPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
 import { CallingListPage } from './pages/CallingListPage'
 import { AwayPage } from './pages/AwayPage'
+import { HomePage } from './pages/HomePage'
 import { HoursPage } from './pages/HoursPage'
 import { LoginPage } from './pages/LoginPage'
 import { MeetingsPage } from './pages/MeetingsPage'
@@ -21,8 +22,13 @@ import { SchedulePage } from './pages/SchedulePage'
 import { SuggestPage } from './pages/SuggestPage'
 
 function Guard({ allow, children }: { allow: (roles: AppRole[], templates: AgendaTemplate[]) => boolean; children: ReactNode }) {
-  const { roles, templates } = useAuth()
-  return allow(roles, templates) ? children : <Navigate to={homeFor(roles, templates)} replace />
+  const { roles, templates, office } = useAuth()
+  return allow(roles, templates) ? children : <Navigate to={homeFor(roles, templates, office)} replace />
+}
+
+function SecretaryGuard({ children }: { children: ReactNode }) {
+  const { roles, templates, office } = useAuth()
+  return hasSecretaryHome(roles, office) ? children : <Navigate to={homeFor(roles, templates, office)} replace />
 }
 
 const attendsAMeeting = (_: AppRole[], templates: AgendaTemplate[]) => canSeeAgenda(templates)
@@ -35,7 +41,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<Navigate to={homeFor(roles, templates, keepsHours(office) && !hasHours)} replace />} />
+        <Route index element={<Navigate to={homeFor(roles, templates, office, keepsHours(office) && !hasHours)} replace />} />
+        <Route path="home" element={<SecretaryGuard><HomePage /></SecretaryGuard>} />
         <Route path="agenda" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
         <Route path="agenda/:slug" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />
         <Route path="agenda/:slug/:date" element={<Guard allow={attendsAMeeting}><AgendaPage /></Guard>} />

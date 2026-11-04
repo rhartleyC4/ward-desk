@@ -78,3 +78,8 @@ export function longDate(date: IsoDate): string {
 export function isBetween(date: IsoDate, start: IsoDate, end: IsoDate): boolean {
   return date >= start && date <= end
 }
+
+/** Whole days from one date to a later one. */
+export function daysBetween(from: IsoDate, to: IsoDate): number {
+  return Math.round((parseIso(to).getTime() - parseIso(from).getTime()) / DAY_MS)
+}

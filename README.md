@@ -45,6 +45,8 @@ The bishop and counselors keep appointment hours on the **Hours** page: usual we
 
 Each appointment has a length (`interviews.duration_minutes`): 10 minutes unless the secretary changes it, in 5-minute steps, with at least 10 for a temple recommend interview. Open times (`src/lib/slots.ts`) fill each block of hours one appointment after another and start the next one right after whatever is booked ends, so lengthening or shortening a booking moves the open times around it.
 
+The executive secretary (`office = 'executive_secretary'`) lands on **Home**, "Your week": who needs an appointment with the leaders they schedule for, with open times by day at the chosen length and a button to book one; what's booked, with the length adjustable and a warning when one runs into the next; and each leader's hours for the next seven days. A secretary not yet assigned to any leader sees everyone.
+
 Adjust these as the real needs become clear.
 
 ## How it replaces the Google Sheet

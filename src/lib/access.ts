@@ -25,10 +25,16 @@ export const canManageCallingList = (roles: AppRole[]) => roles.includes('admin'
 /** Called leaders only submit names; everyone else with a role sees the ward calendar pages. */
 export const isMember = (roles: AppRole[]) => roles.some((r) => r !== 'leader')
 
+type Office = Enums<'bishopric_office'> | null
+
+/** The executive secretary's home: who needs an appointment, open times, and the week ahead. */
+export const hasSecretaryHome = (roles: AppRole[], office: Office) => office === 'executive_secretary' && canSeeAppointments(roles)
+
 export type NavLink = { to: string; label: string }
 
-export function navFor(roles: AppRole[], templates: readonly unknown[] = []): NavLink[] {
+export function navFor(roles: AppRole[], templates: readonly unknown[] = [], office: Office = null): NavLink[] {
   const links: NavLink[] = []
+  if (hasSecretaryHome(roles, office)) links.push({ to: '/home', label: 'Home' })
   if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Agenda' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
   if (canSeeAppointments(roles)) links.push({ to: '/appointments', label: 'Appointments' })
@@ -42,7 +48,7 @@ export function navFor(roles: AppRole[], templates: readonly unknown[] = []): Na
 }
 
 /** Where to land after sign-in. A bishop or counselor who hasn't set appointment hours is asked to first. */
-export function homeFor(roles: AppRole[], templates: readonly unknown[] = [], needsHours = false): string {
+export function homeFor(roles: AppRole[], templates: readonly unknown[] = [], office: Office = null, needsHours = false): string {
   if (needsHours && canEditHours(roles)) return '/hours'
-  return navFor(roles, templates)[0]?.to ?? '/no-access'
+  return navFor(roles, templates, office)[0]?.to ?? '/no-access'
 }

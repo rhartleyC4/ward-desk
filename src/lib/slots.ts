@@ -3,7 +3,7 @@
 // appointments are timestamps, so both are compared as ward dates and times. Pure so it can be
 // unit tested.
 
-import { daysFor, hhmm, timeLabel, WEEKDAYS, type DayChange, type UsualHours } from './availability'
+import { blockLabel, daysFor, hhmm, timeLabel, WEEKDAYS, type DayChange, type UsualHours } from './availability'
 import { longDate, weekday, type IsoDate } from './dates'
 import type { Enums, Tables } from './database.types'
 import type { Absence } from './schedule'
@@ -127,4 +127,33 @@ export function slotsByDay(slots: Slot[]): { date: IsoDate; slots: Slot[] }[] {
 /** "Sun, November 8th at 9:15 AM", the way a message offers a time. */
 export function slotLabel(slot: Pick<Slot, 'date' | 'time'>): string {
   return `${WEEKDAYS[weekday(slot.date)].slice(0, 3)}, ${longDate(slot.date)} at ${timeLabel(slot.time)}`
+}
+
+/** When an appointment ends. */
+export const endsAt = (iso: string, minutes: number) => new Date(new Date(iso).getTime() + minutes * 60_000).toISOString()
+
+/** "9:00–9:10 AM" for a booked appointment, in the ward's time zone. */
+export function bookedRange(iso: string, minutes: number, timeZone: string): string {
+  const start = wardParts(iso, timeZone).time
+  const end = wardParts(endsAt(iso, minutes), timeZone).time
+  return blockLabel({ starts_at: start, ends_at: end })
+}
+
+/**
+ * Booked appointments that overlap another with the same leader, which happens when one is made
+ * longer. Open times move on their own; booked ones don't, so the secretary needs to see these.
+ */
+export function overlapping(booked: Booked[]): Set<string> {
+  const timed = booked.filter((b) => b.status === 'scheduled' && b.scheduled_at && b.interviewer_id)
+  const out = new Set<string>()
+  for (const a of timed) {
+    const aStart = new Date(a.scheduled_at!).getTime()
+    const aEnd = aStart + a.duration_minutes * 60_000
+    for (const b of timed) {
+      if (a.id === b.id || a.interviewer_id !== b.interviewer_id) continue
+      const bStart = new Date(b.scheduled_at!).getTime()
+      if (aStart < bStart + b.duration_minutes * 60_000 && bStart < aEnd) out.add(a.id)
+    }
+  }
+  return out
 }
