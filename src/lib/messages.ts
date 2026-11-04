@@ -47,20 +47,33 @@ export function unknownVariables(body: string): string[] {
   return [...new Set([...body.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).filter((n) => !known.includes(n)))]
 }
 
+/**
+ * Wording that depends on how many times are offered: "{this time|one of these times}" uses the
+ * part before the bar for one time and the part after it for more. A confirmation is one time.
+ */
+export const CHOICE_HELP = { example: '{this time|one of these times}', meaning: 'The first part when one time is offered, the second when there are more' }
+
+/** How many times a message is about, for picking singular or plural wording. */
+const timeCount = (values: MessageValues) => (values.times ? values.times.length : 1)
+
 /** Fills in a template. Unknown variables are left as typed so the mistake shows. */
 export function fillTemplate(body: string, values: MessageValues): string {
+  const one = timeCount(values) === 1
   const vars: Record<string, string> = {
     first_name: firstName(values.name),
     name: values.name.trim(),
     leader: values.leader,
     length: lengthWords(values.minutes),
-    times: (values.times ?? []).map((t) => `• ${t}`).join('\n'),
+    // A single time reads as a plain line; a list of them gets bullets.
+    times: one ? (values.times?.[0] ?? '') : (values.times ?? []).map((t) => `• ${t}`).join('\n'),
     time: values.time ?? '',
     my_name: values.myName,
     // "Hi there" reads fine when the parent's name hasn't been entered.
     parent_name: values.parentName?.trim() || 'there',
   }
-  return body.replace(/\{(\w+)\}/g, (whole, key: string) => (key in vars ? vars[key] : whole))
+  return body
+    .replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (_, single: string, plural: string) => (one ? single : plural))
+    .replace(/\{(\w+)\}/g, (whole, key: string) => (key in vars ? vars[key] : whole))
 }
 
 /**

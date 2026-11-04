@@ -9,7 +9,7 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useRef, useState, type FormEvent } from 'react'
-import { AUDIENCE_LABELS, fillTemplate, KIND_LABELS, smsLink, templatesFor, unknownVariables, VARIABLES, type MessageAudience, type MessageKind, type MessageTemplate, type MessageValues } from '../lib/messages'
+import { AUDIENCE_LABELS, CHOICE_HELP, fillTemplate, KIND_LABELS, smsLink, templatesFor, unknownVariables, VARIABLES, type MessageAudience, type MessageKind, type MessageTemplate, type MessageValues } from '../lib/messages'
 import { nativeSelect } from '../theme'
 import { Muted } from './Layout'
 
@@ -150,6 +150,11 @@ function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDr
           </Typography>
         ))}
       </Box>
+      {form.kind === 'offer' && (
+        <Typography variant="body2" color="text.secondary">
+          <Box component="code" sx={{ color: 'text.primary' }}>{CHOICE_HELP.example}</Box> {CHOICE_HELP.meaning}
+        </Typography>
+      )}
       {unknown.length > 0 && (
         <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
           Not a variable: {unknown.map((u) => `{${u}}`).join(', ')}. It will be sent as typed.

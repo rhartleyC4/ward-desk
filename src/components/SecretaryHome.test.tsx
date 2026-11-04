@@ -142,7 +142,7 @@ describe('SecretaryHome', () => {
     await userEvent.click(within(avery).getByRole('button', { name: 'Find a time' }))
     await userEvent.click(within(avery).getByRole('button', { name: 'Sun, November 8th at 9 AM' }))
     await userEvent.click(within(avery).getByRole('button', { name: 'Message this time' }))
-    expect(within(avery).getByLabelText('Message')).toHaveValue('Hi Sister Quinn, Bishop Avery would like to meet with Avery:\n• Sun, November 8th at 9 AM')
+    expect(within(avery).getByLabelText('Message')).toHaveValue('Hi Sister Quinn, Bishop Avery would like to meet with Avery:\nSun, November 8th at 9 AM')
   })
 
   it('marks someone a youth and saves the parent\'s name', async () => {

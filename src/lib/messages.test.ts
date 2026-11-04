@@ -42,6 +42,16 @@ describe('fillTemplate', () => {
     )
   })
 
+  it('words things for one time or several', () => {
+    const body = 'Would {this time|one of these times} work?\n{times}'
+    const base = { name: 'Jordan', leader: 'Bishop Avery', minutes: 10, myName: '' }
+    expect(fillTemplate(body, { ...base, times: ['Sun, November 8th at 9 AM'] })).toBe('Would this time work?\nSun, November 8th at 9 AM')
+    expect(fillTemplate(body, { ...base, times: ['Sun at 9 AM', 'Wed at 7 PM'] })).toBe('Would one of these times work?\n• Sun at 9 AM\n• Wed at 7 PM')
+    // A confirmation is about one time; either side may be empty.
+    expect(fillTemplate('See you{| all} on {time}.', { ...base, time: 'Sun at 9 AM' })).toBe('See you on Sun at 9 AM.')
+    expect(unknownVariables(body)).toEqual([])
+  })
+
   it('leaves unknown variables as typed', () => {
     expect(fillTemplate('Hi {frist_name}', { name: 'Jordan', leader: '', minutes: 10, myName: '' })).toBe('Hi {frist_name}')
   })
