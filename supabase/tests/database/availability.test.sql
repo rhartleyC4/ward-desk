@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(26);
+select plan(31);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -123,6 +123,16 @@ select throws_ok(
   'a template needs some text'
 );
 
+-- Usual lengths
+select is((select count(*)::int from public.appointment_lengths where minutes = 10), 7, 'every kind of appointment starts at 10 minutes');
+update public.appointment_lengths set minutes = 5 where purpose = 'calling';
+select is((select minutes::int from public.appointment_lengths where purpose = 'calling'), 5, 'secretary shortens the usual length for extending a calling');
+select throws_ok(
+  $$ update public.appointment_lengths set minutes = 5 where purpose = 'temple_recommend' $$,
+  '23514', null,
+  'a temple recommend interview usually takes at least 10 minutes'
+);
+
 select pg_temp.act_as('first@ward.test');
 select is((select count(*)::int from public.message_templates where name = 'Short offer'), 1, 'the rest of the bishopric shares the templates');
 
@@ -133,6 +143,10 @@ select throws_ok(
   '42501', null,
   'called leaders cannot add templates'
 );
+select is((select count(*)::int from public.appointment_lengths), 0, 'called leaders cannot read usual lengths');
+update public.appointment_lengths set minutes = 60 where purpose = 'calling';
+select pg_temp.act_as('secretary@ward.test');
+select is((select minutes::int from public.appointment_lengths where purpose = 'calling'), 5, 'and cannot change them');
 
 select * from finish();
 rollback;

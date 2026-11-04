@@ -6,7 +6,7 @@ import { tidyTitle, type ListedCalling } from './callings'
 import type { MessageTemplate } from './messages'
 import { addDays, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
-import type { Tables, TablesInsert, TablesUpdate } from './database.types'
+import type { Enums, Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
 
 type Result<T> = { data: T; error: { message: string } | null }
@@ -345,7 +345,8 @@ export async function assignCallingAppointment(client: Client, candidate: Pick<C
     const changes: TablesUpdate<'interviews'> = leaderId ? { interviewer_id: leaderId } : { status: 'cancelled' }
     check(await client.from('interviews').update(changes).eq('id', open.id))
   } else if (leaderId) {
-    check(await client.from('interviews').insert({ candidate_id: candidate.id, interviewer_id: leaderId, person_name: candidate.person_name, purpose: 'calling' }))
+    const duration_minutes = await lengthFor(client, 'calling')
+    check(await client.from('interviews').insert({ candidate_id: candidate.id, interviewer_id: leaderId, person_name: candidate.person_name, purpose: 'calling', duration_minutes }))
   }
 }
 
@@ -429,8 +430,32 @@ export async function resolveAgendaItem(client: Client, id: string, on: IsoDate)
   check(await client.from('agenda_items').update({ resolved_on: on }).eq('id', id))
 }
 
+/** Adds an appointment, starting at the usual length for its kind unless one is given. */
 export async function addAppointment(client: Client, interview: TablesInsert<'interviews'>) {
-  check(await client.from('interviews').insert(interview))
+  const duration_minutes = interview.duration_minutes ?? (await lengthFor(client, interview.purpose ?? 'other'))
+  check(await client.from('interviews').insert({ ...interview, duration_minutes }))
+}
+
+export type AppointmentLength = Pick<Tables<'appointment_lengths'>, 'purpose' | 'minutes'>
+
+/** How long each kind of appointment usually takes. */
+export async function loadLengths(client: Client): Promise<AppointmentLength[]> {
+  return must(await client.from('appointment_lengths').select('purpose, minutes'))
+}
+
+/** The usual length for a kind of appointment; 10 minutes if none is set. */
+export async function lengthFor(client: Client, purpose: Enums<'interview_purpose'>): Promise<number> {
+  const row = maybe<{ minutes: number }>(await client.from('appointment_lengths').select('minutes').eq('purpose', purpose).maybeSingle())
+  return row?.minutes ?? 10
+}
+
+export async function setUsualLength(client: Client, purpose: Enums<'interview_purpose'>, minutes: number) {
+  check(await client.from('appointment_lengths').update({ minutes, updated_at: new Date().toISOString() }).eq('purpose', purpose))
+}
+
+/** Lets the times offered to someone go, so they can be offered to others. */
+export async function releaseOffered(client: Client, id: string) {
+  check(await client.from('interviews').update({ offered_at: null, offered_times: [] }).eq('id', id))
 }
 
 export async function addPrayerName(client: Client, name: string) {

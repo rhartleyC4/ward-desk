@@ -163,6 +163,20 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"appointment_lengths": {
+                  Row: {
+                    "minutes": number,"purpose": Database["public"]['Enums']["interview_purpose"],"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "minutes"?: number,"purpose": Database["public"]['Enums']["interview_purpose"],"updated_at"?: string
+                  }
+                  Update: {
+                    "minutes"?: number,"purpose"?: Database["public"]['Enums']["interview_purpose"],"updated_at"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"availability": {
                   Row: {
                     "created_at": string,"ends_at": string,"id": string,"starts_at": string,"user_id": string,"weekday": number

@@ -11,12 +11,13 @@ export function HomePage() {
   const { profile } = useAuth()
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
-    const [appointments, hours, templates] = await Promise.all([
+    const [appointments, hours, templates, lengths] = await Promise.all([
       q.loadAppointments(supabase),
       q.loadHours(supabase, today, addDays(today, DAYS_AHEAD - 1)),
       q.loadTemplates(supabase),
+      q.loadLengths(supabase),
     ])
-    return { ...appointments, ...hours, templates }
+    return { ...appointments, ...hours, templates, lengths }
   }, [today])
   const save = useAction()
   // Times before this are past. Fixed for the visit; reopening the page moves it on.
@@ -39,6 +40,8 @@ export function HomePage() {
     setYouth: (id, isYouth, parentName) => void run(() => q.updateAppointment(supabase, id, { is_youth: isYouth, parent_name: parentName })),
     saveTemplate: (t) => run(() => q.saveTemplate(supabase, t)),
     deleteTemplate: (id) => void run(() => q.deleteTemplate(supabase, id)),
+    release: (id) => void run(() => q.releaseOffered(supabase, id)),
+    setUsualLength: (purpose, minutes) => void run(() => q.setUsualLength(supabase, purpose, minutes)),
   }
 
   return (

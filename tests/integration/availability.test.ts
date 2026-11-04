@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest'
 import { dayFor } from '../../src/lib/availability'
-import { addAppointment, addDayHours, addUsualHours, deleteTemplate, deleteUsualHours, loadAppointments, loadHours, loadTemplates, markDayOff, markOffered, resetDay, saveTemplate, updateAppointment } from '../../src/lib/queries'
+import { addAppointment, addDayHours, addUsualHours, deleteTemplate, deleteUsualHours, loadAppointments, loadHours, loadLengths, loadTemplates, markDayOff, markOffered, releaseOffered, resetDay, saveTemplate, setUsualLength, updateAppointment } from '../../src/lib/queries'
 import { openSlots, wardTimestamp } from '../../src/lib/slots'
 import { signIn } from './helpers'
 
@@ -57,6 +57,9 @@ describe('appointment hours', () => {
     expect(offered.offered_at).not.toBeNull()
     expect(offered.offered_times.map((t) => new Date(t).toISOString())).toEqual(times)
 
+    await releaseOffered(secretary, id)
+    expect((await loadAppointments(secretary)).appointments.find((a) => a.id === id)).toMatchObject({ offered_at: null, offered_times: [] })
+
     await saveTemplate(secretary, { name: `${TAG} template`, kind: 'offer', audience: 'parent', body: 'Hi {parent_name}' })
     const mine = (await loadTemplates(second)).find((t) => t.name === `${TAG} template`)!
     await saveTemplate(second, { ...mine, body: 'Hello {parent_name}' })
@@ -64,6 +67,22 @@ describe('appointment hours', () => {
     await deleteTemplate(secretary, mine.id)
     expect((await loadTemplates(secretary)).some((t) => t.id === mine.id)).toBe(false)
     expect(await loadTemplates(await signIn('leader'))).toEqual([])
+  })
+
+  it('starts a new appointment at the usual length for its kind', async () => {
+    const secretary = await signIn('secretary')
+    const second = await signIn('second')
+    const before = (await loadLengths(secretary)).find((l) => l.purpose === 'ppi')!.minutes
+    try {
+      await setUsualLength(secretary, 'ppi', 20)
+      await addAppointment(secretary, { interviewer_id: second.userId, person_name: `${TAG} Usual`, purpose: 'ppi' })
+      await addAppointment(secretary, { interviewer_id: second.userId, person_name: `${TAG} Given`, purpose: 'ppi', duration_minutes: 15 })
+      const { appointments } = await loadAppointments(secretary)
+      expect(appointments.find((a) => a.person_name === `${TAG} Usual`)?.duration_minutes).toBe(20)
+      expect(appointments.find((a) => a.person_name === `${TAG} Given`)?.duration_minutes).toBe(15)
+    } finally {
+      await setUsualLength(secretary, 'ppi', before)
+    }
   })
 
   it('lets the secretary change one date and put it back', async () => {

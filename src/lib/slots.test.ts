@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { DayChange, UsualHours } from './availability'
-import { adjustMinutes, bookedRange, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, wardTimestamp, type Booked, type SlotInput } from './slots'
+import { adjustMinutes, bookedRange, heldTimes, isHolding, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, wardTimestamp, type Booked, type SlotInput } from './slots'
 
 const TZ = 'America/Denver'
 // 2026-11-08 is a Sunday; Denver is UTC-7 in November.
@@ -144,5 +144,32 @@ describe('booked appointments', () => {
       booking('a5', '2026-11-08T16:05:00Z', 10, { status: 'cancelled' }),
     ]
     expect([...overlapping(booked)].sort()).toEqual(['a1', 'a2'])
+  })
+})
+
+describe('held times', () => {
+  const offered = (id: string, extra: object = {}) => ({
+    ...booking(id, null, 10),
+    offered_at: '2026-11-06T18:00:00Z',
+    offered_times: ['2026-11-08T16:00:00Z', '2026-11-08T16:20:00Z'],
+    ...extra,
+  })
+  const now = new Date('2026-11-07T12:00:00Z')
+
+  it('keeps times offered to someone from being offered to anyone else', () => {
+    const held = heldTimes([offered('w1')], now)
+    expect(times({ booked: held, now }).filter((t) => t.startsWith('2026-11-08'))).toEqual([
+      '2026-11-08 09:10', '2026-11-08 09:30', '2026-11-08 09:40', '2026-11-08 09:50',
+    ])
+    // The person they were offered to still sees them.
+    expect(times({ booked: held, now, ignoreId: 'w1' })).toContain('2026-11-08 09:00')
+  })
+
+  it('lets the hold go after three days, once booked, or when released', () => {
+    expect(isHolding(offered('w1'), now)).toBe(true)
+    expect(isHolding(offered('w1'), new Date('2026-11-09T18:00:01Z'))).toBe(false)
+    expect(heldTimes([offered('w1', { scheduled_at: '2026-11-08T16:00:00Z' })], now)).toEqual([])
+    expect(heldTimes([offered('w1', { offered_at: null, offered_times: [] })], now)).toEqual([])
+    expect(heldTimes([offered('w1', { status: 'cancelled' })], now)).toEqual([])
   })
 })

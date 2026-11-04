@@ -157,3 +157,26 @@ export function overlapping(booked: Booked[]): Set<string> {
   }
   return out
 }
+
+/** How long times offered to someone are kept from everyone else while they reply. */
+export const HOLD_DAYS = 3
+
+type Offered = Booked & Pick<Tables<'interviews'>, 'offered_at' | 'offered_times'>
+
+/** When the hold on someone's offered times ends. */
+export const holdEnds = (offeredAt: string, days = HOLD_DAYS) => new Date(new Date(offeredAt).getTime() + days * 86_400_000)
+
+/** Whether someone still waiting for a time has offered times on hold. */
+export const isHolding = (a: Offered, now: Date, days = HOLD_DAYS) =>
+  a.status === 'scheduled' && !a.scheduled_at && !!a.offered_at && a.offered_times.length > 0 && holdEnds(a.offered_at, days) > now
+
+/**
+ * Times offered to people still waiting, as if booked, so the picker doesn't offer them to anyone
+ * else. Each carries the appointment's id, so that appointment's own picker (which ignores its own
+ * id) still shows them. The hold ends when the person is booked, released, or after a few days.
+ */
+export function heldTimes(appointments: Offered[], now: Date, days = HOLD_DAYS): Booked[] {
+  return appointments
+    .filter((a) => isHolding(a, now, days))
+    .flatMap((a) => a.offered_times.map((at) => ({ id: a.id, interviewer_id: a.interviewer_id, scheduled_at: at, status: a.status, duration_minutes: a.duration_minutes })))
+}

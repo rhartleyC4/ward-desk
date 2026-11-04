@@ -49,6 +49,7 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
     changes: [],
     absences: [{ id: 'x', user_id: 'l', starts_on: '2026-11-10', ends_on: '2026-11-10', location: 'Moab', created_at: ts }],
     leaders: profiles,
+    lengths: [{ purpose: 'calling', minutes: 5 }],
     templates: [
       { id: 't1', name: 'Offer times', kind: 'offer', audience: 'member', body: 'Hi {first_name}, {leader} would like to meet for {length}:\n{times}\n{my_name}' },
       { id: 't2', name: 'Confirm time', kind: 'confirm', audience: 'member', body: 'Hi {first_name}, see {leader} on {time}.' },
@@ -59,7 +60,7 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
 }
 
 function actions(): SecretaryHomeActions {
-  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), complete: vi.fn(), offer: vi.fn(), setYouth: vi.fn(), saveTemplate: vi.fn().mockResolvedValue(true), deleteTemplate: vi.fn() }
+  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), complete: vi.fn(), offer: vi.fn(), setYouth: vi.fn(), release: vi.fn(), setUsualLength: vi.fn(), saveTemplate: vi.fn().mockResolvedValue(true), deleteTemplate: vi.fn() }
 }
 
 const view = (d = data(), userId = 'exec') => {
@@ -159,6 +160,32 @@ describe('SecretaryHome', () => {
     await userEvent.click(within(avery).getByRole('button', { name: 'Find a time' }))
     await userEvent.type(within(avery).getByLabelText("Parent's name for Avery Quinn"), ' Brother Quinn {Enter}')
     expect(a.setYouth).toHaveBeenCalledWith('y1', true, 'Brother Quinn')
+  })
+
+  it('holds times offered to someone so they are not offered to anyone else', async () => {
+    const d = data()
+    // Brother Ward was offered 9:25 yesterday and hasn't replied.
+    d.appointments = d.appointments.map((x) => (x.id === 'a2' ? { ...x, offered_at: '2026-11-07T18:00:00Z', offered_times: ['2026-11-08T16:25:00Z'] } : x))
+    const a = view(d)
+    const ward = screen.getByRole('article', { name: 'Brother Ward' })
+    expect(ward).toHaveTextContent('That time is held for them until Tue, November 10th.')
+    await userEvent.click(within(ward).getByRole('button', { name: 'Release' }))
+    expect(a.release).toHaveBeenCalledWith('a2')
+
+    const nash = screen.getByRole('article', { name: 'Sister Nash' })
+    await userEvent.click(within(nash).getByRole('button', { name: 'Find a time' }))
+    const sunday = within(nash).getByText('Sun, November 8th').parentElement!
+    expect(within(sunday).getAllByRole('button').map((b) => b.textContent)).toEqual(['9:35 AM', '9:45 AM'])
+  })
+
+  it('sets how long each kind of appointment usually takes', async () => {
+    const a = view()
+    const lengths = section(/Usual lengths/)
+    expect(within(lengths).getByRole('group', { name: 'Length for Extending a calling' })).toHaveTextContent('5 min')
+    expect(within(lengths).getByRole('group', { name: 'Length for Temple recommend' })).toHaveTextContent('10 min')
+    expect(within(lengths).getByRole('button', { name: 'Shorter for Temple recommend' })).toBeDisabled()
+    await userEvent.click(within(lengths).getByRole('button', { name: 'Longer for Extending a calling' }))
+    expect(a.setUsualLength).toHaveBeenCalledWith('calling', 10)
   })
 
   it('marks times already offered and when', async () => {

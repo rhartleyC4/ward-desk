@@ -18,13 +18,14 @@ import { appointmentPurpose, leadersScheduledBy, splitAppointments, withDefaultS
 import { dayLabel, daysFor, WEEKDAYS } from '../lib/availability'
 import { daysBetween, longDate, todayIso, weekday, type IsoDate } from '../lib/dates'
 import { audienceFor, type MessageTemplate } from '../lib/messages'
-import type { Appointment, AppointmentsData } from '../lib/queries'
-import { adjustMinutes, bookedRange, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, type Slot } from '../lib/slots'
+import type { Enums } from '../lib/database.types'
+import type { Appointment, AppointmentLength, AppointmentsData } from '../lib/queries'
+import { adjustMinutes, bookedRange, heldTimes, holdEnds, isHolding, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, type Slot } from '../lib/slots'
 import type { HoursData } from './HoursView'
 import { Muted, SectionCard } from './Layout'
 import { MessagePanel, TemplatesEditor } from './Messages'
 
-export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[] }
+export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[]; lengths: AppointmentLength[] }
 
 export type SecretaryHomeActions = {
   book: (id: string, at: string, minutes: number) => Promise<boolean>
@@ -35,8 +36,22 @@ export type SecretaryHomeActions = {
   /** Marks an appointment as a youth's, so messages go to a parent. */
   setYouth: (id: string, isYouth: boolean, parentName: string | null) => void
   saveTemplate: (t: Omit<MessageTemplate, 'id'> & { id?: string }) => Promise<boolean>
+  /** Lets times offered to someone go, so they can be offered to others. */
+  release: (id: string) => void
+  setUsualLength: (purpose: Enums<'interview_purpose'>, minutes: number) => void
   deleteTemplate: (id: string) => void
 }
+
+const USUAL_LENGTH_LABELS: Record<Enums<'interview_purpose'>, string> = {
+  calling: 'Extending a calling',
+  temple_recommend: 'Temple recommend',
+  ppi: 'PPI',
+  youth: 'Youth interview',
+  tithing_declaration: 'Tithing declaration',
+  advancement: 'Advancement',
+  other: 'Other',
+}
+const USUAL_LENGTH_ORDER = Object.keys(USUAL_LENGTH_LABELS) as Enums<'interview_purpose'>[]
 
 /** How far ahead open times are offered. */
 export const DAYS_AHEAD = 14
@@ -48,10 +63,9 @@ type Ctx = { data: SecretaryHomeData; today: IsoDate; now: Date; timeZone: strin
 const leaderName = (id: string | null, data: SecretaryHomeData) => data.bishopric.find((l) => l.id === id)?.display_name ?? 'Unassigned'
 const shortDay = (date: IsoDate) => `${WEEKDAYS[weekday(date)].slice(0, 3)}, ${longDate(date)}`
 
-function LengthControl({ minutes, onChange, appointment, busy }: { minutes: number; onChange: (m: number) => void; appointment: Appointment; busy: boolean }) {
-  const name = appointment.person_name ?? 'this appointment'
-  const shorter = adjustMinutes(minutes, -1, appointment.purpose)
-  const longer = adjustMinutes(minutes, 1, appointment.purpose)
+function LengthControl({ minutes, onChange, purpose, name, busy }: { minutes: number; onChange: (m: number) => void; purpose: Enums<'interview_purpose'>; name: string; busy: boolean }) {
+  const shorter = adjustMinutes(minutes, -1, purpose)
+  const longer = adjustMinutes(minutes, 1, purpose)
   return (
     <Stack direction="row" sx={{ alignItems: 'center' }} role="group" aria-label={`Length for ${name}`}>
       <IconButton size="small" aria-label={`Shorter for ${name}`} disabled={busy || shorter === minutes} onClick={() => onChange(shorter)}>
@@ -116,7 +130,7 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
   const leaderId = a.interviewer_id!
   const leader = leaderName(leaderId, data)
 
-  const slots = openSlots({ leaderId, from: today, days: DAYS_AHEAD, hours: data.hours, changes: data.changes, absences: data.absences, booked: data.appointments, now, timeZone, minutes, ignoreId: a.id })
+  const slots = openSlots({ leaderId, from: today, days: DAYS_AHEAD, hours: data.hours, changes: data.changes, absences: data.absences, booked: [...data.appointments, ...heldTimes(data.appointments, now)], now, timeZone, minutes, ignoreId: a.id })
   const days = slotsByDay(slots)
   const shown = allDays ? days : days.slice(0, FIRST_DAYS)
   const hasHours = data.hours.some((h) => h.user_id === leaderId)
@@ -162,7 +176,7 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
       <YouthFields appointment={a} ctx={ctx} />
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
         <Muted>Length</Muted>
-        <LengthControl minutes={minutes} onChange={changeLength} appointment={a} busy={busy} />
+        <LengthControl minutes={minutes} onChange={changeLength} purpose={a.purpose} name={a.person_name ?? 'this appointment'} busy={busy} />
       </Stack>
       {!hasHours ? (
         <Muted>{leader} hasn't set appointment hours yet. Add them on the Hours page, or book a time on the Appointments page.</Muted>
@@ -214,6 +228,7 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
   const [open, setOpen] = useState(false)
   const name = a.person_name ?? 'Unnamed'
   const waiting = daysBetween(todayIso(new Date(a.created_at)), ctx.today)
+  const holding = isHolding(a, ctx.now)
 
   return (
     <Box component="article" aria-label={name}>
@@ -227,6 +242,14 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
             {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)} · {waiting < 1 ? 'added today' : `waiting ${waiting} day${waiting === 1 ? '' : 's'}`}
             {a.offered_at && ` · offered ${shortDay(todayIso(new Date(a.offered_at)))}`}
           </Typography>
+          {holding && (
+            <Typography variant="body2" color="text.secondary">
+              {a.offered_times.length === 1 ? 'That time is' : `Those ${a.offered_times.length} times are`} held for them until {shortDay(todayIso(holdEnds(a.offered_at!)))}.{' '}
+              <Button size="small" sx={{ p: 0, minWidth: 0, verticalAlign: 'baseline' }} disabled={ctx.busy} onClick={() => ctx.actions.release(a.id)}>
+                Release
+              </Button>
+            </Typography>
+          )}
         </Box>
         <Button size="small" variant={open ? 'text' : 'outlined'} onClick={() => setOpen(!open)}>
           {open ? 'Close' : 'Find a time'}
@@ -265,7 +288,7 @@ function BookedRow({ appointment: a, ctx, clash }: { appointment: Appointment; c
           )}
         </Box>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
-          <LengthControl minutes={a.duration_minutes} onChange={(m) => ctx.actions.setLength(a.id, m)} appointment={a} busy={ctx.busy} />
+          <LengthControl minutes={a.duration_minutes} onChange={(m) => ctx.actions.setLength(a.id, m)} purpose={a.purpose} name={name} busy={ctx.busy} />
           {!past && (
             <Button size="small" onClick={() => setWriting(!writing)}>
               {writing ? 'Hide' : 'Message'}
@@ -400,6 +423,21 @@ export function SecretaryHome({
         }
       >
         <WeekGlance leaderIds={leaderIds} ctx={ctx} />
+      </SectionCard>
+
+      <SectionCard title="Usual lengths">
+        <Muted>New appointments start at these. You can still change any one when booking.</Muted>
+        <Stack divider={<Divider flexItem />} sx={{ mt: 1 }}>
+          {USUAL_LENGTH_ORDER.map((purpose) => {
+            const minutes = data.lengths.find((l) => l.purpose === purpose)?.minutes ?? 10
+            return (
+              <Stack key={purpose} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', py: 0.25 }}>
+                <Typography variant="body2">{USUAL_LENGTH_LABELS[purpose]}</Typography>
+                <LengthControl minutes={minutes} onChange={(m) => actions.setUsualLength(purpose, m)} purpose={purpose} name={USUAL_LENGTH_LABELS[purpose]} busy={busy} />
+              </Stack>
+            )
+          })}
+        </Stack>
       </SectionCard>
 
       <SectionCard title="Message templates">
