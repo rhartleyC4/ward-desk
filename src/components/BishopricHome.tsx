@@ -21,12 +21,15 @@ import { timeLabel, WEEKDAYS } from '../lib/availability'
 import type { AgendaSection, AgendaTemplate, Appointment, AppointmentsData } from '../lib/queries'
 import { bookedRange, minutesLabel, wardParts } from '../lib/slots'
 import { Muted, SectionCard } from './Layout'
+import { ThisMonth } from './ThisMonth'
+import type { Rotation } from '../lib/schedule'
 
 export type BishopricHomeData = Pick<AppointmentsData, 'appointments' | 'assignments' | 'secretaries' | 'bishopric'> & {
   /** The meetings this leader can open. */
   templates: AgendaTemplate[]
   agendaItems: AgendaItem[]
   sacrament: HomeSacrament[]
+  rotations: Rotation[]
 }
 
 export type InterviewRequest = { person_name: string; purpose: Enums<'interview_purpose'>; interviewer_id: string; is_youth: boolean; parent_name: string | null }
@@ -83,6 +86,12 @@ function DayLines({ day, timeZone, openButtons }: { day: DayPlan<Appointment, Ag
           </Button>
         </Box>
       )}
+      {day.rotations.map((r, i) => (
+        <Box key={`r${i}`} sx={{ display: 'flex', gap: 1, py: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
+          <Typography sx={{ fontWeight: 600 }}>{r.title}</Typography>
+          <Chip size="small" variant="outlined" color="secondary" label={r.assignee_id ? 'Your turn' : 'Rotation'} />
+        </Box>
+      ))}
       {day.meetings.map(({ template, openItems }) => (
         <Box key={template.id} sx={{ display: 'flex', gap: 1, py: 0.75, alignItems: 'center', flexWrap: 'wrap' }}>
           <Typography sx={{ fontWeight: 600, flexBasis: { xs: '100%', sm: 'auto' } }}>
@@ -134,6 +143,7 @@ function Today({ today, week, timeZone }: { today: DayPlan<Appointment, AgendaTe
 function nextLabel(day: DayPlan<Appointment, AgendaTemplate>, timeZone: string): string {
   if (day.sacrament) return day.sacrament.conducting ? 'sacrament meeting (you are conducting)' : 'sacrament meeting'
   const meeting = day.meetings[0]
+  if (!meeting && day.rotations[0]) return day.rotations[0].title
   if (meeting) return `${meeting.template.start_time ? `${timeLabel(meeting.template.start_time)} ` : ''}${meeting.template.name}`
   const a = day.appointments[0]
   return `${bookedRange(a.scheduled_at!, a.duration_minutes, timeZone)}, ${a.person_name ?? 'an appointment'}`
@@ -430,7 +440,7 @@ function QuickActions(props: Props) {
 /** The bishop's and counselors' home: today, quick actions, the week ahead, and open requests. */
 export function BishopricHome(props: Props) {
   const { data, userId, today, timeZone } = props
-  const [todayPlan, ...week] = planDays({ userId, from: today, days: WEEK_AHEAD + 1, appointments: data.appointments, templates: data.templates, agendaItems: data.agendaItems, sacrament: data.sacrament, timeZone })
+  const [todayPlan, ...week] = planDays({ userId, from: today, days: WEEK_AHEAD + 1, appointments: data.appointments, templates: data.templates, agendaItems: data.agendaItems, sacrament: data.sacrament, rotations: data.rotations, timeZone })
   return (
     <>
       <Typography variant="h1" sx={{ mb: 1.5 }}>
@@ -439,6 +449,7 @@ export function BishopricHome(props: Props) {
       <Today today={todayPlan} week={week} timeZone={timeZone} />
       <QuickActions {...props} />
       <ComingUp week={week} timeZone={timeZone} />
+      <ThisMonth userId={userId} today={today} rotations={data.rotations} />
       <Waiting data={data} userId={userId} timeZone={timeZone} />
     </>
   )

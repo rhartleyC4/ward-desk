@@ -5,7 +5,7 @@ import { openItems, type AgendaItem } from './agenda'
 import { withDefaultSecretary, type SecretaryAssignment } from './appointments'
 import { addDays, type IsoDate } from './dates'
 import type { Enums, Tables } from './database.types'
-import { meetsOn, nextMeeting } from './schedule'
+import { meetsOn, nextMeeting, reminds, rotationsOn, type Rotation } from './schedule'
 import { wardParts } from './slots'
 
 export type HomeAppointment = Pick<Tables<'interviews'>, 'id' | 'interviewer_id' | 'scheduled_at' | 'person_name' | 'purpose' | 'duration_minutes' | 'is_youth' | 'status' | 'created_at'>
@@ -24,6 +24,8 @@ export type DayPlan<A extends HomeAppointment, T extends HomeTemplate> = {
   meetings: { template: T; openItems: number }[]
   /** Sacrament meeting, when one is planned for the day. */
   sacrament: (HomeSacrament & { conducting: boolean }) | null
+  /** Rotations with a set day that fall on this one and remind this leader (their Primary message). */
+  rotations: Rotation[]
 }
 
 type PlanInput<A extends HomeAppointment, T extends HomeTemplate> = {
@@ -35,6 +37,7 @@ type PlanInput<A extends HomeAppointment, T extends HomeTemplate> = {
   templates: T[]
   agendaItems: AgendaItem[]
   sacrament: HomeSacrament[]
+  rotations: Rotation[]
   timeZone: string
 }
 
@@ -51,7 +54,8 @@ export function openItemCount(template: HomeTemplate, date: IsoDate, items: Agen
  * One entry per day from `from`, for `days` days, with this leader's appointments, their meetings
  * and sacrament meeting. Days with nothing on them are still returned, so "Today" can say so.
  */
-export function planDays<A extends HomeAppointment, T extends HomeTemplate>({ userId, from, days, appointments, templates, agendaItems, sacrament, timeZone }: PlanInput<A, T>): DayPlan<A, T>[] {
+export function planDays<A extends HomeAppointment, T extends HomeTemplate>({ userId, from, days, appointments, templates, agendaItems, sacrament, rotations, timeZone }: PlanInput<A, T>): DayPlan<A, T>[] {
+  const mine = rotations.filter((r) => reminds(r, userId))
   const booked = appointments
     .filter((a) => a.status === 'scheduled' && a.interviewer_id === userId && a.scheduled_at)
     .sort((a, b) => a.scheduled_at!.localeCompare(b.scheduled_at!))
@@ -71,11 +75,12 @@ export function planDays<A extends HomeAppointment, T extends HomeTemplate>({ us
         .sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
         .map((template) => ({ template, openItems: openItemCount(template, date, agendaItems) })),
       sacrament: sunday ? { ...sunday, conducting: sunday.conducting_id === userId } : null,
+      rotations: rotationsOn(date, mine),
     }
   })
 }
 
-export const isEmptyDay = (day: DayPlan<HomeAppointment, HomeTemplate>) => !day.appointments.length && !day.meetings.length && !day.sacrament
+export const isEmptyDay = (day: DayPlan<HomeAppointment, HomeTemplate>) => !day.appointments.length && !day.meetings.length && !day.sacrament && !day.rotations.length
 
 /** This leader's requests that have no time yet, oldest first: the secretary still has to book them. */
 export function waitingForTime<A extends HomeAppointment>(userId: string, appointments: A[]): A[] {

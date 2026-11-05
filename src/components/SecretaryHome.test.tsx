@@ -56,6 +56,7 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
       { id: 't2', name: 'Confirm time', kind: 'confirm', audience: 'member', body: 'Hi {first_name}, see {leader} on {time}.' },
       { id: 't3', name: 'Offer to a parent', kind: 'offer', audience: 'parent', body: 'Hi {parent_name}, {leader} would like to meet with {first_name}:\n{times}' },
     ],
+    rotations: [],
     ...extra,
   }
 }

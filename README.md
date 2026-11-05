@@ -47,6 +47,8 @@ The bishop and counselors keep appointment hours in **Settings › Appointment h
 
 Each appointment has a length (`interviews.duration_minutes`): 10 minutes unless the secretary changes it, in 5-minute steps, with at least 10 for a temple recommend interview. Open times (`src/lib/slots.ts`) fill each block of hours one appointment after another and start the next one right after whatever is booked ends, so lengthening or shortening a booking moves the open times around it.
 
+The bishopric keeps the standing schedule in **Settings › Standing schedule**: regular meetings (`recurring_events`, every week or one week of the month, with an optional time), rotations (`rotations`) and each member's assignments (`stewardships`). A rotation is due in the months ticked and either falls on a set day ("3rd Sunday", `weekday` + `week_of_month`) or runs any time that month. It reminds whoever has the turn (`assignee_id`); one that names someone outside the app (`assignee_label`, like "EQ President") reminds the whole bishopric. Home shows a set-day rotation on its day and lists the month's under **This month**, for the bishop, counselors and secretaries alike.
+
 New appointments start at the usual length for their kind (`appointment_lengths`, one row per purpose, all 10 minutes to begin with), which the bishopric sets under **Usual lengths** on Home.
 
 The executive and assistant executive secretaries land on **Home**, "Your week": who needs an appointment with the leaders they schedule for, with open times by day at the chosen length and a button to book one; what's booked, with the length adjustable and a warning when one runs into the next; and each leader's hours for the next seven days. A secretary not yet assigned to any leader sees everyone.
@@ -62,6 +64,7 @@ Adjust these as the real needs become clear.
 Bishopric members can turn on a **day-ahead summary** for each device on the Account page (Settings, then their name at the top). The evening before, it lists that person's next day:
 
 - The standing meetings on the **Schedule** page (`recurring_events`) that fall on that day, with their times
+- Their rotations: one with a set day on that day, and on the 1st of the month "This month: …" for each one due any time that month. Only the title is sent, never the label naming who it's with, so keep titles general
 - Conducting sacrament meeting, when they're down to conduct, with how many releases and sustainings there are to read
 - Their own booked appointments: how many, from the first start to the last end
 - For a secretary, the appointments booked for the leaders they schedule for

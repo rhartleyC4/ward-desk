@@ -93,6 +93,21 @@ describe('day-ahead summaries', () => {
     expect(forced.sent).toHaveLength(2)
   })
 
+  it("adds the seeded rotations: Ortiz's Primary message on the 3rd Sunday, a PPI month for everyone on the 1st", async () => {
+    const lines = async (date: string) => {
+      const reports = await sendDaySummaries({ sql, date, timeZone: 'America/Denver', send: fakePush().send, dryRun: true, only: [BISHOP, SECOND] })
+      return Object.fromEntries(reports.map((r) => [r.userId, r.lines.map((l) => l.text)]))
+    }
+    const third = await lines('2026-11-15')
+    expect(third[SECOND]).toContain('Primary message')
+    expect(third[BISHOP]).not.toContain('Primary message')
+
+    const first = await lines('2026-11-01')
+    expect(first[SECOND]).toContain('This month: PPI: Young Women President')
+    expect(first[BISHOP]).toContain('This month: PPI: Young Women President')
+    expect(first[BISHOP].join(' ')).not.toContain('YW President') // the label stays off the lock screen
+  })
+
   it('logs nothing when every device fails, so the next run tries again', async () => {
     await sql`delete from public.notification_log where for_date = ${SUNDAY} and user_id = ${SECOND}`
     const reports = await sendDaySummaries({ sql, date: SUNDAY, timeZone: 'America/Denver', send: fakePush(() => 'failed').send, only: [SECOND] })

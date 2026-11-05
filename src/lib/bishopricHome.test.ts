@@ -16,7 +16,7 @@ const evening: HomeTemplate = { ...wardCouncilTemplate, id: 'youth', slug: 'yout
 
 describe('planDays', () => {
   const plan = (extra: Partial<Parameters<typeof planDays>[0]> = {}) =>
-    planDays({ userId: 'b', from: TODAY, days: 5, appointments: [], templates: [bishopricTemplate], agendaItems: [], sacrament: [], timeZone: TZ, ...extra })
+    planDays({ userId: 'b', from: TODAY, days: 5, appointments: [], templates: [bishopricTemplate], agendaItems: [], sacrament: [], rotations: [], timeZone: TZ, ...extra })
 
   it("puts this leader's booked appointments on their ward date, earliest first", () => {
     const days = plan({

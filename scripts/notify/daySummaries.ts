@@ -17,7 +17,7 @@ export type Sender = (device: Device, message: PushMessage) => Promise<SendResul
 type DayData = Omit<DaySummaryInput, 'person' | 'date' | 'timeZone'> & { people: SummaryPerson[]; devices: Device[]; alreadySent: Set<string> }
 
 export async function loadDay(sql: Sql, date: IsoDate): Promise<DayData> {
-  const [people, devices, events, meetings, appointments, assignments, needs, candidates, absences, sent] = await Promise.all([
+  const [people, devices, events, rotations, meetings, appointments, assignments, needs, candidates, absences, sent] = await Promise.all([
     sql<SummaryPerson[]>`
       select p.id, p.office from public.profiles p
       join public.roles r on r.user_id = p.id and r.role = 'bishopric'`,
@@ -25,6 +25,7 @@ export async function loadDay(sql: Sql, date: IsoDate): Promise<DayData> {
       select s.id, s.user_id, s.endpoint, s.p256dh, s.auth from public.push_subscriptions s
       join public.roles r on r.user_id = s.user_id and r.role = 'bishopric'`,
     sql<DaySummaryInput['events']>`select title, weekday, week_of_month, start_time::text from public.recurring_events`,
+    sql<DaySummaryInput['rotations']>`select title, months, assignee_id, assignee_label, weekday, week_of_month from public.rotations`,
     sql<DaySummaryInput['meetings']>`
       select meeting_date::text, meeting_type, title, conducting_id from public.meetings where meeting_date = ${date}`,
     // A day either side, since the ward's day doesn't line up with UTC's. The summary keeps the ward's.
@@ -45,6 +46,7 @@ export async function loadDay(sql: Sql, date: IsoDate): Promise<DayData> {
     people: [...people],
     devices: [...devices],
     events: [...events],
+    rotations: [...rotations],
     meetings: [...meetings],
     appointments: appointments.map((a) => ({ ...a, scheduled_at: a.scheduled_at.toISOString() })),
     assignments: withDefaultSecretary([...assignments], leaders, [...people]),

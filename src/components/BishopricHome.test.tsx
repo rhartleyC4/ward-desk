@@ -30,6 +30,7 @@ function data(extra: Partial<BishopricHomeData> = {}): BishopricHomeData {
     templates: [bishopricTemplate],
     agendaItems: [{ id: 'i1', section_id: 'bishopric-s1', body: 'Budget', event_date: null, resolved_on: null, created_at: ts }],
     sacrament: [{ meeting_date: TODAY, meeting_type: 'regular', title: null, conducting_id: 'b' }],
+    rotations: [],
     ...extra,
   }
 }
@@ -67,6 +68,34 @@ describe('BishopricHome', () => {
     const waiting = within(card('Waiting for a time'))
     expect(waiting.getByText('Sister Reed')).toBeInTheDocument()
     expect(waiting.getByText('Brother Quinn will find a time for these.')).toBeInTheDocument()
+  })
+
+  it('puts my rotations on their day and lists the month', () => {
+    const anyTime = { weekday: null, week_of_month: null }
+    setup(
+      data({
+        rotations: [
+          { title: 'Primary message', months: [11], assignee_id: 'b', assignee_label: null, weekday: 0, week_of_month: 2 },
+          { title: 'Ward council message', months: [11], assignee_id: 'l', assignee_label: null, weekday: 0, week_of_month: 2 },
+          { title: 'PPI: YW President', months: [11], assignee_id: null, assignee_label: 'YW President', ...anyTime },
+          { title: 'PPI: EQ President', months: [2], assignee_id: null, assignee_label: 'EQ President', ...anyTime },
+        ],
+      }),
+    )
+    const today = within(card('Today'))
+    expect(today.getByText('Primary message')).toBeInTheDocument()
+    expect(today.getByText('Your turn')).toBeInTheDocument()
+    expect(screen.queryByText('Ward council message')).not.toBeInTheDocument() // Lane's turn
+    const month = within(card('This month'))
+    expect(month.getByText('Sunday, November 8th (today)')).toBeInTheDocument()
+    expect(month.getByText('PPI: YW President')).toBeInTheDocument()
+    expect(month.getByText('Any time this month')).toBeInTheDocument()
+    expect(month.queryByText('PPI: EQ President')).not.toBeInTheDocument()
+  })
+
+  it('leaves out This month when nothing is due', () => {
+    setup()
+    expect(screen.queryByRole('heading', { name: 'This month' })).not.toBeInTheDocument()
   })
 
   it('points to the next thing when today is empty', () => {

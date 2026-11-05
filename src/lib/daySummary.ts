@@ -1,16 +1,17 @@
-// The day-ahead summary a bishopric member gets the evening before: standing meetings, sacrament
-// meeting duties, and appointments for that day. Pure so it can be unit tested, and shared by the
+// The day-ahead summary a bishopric member gets the evening before: standing meetings, their
+// rotations, sacrament meeting duties, and appointments for that day. Pure so it can be unit tested, and shared by the
 // app and the scheduled sender (scripts/notify).
 //
 // Notifications show on lock screens, so lines never name a member or say what an appointment is
-// for. They say what kind of thing it is, when, and how many.
+// for. They say what kind of thing it is, when, and how many. Rotations show their title only,
+// never the label naming who they're with.
 
 import { releasesOn, sustainingsOn, type CallingNeed, type Candidate, type Meeting } from './agenda'
 import { leadersScheduledBy, type SecretaryAssignment } from './appointments'
 import { blockLabel, hhmm, timeLabel, WEEKDAYS } from './availability'
 import { longDate, weekday, type IsoDate } from './dates'
 import type { Enums } from './database.types'
-import { awayOn, eventsOn, type Absence, type RecurringEvent } from './schedule'
+import { awayOn, eventsOn, hasDay, reminds, rotationsDue, rotationsOn, type Absence, type RecurringEvent, type Rotation } from './schedule'
 import { endsAt, wardParts, type Booked } from './slots'
 
 export type SummaryPerson = { id: string; office: Enums<'bishopric_office'> | null }
@@ -20,6 +21,7 @@ export type DaySummaryInput = {
   timeZone: string
   person: SummaryPerson
   events: RecurringEvent[]
+  rotations: Rotation[]
   meetings: Pick<Meeting, 'meeting_date' | 'meeting_type' | 'title' | 'conducting_id'>[]
   appointments: Booked[]
   /** Who schedules for whom, with the default secretary already filled in (withDefaultSecretary). */
@@ -67,6 +69,11 @@ export function daySummary(input: DaySummaryInput): SummaryLine[] {
   const lines: SummaryLine[] = []
   for (const e of eventsOn(date, input.events)) {
     lines.push(e.start_time ? { time: hhmm(e.start_time), text: `${timeLabel(e.start_time)} ${e.title}` } : { text: e.title })
+  }
+  // A rotation with a set day lands on it; one for any time in the month is raised on the 1st.
+  for (const r of rotationsOn(date, input.rotations)) if (reminds(r, person.id)) lines.push({ text: r.title })
+  if (date.endsWith('-01')) {
+    for (const r of rotationsDue(date, input.rotations)) if (!hasDay(r) && reminds(r, person.id)) lines.push({ text: `This month: ${r.title}` })
   }
   lines.push(...sacramentLines(input))
 

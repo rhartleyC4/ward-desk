@@ -24,8 +24,10 @@ import { adjustMinutes, bookedRange, heldTimes, holdEnds, isHolding, minutesLabe
 import type { HoursData } from './HoursView'
 import { Muted, SectionCard } from './Layout'
 import { MessagePanel } from './Messages'
+import { ThisMonth } from './ThisMonth'
+import type { Rotation } from '../lib/schedule'
 
-export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[]; lengths: AppointmentLength[] }
+export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[]; lengths: AppointmentLength[]; rotations: Rotation[] }
 
 export type SecretaryHomeActions = {
   book: (id: string, at: string, minutes: number) => Promise<boolean>
@@ -421,6 +423,7 @@ export function SecretaryHome({
       >
         <WeekGlance leaderIds={leaderIds} ctx={ctx} />
       </SectionCard>
+      <ThisMonth userId={userId} today={today} rotations={data.rotations} />
 
     </>
   )

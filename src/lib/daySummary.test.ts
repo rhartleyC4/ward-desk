@@ -26,6 +26,7 @@ const base = (over: Partial<DaySummaryInput> = {}): DaySummaryInput => ({
     { title: 'Bishopric meeting', weekday: 0, week_of_month: null, start_time: '08:30:00' },
     { title: 'Interviews', weekday: 4, week_of_month: null, start_time: null },
   ],
+  rotations: [],
   meetings: [{ meeting_date: SUNDAY, meeting_type: 'regular', title: null, conducting_id: LANE }],
   appointments: [],
   assignments: [],
@@ -44,6 +45,28 @@ describe('daySummary', () => {
 
   it('lists untimed events after the timed ones', () => {
     expect(texts(base({ date: '2026-11-05' }))).toEqual(['Interviews'])
+  })
+
+  it('adds a rotation on its day for whoever has the turn', () => {
+    const rotations = [
+      { title: 'Primary message', months: [11], assignee_id: LANE, assignee_label: null, weekday: 0, week_of_month: 2 },
+      { title: 'Primary message', months: [11], assignee_id: BISHOP, assignee_label: null, weekday: 0, week_of_month: 3 },
+    ]
+    expect(texts(base({ rotations, person: { id: LANE, office: 'first_counselor' } }))).toEqual(['8:30 AM Bishopric meeting', '9:15 AM Ward Council', 'Primary message', 'Conducting sacrament meeting'])
+    expect(texts(base({ rotations }))).not.toContain('Primary message')
+    expect(texts(base({ rotations, date: '2026-11-15' }))).toContain('Primary message')
+  })
+
+  it('raises rotations for any time in the month on the 1st, without the label naming who', () => {
+    const rotations = [
+      { title: 'PPI: YW President', months: [11], assignee_id: null, assignee_label: 'Sister Vale', weekday: null, week_of_month: null },
+      { title: 'Ministering report', months: [11], assignee_id: LANE, assignee_label: null, weekday: null, week_of_month: null },
+      { title: 'PPI: EQ President', months: [12], assignee_id: null, assignee_label: null, weekday: null, week_of_month: null },
+    ]
+    expect(texts(base({ rotations, date: '2026-11-01' }))).toContain('This month: PPI: YW President')
+    expect(texts(base({ rotations, date: '2026-11-01' })).join(' ')).not.toMatch(/Vale|Ministering|EQ/)
+    expect(texts(base({ rotations, date: '2026-11-08' })).join(' ')).not.toMatch(/This month/)
+    expect(texts(base({ rotations, date: '2026-11-03', person: { id: LANE, office: 'first_counselor' } }))).toEqual([])
   })
 
   it('is empty on a day with nothing on it', () => {

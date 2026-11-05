@@ -22,12 +22,13 @@ function BishopricHomePage() {
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
     // The bishopric attends every meeting in the database's eyes, so these are all of them.
-    const [appointments, sacrament, agendaItems] = await Promise.all([
+    const [appointments, sacrament, agendaItems, rotations] = await Promise.all([
       q.loadAppointments(supabase),
       q.loadSundays(supabase, today, addDays(today, WEEK_AHEAD)),
       q.loadOpenAgendaItems(supabase, templates.flatMap((t) => t.sections.map((s) => s.id))),
+      q.loadRotations(supabase),
     ])
-    return { ...appointments, templates, agendaItems, sacrament }
+    return { ...appointments, templates, agendaItems, sacrament, rotations }
   }, [today, templates])
   const save = useAction()
 
@@ -58,13 +59,14 @@ function SecretaryHomePage() {
   const { profile } = useAuth()
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
-    const [appointments, hours, templates, lengths] = await Promise.all([
+    const [appointments, hours, templates, lengths, rotations] = await Promise.all([
       q.loadAppointments(supabase),
       q.loadHours(supabase, today, addDays(today, DAYS_AHEAD - 1)),
       q.loadTemplates(supabase),
       q.loadLengths(supabase),
+      q.loadRotations(supabase),
     ])
-    return { ...appointments, ...hours, templates, lengths }
+    return { ...appointments, ...hours, templates, lengths, rotations }
   }, [today])
   const save = useAction()
   // Times before this are past. Fixed for the visit; reopening the page moves it on.
