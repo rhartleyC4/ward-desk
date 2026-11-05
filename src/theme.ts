@@ -1,9 +1,10 @@
 import '@fontsource-variable/lexend'
 import { createTheme } from '@mui/material/styles'
 
-// Deep ink and notebook gold, matching the app icon (public/favicon.svg).
-const ink = '#1b2233'
-const gold = '#f2b23a'
+// Harbor blue on cool greys, matching the app icon (public/favicon.svg).
+const ink = '#14213d'
+const harbor = '#2b5c9e'
+const sky = '#8ab4f8'
 
 // Light and dark palettes. The mode follows the device by default; ThemeToggle overrides it
 // (MUI stores the choice in localStorage).
@@ -12,19 +13,18 @@ export const theme = createTheme({
   colorSchemes: {
     light: {
       palette: {
-        primary: { main: ink, contrastText: '#ffffff' },
-        // Darkened gold so it passes contrast as text on a light background.
-        secondary: { main: '#8a5a00', contrastText: '#ffffff' },
-        background: { default: '#f5f2ea', paper: '#ffffff' },
-        text: { primary: ink, secondary: '#4c5263' },
+        primary: { main: harbor, contrastText: '#ffffff' },
+        secondary: { main: '#1d4479', contrastText: '#ffffff' },
+        background: { default: '#f2f4f7', paper: '#ffffff' },
+        text: { primary: ink, secondary: '#55607a' },
       },
     },
     dark: {
       palette: {
-        primary: { main: gold, contrastText: ink },
-        secondary: { main: '#f6cd7a', contrastText: ink },
-        background: { default: '#12161f', paper: ink },
-        text: { primary: '#f3f1ec', secondary: '#b9bdc8' },
+        primary: { main: sky, contrastText: '#0b1526' },
+        secondary: { main: '#bcd3fb', contrastText: '#0b1526' },
+        background: { default: '#0d1117', paper: '#161d29' },
+        text: { primary: '#eef2f8', secondary: '#a3adc2' },
       },
     },
   },

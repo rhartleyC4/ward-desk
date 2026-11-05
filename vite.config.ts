@@ -15,8 +15,8 @@ export default defineConfig({
         name: 'Ward Desk',
         short_name: 'Ward Desk',
         description: 'Sacrament meetings, bishopric agenda, and callings in one place.',
-        theme_color: '#1b2233',
-        background_color: '#f5f2ea',
+        theme_color: '#2b5c9e',
+        background_color: '#f2f4f7',
         display: 'standalone',
         start_url: '/',
         // PNGs are built from scripts/icons/ by scripts/build-icons.sh.
