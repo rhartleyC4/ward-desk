@@ -17,7 +17,7 @@ export type Sender = (device: Device, message: PushMessage) => Promise<SendResul
 type DayData = Omit<DaySummaryInput, 'person' | 'date' | 'timeZone'> & { people: SummaryPerson[]; devices: Device[]; alreadySent: Set<string> }
 
 export async function loadDay(sql: Sql, date: IsoDate): Promise<DayData> {
-  const [people, devices, events, rotations, meetings, appointments, assignments, needs, candidates, absences, sent] = await Promise.all([
+  const [people, devices, events, rotations, meetings, appointments, assignments, needs, candidates, absences, sent, requests, callingRequests] = await Promise.all([
     sql<SummaryPerson[]>`
       select p.id, p.office from public.profiles p
       join public.roles r on r.user_id = p.id and r.role = 'bishopric'`,
@@ -40,6 +40,8 @@ export async function loadDay(sql: Sql, date: IsoDate): Promise<DayData> {
     sql<DaySummaryInput['absences']>`
       select user_id, starts_on::text, ends_on::text, location from public.absences where starts_on <= ${date} and ends_on >= ${date}`,
     sql<{ user_id: string }[]>`select user_id from public.notification_log where kind = 'day_summary' and for_date = ${date}`,
+    sql<NonNullable<DaySummaryInput['requests']>>`select to_id, status::text, due_on::text from public.requests where status in ('sent', 'seen')`,
+    sql<NonNullable<DaySummaryInput['callingRequests']>>`select routed_to, received_at::text from public.calling_requests where received_at is null`,
   ])
   const leaders = people.filter((p) => keepsHours(p.office)).map((p) => p.id)
   return {
@@ -53,6 +55,8 @@ export async function loadDay(sql: Sql, date: IsoDate): Promise<DayData> {
     needs: [...needs],
     candidates: [...candidates],
     absences: [...absences],
+    requests: [...requests],
+    callingRequests: [...callingRequests],
     alreadySent: new Set(sent.map((s) => s.user_id)),
   }
 }

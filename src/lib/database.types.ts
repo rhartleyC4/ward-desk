@@ -449,6 +449,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"push_events": {
+                  Row: {
+                    "created_at": string,"key": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"key": string
+                  }
+                  Update: {
+                    "created_at"?: string,"key"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"push_subscriptions": {
                   Row: {
                     "auth": string,"created_at": string,"endpoint": string,"id": string,"p256dh": string,"user_id": string

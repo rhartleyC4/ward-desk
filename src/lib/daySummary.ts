@@ -29,6 +29,25 @@ export type DaySummaryInput = {
   needs: CallingNeed[]
   candidates: Candidate[]
   absences: Absence[]
+  /** Open requests (sent or seen). Lines count them; they never say what was asked. */
+  requests?: { to_id: string; status: string; due_on: IsoDate | null }[]
+  /** Calling requests not marked received yet. */
+  callingRequests?: { routed_to: string[]; received_at: string | null }[]
+}
+
+/** "1 request due", "2 requests you haven't opened", "1 calling request to receive". */
+function requestLines(input: DaySummaryInput): SummaryLine[] {
+  const mine = (input.requests ?? []).filter((r) => r.to_id === input.person.id && (r.status === 'sent' || r.status === 'seen'))
+  const due = mine.filter((r) => r.due_on === input.date).length
+  const unopened = mine.filter((r) => r.status === 'sent' && r.due_on !== input.date).length
+  const calling = (input.callingRequests ?? []).filter((r) => !r.received_at && r.routed_to.includes(input.person.id)).length
+  return [
+    due && `${plural(due, 'request')} due`,
+    unopened && `${plural(unopened, 'request')} you haven't opened`,
+    calling && `${plural(calling, 'calling request')} to mark received`,
+  ]
+    .filter((t): t is string => !!t)
+    .map((text) => ({ text }))
 }
 
 /** One line of the summary. `time` ("HH:MM") orders the timed lines; untimed ones follow. */
@@ -84,6 +103,7 @@ export function daySummary(input: DaySummaryInput): SummaryLine[] {
   const leaders = leadersScheduledBy(person.id, input.assignments).filter((id) => id !== person.id)
   const covered = appointmentsLine(onDate.filter((a) => a.interviewer_id && leaders.includes(a.interviewer_id)), timeZone, ' you scheduled')
   if (covered) lines.push(covered)
+  lines.push(...requestLines(input))
 
   const sorted = [...lines.filter((l) => l.time).sort((a, b) => a.time!.localeCompare(b.time!)), ...lines.filter((l) => !l.time)]
   if (sorted.length && awayOn(date, input.absences).some((a) => a.user_id === person.id)) {

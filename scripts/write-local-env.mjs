@@ -24,3 +24,9 @@ const env = [
 ].join('\n')
 writeFileSync(file, env)
 console.log('Wrote .env for', status.API_URL)
+
+// The push Edge Function reads its secrets from here when served locally
+// (npx supabase functions serve). Same key pair, so the same devices get them.
+const functionsEnv = new URL('../supabase/functions/.env', import.meta.url)
+writeFileSync(functionsEnv, [`VAPID_PUBLIC_KEY=${vapid.publicKey}`, `VAPID_PRIVATE_KEY=${vapid.privateKey}`, 'VAPID_SUBJECT=mailto:noreply@warddesk.app', ''].join('\n'))
+console.log('Wrote supabase/functions/.env')

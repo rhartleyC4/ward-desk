@@ -30,7 +30,7 @@ All three modules share the same users, roles, notifications, and calendar.
 - **Frontend:** React + TypeScript PWA built with Vite and [MUI](https://mui.com/), hosted on Cloudflare Pages. Light and dark themes follow the device by default; Appearance in Settings overrides it (see `src/theme.ts`)
 - **Backend:** Supabase (Postgres, Auth, Realtime, Edge Functions)
 - **Auth:** Google sign-in and email magic links, invite-only via an allowlist table
-- **Notifications:** Web Push (VAPID), sent by a scheduled GitHub Actions job (`scripts/notify`). See "Notifications" below
+- **Notifications:** Web Push (VAPID). Day-ahead summaries come from a scheduled GitHub Actions job (`scripts/notify`); requests notify right away through a Supabase Edge Function (`supabase/functions/push`). See "Notifications" below
 
 ## Roles
 
@@ -76,6 +76,7 @@ Bishopric members can turn on a **day-ahead summary** for each device on the Acc
 - Their own booked appointments: how many, from the first start to the last end
 - For a secretary, the appointments booked for the leaders they schedule for
 - A note when they're marked away that day
+- How many requests are due that day or still unopened, and calling requests waiting to be marked received
 
 Notifications show on lock screens, so the text says when and how many, never who or what an appointment is for. Nothing is sent for a day with nothing on it. The lines are built by `src/lib/daySummary.ts`.
 
@@ -96,6 +97,16 @@ npm run notify -- --date 2026-11-08 --only bishop@ward.test --force
 The first shows what everyone would get; the second sends it to one account. **Show a test** on the Account page checks that the device can display a notification without sending anything.
 
 **Trying it on staging or production:** Actions → "Day-ahead summaries" → Run workflow, on `main` for staging or `production` for production. It's a dry run unless you untick that box; set a date and your own email to send yourself one.
+
+### Instant notifications for requests
+
+When someone sends or answers a request, or sends or receives a calling request, the app calls the `push` Edge Function (`pushAbout` in `src/lib/queries.ts`). The function checks that the caller made that change in the last few minutes, records it in `push_events` so a repeat call sends nothing, and notifies the other person on each of their devices. Who gets what is in `supabase/functions/push/plan.ts`. The text names an office ("The bishop asked you to do something"), never a member or what was asked. If the function isn't deployed or fails, the request still goes through and shows in the app; only the notification is missed.
+
+**Locally:** `npm run db:env` also writes `supabase/functions/.env` with this machine's key pair. Serve the function with:
+
+```bash
+npx supabase functions serve --env-file supabase/functions/.env
+```
 
 ## How it replaces the Google Sheet
 
@@ -223,6 +234,20 @@ The allowlist still applies. A Google account whose email isn't on the allowlist
 4. Set the repository variable `NOTIFY_ENABLED` to `true`. Until then the nightly job does nothing. Production's nightly run starts only once `notify.yml` is on the `production` branch.
 
 Changing a key pair later signs every device out of notifications; each person turns them on again.
+
+**The push Edge Function** is deployed by hand, not by CI, because deploying functions needs a Supabase access token, which reaches every project you own. Do this once per environment, and again whenever `supabase/functions/` changes:
+
+1. Sign in to the Supabase CLI on your own machine: `npx supabase login`
+2. Give the function the same key pair as that environment's GitHub settings:
+   ```bash
+   npx supabase secrets set --project-ref <ref> VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:noreply@warddesk.app
+   ```
+3. Deploy it:
+   ```bash
+   npx supabase functions deploy push --project-ref <ref>
+   ```
+
+Deploy to staging first and try it there before production.
 
 ### Face ID and fingerprint sign-in (passkeys)
 

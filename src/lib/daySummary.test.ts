@@ -144,4 +144,20 @@ describe('pushMessage', () => {
       tag: 'day-summary-2026-11-08',
     })
   })
+
+  it('counts requests waiting on the person without saying what they are', () => {
+    const requests = [
+      { to_id: BISHOP, status: 'seen', due_on: '2026-11-08' },
+      { to_id: BISHOP, status: 'sent', due_on: null },
+      { to_id: BISHOP, status: 'sent', due_on: null },
+      { to_id: BISHOP, status: 'done', due_on: '2026-11-08' },
+      { to_id: LANE, status: 'sent', due_on: null },
+    ]
+    const callingRequests = [
+      { routed_to: [BISHOP], received_at: null },
+      { routed_to: [BISHOP], received_at: '2026-11-01T00:00:00Z' },
+    ]
+    const lines = texts(base({ date: '2026-11-08', requests, callingRequests }))
+    expect(lines).toEqual(expect.arrayContaining(['1 request due', "2 requests you haven't opened", '1 calling request to mark received']))
+  })
 })

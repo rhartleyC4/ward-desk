@@ -92,6 +92,7 @@ CI (`.github/workflows/ci.yml`) runs on every push. Check it with `gh run list` 
 | `src/**` (UI, pages, components, tests) | runs | **runs** | skipped |
 | `src/lib/**` (queries, types, access, `supabase.ts`) | runs | **runs** | **runs** |
 | `supabase/**`, `tests/integration/**` | runs | skipped | **runs** |
+| `supabase/functions/**` (the push Edge Function) | runs | **runs** | **runs** |
 | `package.json`, `package-lock.json`, `.nvmrc`, `tsconfig*.json`, `vite.config.ts`, `.oxlintrc.json`, `index.html`, `scripts/**`, `.github/workflows/**` | runs | **runs** | **runs** |
 
 - `src/lib/**` also runs `database` because the integration tests call `queries.ts` and `database.types.ts` as real roles.

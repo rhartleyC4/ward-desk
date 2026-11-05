@@ -60,6 +60,8 @@ jobs:
             check:
               - *shared
               - 'src/**'
+              # The push Edge Function's logic has unit tests.
+              - 'supabase/functions/**'
             database:
               - *shared
               - 'src/lib/**'
