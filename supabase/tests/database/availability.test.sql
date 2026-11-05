@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(31);
+select plan(32);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -111,6 +111,7 @@ select throws_ok(
 
 select is((select count(*)::int from public.message_templates where created_by is null and audience = 'member'), 2, 'the ward starts with an offer and a confirm template');
 select is((select count(*)::int from public.message_templates where created_by is null and audience = 'parent'), 2, 'and the same two for writing to a parent');
+select is((select count(*)::int from public.message_templates where created_by is null and body like E'%\n\nThanks,\n{my_name}'), 4, 'the default templates are spaced out, with the sign-off on its own lines');
 insert into public.interviews (person_name, purpose) values ('Youth Default', 'youth');
 select is((select is_youth from public.interviews where person_name = 'Youth Default'), false, 'an appointment is not a youth''s unless marked');
 select lives_ok(
