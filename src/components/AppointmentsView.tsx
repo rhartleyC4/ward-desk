@@ -4,7 +4,6 @@ import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
 import Divider from '@mui/material/Divider'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import Grid from '@mui/material/Grid'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import ToggleButton from '@mui/material/ToggleButton'
@@ -16,7 +15,7 @@ import { appointmentPurpose, defaultSecretaryFor, leadersScheduledBy, schedulers
 import type { Enums } from '../lib/database.types'
 import type { Appointment, AppointmentsData } from '../lib/queries'
 import { nativeSelect } from '../theme'
-import { Muted, SectionCard } from './Layout'
+import { Muted, SectionCard, Side, Split } from './Layout'
 
 export type AppointmentsActions = {
   schedule: (id: string, scheduledAt: string) => void
@@ -120,32 +119,34 @@ function AddAppointment({ data, onAdd }: { data: AppointmentsData; onAdd: Appoin
   }
   return (
     <Box component="form" onSubmit={submit} aria-label="Add an appointment">
-      <Grid container spacing={1.5}>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField label="Name" value={form.person_name} onChange={(e) => setForm({ ...form, person_name: e.target.value })} />
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <TextField select label="With" slotProps={nativeSelect} value={form.interviewer_id} onChange={(e) => setForm({ ...form, interviewer_id: e.target.value })}>
-            <option value="">—</option>
-            {data.bishopric.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.display_name}
-              </option>
-            ))}
-          </TextField>
-        </Grid>
-        <Grid size={{ xs: 6, sm: 3 }}>
-          <TextField select label="Purpose" slotProps={nativeSelect} value={form.purpose} onChange={(e) => setForm({ ...form, purpose: e.target.value as Enums<'interview_purpose'> })}>
-            <option value="calling">Calling</option>
-            <option value="temple_recommend">Temple recommend</option>
-            <option value="ppi">PPI</option>
-            <option value="youth">Youth</option>
-            <option value="tithing_declaration">Tithing declaration</option>
-            <option value="advancement">Advancement</option>
-            <option value="other">Other</option>
-          </TextField>
-        </Grid>
-      </Grid>
+      {/* Wraps by the card's width rather than the screen's, so it fits the side column too. */}
+      <Stack direction="row" useFlexGap sx={{ gap: 1.5, flexWrap: 'wrap' }}>
+        <TextField label="Name" value={form.person_name} onChange={(e) => setForm({ ...form, person_name: e.target.value })} sx={{ flex: '1 1 100%' }} />
+        <TextField select label="With" slotProps={nativeSelect} value={form.interviewer_id} onChange={(e) => setForm({ ...form, interviewer_id: e.target.value })} sx={{ flex: '1 1 8rem' }}>
+          <option value="">—</option>
+          {data.bishopric.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.display_name}
+            </option>
+          ))}
+        </TextField>
+        <TextField
+          select
+          label="Purpose"
+          slotProps={nativeSelect}
+          value={form.purpose}
+          onChange={(e) => setForm({ ...form, purpose: e.target.value as Enums<'interview_purpose'> })}
+          sx={{ flex: '1 1 8rem' }}
+        >
+          <option value="calling">Calling</option>
+          <option value="temple_recommend">Temple recommend</option>
+          <option value="ppi">PPI</option>
+          <option value="youth">Youth</option>
+          <option value="tithing_declaration">Tithing declaration</option>
+          <option value="advancement">Advancement</option>
+          <option value="other">Other</option>
+        </TextField>
+      </Stack>
       <Stack direction="row" useFlexGap sx={{ mt: 1.5, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
         <WhenFields value={when} onChange={setWhen} name="the new appointment" />
         <Button type="submit" variant="outlined">
@@ -224,34 +225,37 @@ export function AppointmentsView({
         )}
       </Stack>
 
-      <SectionCard title={`To schedule (${toSchedule.length})`}>
-        {toSchedule.length ? (
-          <Stack divider={<Divider flexItem />} spacing={1.5}>
-            {toSchedule.map((a) => (
-              <AppointmentRow key={a.id} appointment={a} data={data} actions={actions} timeZone={timeZone} />
-            ))}
-          </Stack>
-        ) : (
-          <Muted>Nothing waiting. Names the bishopric assigns in the meeting show up here.</Muted>
-        )}
-      </SectionCard>
+      <Split>
+        <SectionCard title={`To schedule (${toSchedule.length})`}>
+          {toSchedule.length ? (
+            <Stack divider={<Divider flexItem />} spacing={1.5}>
+              {toSchedule.map((a) => (
+                <AppointmentRow key={a.id} appointment={a} data={data} actions={actions} timeZone={timeZone} />
+              ))}
+            </Stack>
+          ) : (
+            <Muted>Nothing waiting. Names the bishopric assigns in the meeting show up here.</Muted>
+          )}
+        </SectionCard>
 
-      <SectionCard title="Scheduled">
-        {scheduled.length ? (
-          <Stack divider={<Divider flexItem />} spacing={1.5}>
-            {scheduled.map((a) => (
-              <AppointmentRow key={a.id} appointment={a} data={data} actions={actions} timeZone={timeZone} />
-            ))}
-          </Stack>
-        ) : (
-          <Muted>No appointments booked.</Muted>
-        )}
-      </SectionCard>
+        <SectionCard title="Scheduled">
+          {scheduled.length ? (
+            <Stack divider={<Divider flexItem />} spacing={1.5}>
+              {scheduled.map((a) => (
+                <AppointmentRow key={a.id} appointment={a} data={data} actions={actions} timeZone={timeZone} />
+              ))}
+            </Stack>
+          ) : (
+            <Muted>No appointments booked.</Muted>
+          )}
+        </SectionCard>
 
-      <SectionCard title="Add an appointment">
-        <AddAppointment data={data} onAdd={actions.add} />
-      </SectionCard>
-
+        <Side>
+          <SectionCard title="Add an appointment">
+            <AddAppointment data={data} onAdd={actions.add} />
+          </SectionCard>
+        </Side>
+      </Split>
     </>
   )
 }

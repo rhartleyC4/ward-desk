@@ -23,7 +23,9 @@ import Tabs from '@mui/material/Tabs'
 import Toolbar from '@mui/material/Toolbar'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
-import type { ReactNode } from 'react'
+import { useTheme } from '@mui/material/styles'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { Children, isValidElement, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { isSettingsPage, navFor } from '../lib/access'
@@ -69,8 +71,17 @@ function Shell() {
   const steps = useSetupSteps()
   const links = navFor(roles, templates, office)
   const current = links.find((l) => pathname === l.to || pathname.startsWith(`${l.to}/`))?.to ?? false
-  const back = backFor(pathname, state)
+  const split = useSettingsSplit()
+  const sentBack = backFor(pathname, state)
+  // With the Settings list showing beside the page, a button back to it would go nowhere new.
+  const back = split && sentBack?.to === '/settings' ? null : sentBack
   const showTabs = links.length > 1
+  const settings = isSettingsPage(pathname)
+  // Dashboards spread into columns on a wide screen. Settings shows its list beside the page, and forms
+  // elsewhere stay at a readable width.
+  const width = current ? false : split && settings ? 'lg' : 'md'
+  // The tab pages: a phone-width column until there's room for a side column, then wider but not endless.
+  const wideMax = { xs: 900, lg: 1800 }
   // Offers to install and to turn on Face ID show on the landing page only, not on every page.
   const landing = pathname === links[0]?.to
   const pending = !!nextStep(steps)
@@ -133,7 +144,7 @@ function Shell() {
           </Tooltip>
         </Toolbar>
       </AppBar>
-      <Container maxWidth="md" sx={{ pt: 2, pb: showTabs ? { xs: 'calc(96px + env(safe-area-inset-bottom, 0px))', md: 4 } : 4 }}>
+      <Container maxWidth={width} sx={{ maxWidth: width === false ? wideMax : undefined, pt: 2, pb: showTabs ? { xs: 'calc(96px + env(safe-area-inset-bottom, 0px))', md: 4 } : 4 }}>
         {landing && (
           <>
             <InstallPrompt />
@@ -190,6 +201,48 @@ function Shell() {
           </BottomNavigation>
         </Paper>
       )}
+    </Box>
+  )
+}
+
+/** Wide enough to show the Settings list beside the page it opens, like Settings on an iPad. */
+export const useSettingsSplit = () => useMediaQuery(useTheme().breakpoints.up('md'), { noSsr: true })
+
+/** The narrowest a tile gets before the row drops to fewer tiles. Cards are laid out for phones up to here. */
+const COLUMN = '34rem'
+
+/** Marks a card for the side column of a Split. On a phone it stays where it is in the order. */
+export function Side({ children }: { children: ReactNode }) {
+  return children
+}
+
+const isSide = (node: ReactNode) => isValidElement(node) && node.type === Side
+
+/**
+ * A page of cards. On a phone they stack in the order given. On a desktop the cards marked `Side`
+ * (things to glance at) move to a narrower column on the right, and the rest (things to work through)
+ * stay on the left, each in a fixed place, so opening a form never pushes cards across.
+ */
+export function Split({ children }: { children: ReactNode }) {
+  const wide = useMediaQuery(useTheme().breakpoints.up('lg'), { noSsr: true })
+  const cards = Children.toArray(children)
+  const side = cards.filter(isSide)
+  if (!wide) return <>{cards}</>
+  // Nothing to put beside it: one column at the width a single column reads best.
+  if (!side.length) return <Box sx={{ maxWidth: 900, mx: 'auto' }}>{cards}</Box>
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(22rem, 1fr)', columnGap: 1.5, alignItems: 'start' }}>
+      <Box sx={{ minWidth: 0 }}>{cards.filter((c) => !isSide(c))}</Box>
+      <Box sx={{ minWidth: 0 }}>{side}</Box>
+    </Box>
+  )
+}
+
+/** Cards in rows across as many columns as fit, for a dated series read left to right (like Sundays). Cards in a row match heights. */
+export function Tiles({ children }: { children: ReactNode }) {
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${COLUMN}), 1fr))`, columnGap: 1.5 }}>
+      {children}
     </Box>
   )
 }

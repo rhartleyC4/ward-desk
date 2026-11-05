@@ -1,14 +1,15 @@
 import Button from '@mui/material/Button'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
+import EditIcon from '@mui/icons-material/Edit'
+import Chip from '@mui/material/Chip'
+import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading } from '../components/Layout'
+import { ErrorNote, Loading, SectionCard, Tiles } from '../components/Layout'
 import { MeetingEditor } from '../components/MeetingEditor'
-import { MeetingSummary } from '../components/MeetingSummary'
+import { meetingLabel, MeetingSummary } from '../components/MeetingSummary'
 import { canPlanMeetings } from '../lib/access'
-import { sundaysFrom, todayIso } from '../lib/dates'
+import { longDate, sundaysFrom, todayIso } from '../lib/dates'
 import { loadBishopric, loadProfiles, loadSacrament, saveMeeting } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -40,14 +41,31 @@ export function SacramentPage() {
         Sacrament meetings
       </Typography>
       <ErrorNote error={save.error} />
-      {sundays.map((date) => {
-        const meeting = data.meetings.find((m) => m.meeting_date === date)
-        const items = meeting ? data.items.filter((i) => i.meeting_id === meeting.id) : []
-        return (
-          <Card key={date} component="section" sx={{ mb: 1.5 }}>
-            <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+      <Tiles>
+        {sundays.map((date) => {
+          const meeting = data.meetings.find((m) => m.meeting_date === date)
+          const items = meeting ? data.items.filter((i) => i.meeting_id === meeting.id) : []
+          const label = meetingLabel(meeting)
+          return (
+            <SectionCard
+              key={date}
+              title={longDate(date)}
+              action={
+                editing !== date && (label || canEdit) ? (
+                  <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+                    {label && <Chip size="small" color="secondary" label={label} />}
+                    {canEdit && (
+                      <Button variant={meeting ? 'text' : 'contained'} size="small" startIcon={meeting ? <EditIcon /> : undefined} onClick={() => setEditing(date)} aria-label={`${meeting ? 'Edit' : 'Plan'} ${longDate(date)}`}>
+                        {meeting ? 'Edit' : 'Plan'}
+                      </Button>
+                    )}
+                  </Stack>
+                ) : undefined
+              }
+            >
               {editing === date ? (
                 <MeetingEditor
+                  heading={false}
                   date={date}
                   meeting={meeting}
                   items={items}
@@ -63,19 +81,12 @@ export function SacramentPage() {
                   }}
                 />
               ) : (
-                <>
-                  <MeetingSummary date={date} meeting={meeting} items={items} profiles={data.profiles} absences={data.absences} />
-                  {canEdit && (
-                    <Button variant={meeting ? 'outlined' : 'contained'} size="small" onClick={() => setEditing(date)} sx={{ mt: 1.5 }}>
-                      {meeting ? 'Edit' : 'Plan this Sunday'}
-                    </Button>
-                  )}
-                </>
+                <MeetingSummary heading={false} date={date} meeting={meeting} items={items} profiles={data.profiles} absences={data.absences} />
               )}
-            </CardContent>
-          </Card>
-        )
-      })}
+            </SectionCard>
+          )
+        })}
+      </Tiles>
     </>
   )
 }

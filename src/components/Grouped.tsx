@@ -79,10 +79,12 @@ type RowProps = {
   /** Text color for an action row such as "Sign out". */
   tone?: 'error' | 'primary'
   center?: boolean
+  /** The page this row opens is the one showing beside the list. */
+  selected?: boolean
 }
 
 /** One row of a GroupedList. With `to` or `onClick` it's a full-width tap target with a chevron. */
-export function GroupedRow({ label, hint, value, start, to, state, onClick, tone, center }: RowProps) {
+export function GroupedRow({ label, hint, value, start, to, state, onClick, tone, center, selected }: RowProps) {
   const tappable = !!to || !!onClick
   const content = (
     <>
@@ -105,9 +107,13 @@ export function GroupedRow({ label, hint, value, start, to, state, onClick, tone
   )
   const sx = { display: 'flex', alignItems: 'center', gap: 1.5, width: '100%', minHeight: 52, px: 2, py: 1 } as const
   if (!tappable) return <Box sx={sx}>{content}</Box>
-  const link = to ? { component: Link, to, state } : {}
+  const link = to ? { component: Link, to, state, 'aria-current': selected ? ('page' as const) : undefined } : {}
   return (
-    <ButtonBase {...link} onClick={onClick} sx={{ ...sx, justifyContent: 'flex-start', '&:hover, &.Mui-focusVisible': { bgcolor: 'action.hover' } }}>
+    <ButtonBase
+      {...link}
+      onClick={onClick}
+      sx={{ ...sx, justifyContent: 'flex-start', bgcolor: selected ? 'action.selected' : undefined, '&:hover, &.Mui-focusVisible': { bgcolor: selected ? 'action.selected' : 'action.hover' } }}
+    >
       {content}
     </ButtonBase>
   )

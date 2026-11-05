@@ -39,7 +39,7 @@ import {
 } from '../lib/requests'
 import { nativeSelect } from '../theme'
 import { CallingField } from './CallingField'
-import { Muted, SectionCard } from './Layout'
+import { Muted, SectionCard, Side, Split } from './Layout'
 import { ActionButton, Choices, StepFrame } from './Steps'
 
 const nameOf = (id: string | null, people: Pick<Profile, 'id' | 'display_name'>[]) => people.find((p) => p.id === id)?.display_name ?? 'Someone'
@@ -530,94 +530,102 @@ export function RequestsView({
         Requests
       </Typography>
 
-      {(canSend || canAskCallings) && (
-        <SectionCard title={open ? undefined : 'What would you like to do?'}>
-          {open === 'request' ? (
-            <NewRequest recipients={data.recipients} onSend={actions.send} onClose={() => setOpen(null)} busy={busy} />
-          ) : open === 'calling' ? (
-            <NewCallingRequest callings={data.callings} onSend={actions.sendCallingRequest} onClose={() => setOpen(null)} busy={busy} />
-          ) : (
-            <Stack sx={{ gap: 1 }}>
-              {canSend && <ActionButton icon={<SendIcon />} label="Ask someone to do something" hint="They'll let you know they've seen it and when it's done." onClick={() => setOpen('request')} />}
-              {canAskCallings && (
-                <ActionButton icon={<PersonAddIcon />} label="Ask for a calling change" hint="Fill a calling, release someone, or suggest a name." onClick={() => setOpen('calling')} />
+      <Split>
+        {(canSend || canAskCallings) && (
+          <Side>
+            <SectionCard title={open ? undefined : 'What would you like to do?'}>
+              {open === 'request' ? (
+                <NewRequest recipients={data.recipients} onSend={actions.send} onClose={() => setOpen(null)} busy={busy} />
+              ) : open === 'calling' ? (
+                <NewCallingRequest callings={data.callings} onSend={actions.sendCallingRequest} onClose={() => setOpen(null)} busy={busy} />
+              ) : (
+                <Stack sx={{ gap: 1 }}>
+                  {canSend && <ActionButton icon={<SendIcon />} label="Ask someone to do something" hint="They'll let you know they've seen it and when it's done." onClick={() => setOpen('request')} />}
+                  {canAskCallings && (
+                    <ActionButton icon={<PersonAddIcon />} label="Ask for a calling change" hint="Fill a calling, release someone, or suggest a name." onClick={() => setOpen('calling')} />
+                  )}
+                </Stack>
               )}
-            </Stack>
-          )}
-        </SectionCard>
-      )}
-
-      <SectionCard title="For you">
-        {waiting.length ? (
-          <Stack divider={<Divider flexItem />}>
-            {waiting.map((r) => (
-              <IncomingRequest key={r.id} request={r} people={data.people} today={today} onAnswer={actions.answer} busy={busy} />
-            ))}
-          </Stack>
-        ) : (
-          <Muted>Nothing waiting for you.</Muted>
+            </SectionCard>
+          </Side>
         )}
-        {finished.length > 0 && (
-          <>
-            <Typography variant="h3" sx={{ mt: 2 }}>
-              Finished lately
-            </Typography>
+
+        <SectionCard title="For you">
+          {waiting.length ? (
             <Stack divider={<Divider flexItem />}>
-              {finished.map((r) => (
+              {waiting.map((r) => (
                 <IncomingRequest key={r.id} request={r} people={data.people} today={today} onAnswer={actions.answer} busy={busy} />
               ))}
             </Stack>
-          </>
+          ) : (
+            <Muted>Nothing waiting for you.</Muted>
+          )}
+          {finished.length > 0 && (
+            <>
+              <Typography variant="h3" sx={{ mt: 2 }}>
+                Finished lately
+              </Typography>
+              <Stack divider={<Divider flexItem />}>
+                {finished.map((r) => (
+                  <IncomingRequest key={r.id} request={r} people={data.people} today={today} onAnswer={actions.answer} busy={busy} />
+                ))}
+              </Stack>
+            </>
+          )}
+        </SectionCard>
+
+        {canSend && (
+          <SectionCard title="Calling requests from leaders">
+            {newCalling.length === 0 && receivedCalling.length === 0 && <Muted>None right now.</Muted>}
+            <Stack divider={<Divider flexItem />}>
+              {newCalling.map((r) => (
+                <CallingRequestRow key={r.id} request={r} people={data.people} candidates={data.candidates} onReceive={actions.receive} busy={busy} />
+              ))}
+              {receivedCalling.map((r) => (
+                <CallingRequestRow key={r.id} request={r} people={data.people} candidates={data.candidates} busy={busy} showAgendaLink={false} />
+              ))}
+            </Stack>
+          </SectionCard>
         )}
-      </SectionCard>
 
-      {canSend && (
-        <SectionCard title="Calling requests from leaders">
-          {newCalling.length === 0 && receivedCalling.length === 0 && <Muted>None right now.</Muted>}
-          <Stack divider={<Divider flexItem />}>
-            {newCalling.map((r) => (
-              <CallingRequestRow key={r.id} request={r} people={data.people} candidates={data.candidates} onReceive={actions.receive} busy={busy} />
-            ))}
-            {receivedCalling.map((r) => (
-              <CallingRequestRow key={r.id} request={r} people={data.people} candidates={data.candidates} busy={busy} showAgendaLink={false} />
-            ))}
-          </Stack>
-        </SectionCard>
-      )}
+        {canAskCallings && (
+          <Side>
+            <SectionCard title="Your calling requests">
+              {data.myCallingRequests.length ? (
+                <Stack divider={<Divider flexItem />}>
+                  {data.myCallingRequests.map((r) => (
+                    <MyCallingRequestRow key={r.id} request={r} />
+                  ))}
+                </Stack>
+              ) : (
+                <Muted>You haven't sent any.</Muted>
+              )}
+            </SectionCard>
+          </Side>
+        )}
 
-      {canAskCallings && (
-        <SectionCard title="Your calling requests">
-          {data.myCallingRequests.length ? (
-            <Stack divider={<Divider flexItem />}>
-              {data.myCallingRequests.map((r) => (
-                <MyCallingRequestRow key={r.id} request={r} />
-              ))}
-            </Stack>
-          ) : (
-            <Muted>You haven't sent any.</Muted>
-          )}
-        </SectionCard>
-      )}
+        {canSend && (
+          <Side>
+            <SectionCard title="You asked">
+              {sent.length ? (
+                <Stack divider={<Divider flexItem />}>
+                  {sent.map((r) => (
+                    <SentRequest key={r.id} request={r} people={data.people} today={today} onTakeBack={actions.takeBack} busy={busy} />
+                  ))}
+                </Stack>
+              ) : (
+                <Muted>Nothing you've asked for is open.</Muted>
+              )}
+            </SectionCard>
+          </Side>
+        )}
 
-      {canSend && (
-        <SectionCard title="You asked">
-          {sent.length ? (
-            <Stack divider={<Divider flexItem />}>
-              {sent.map((r) => (
-                <SentRequest key={r.id} request={r} people={data.people} today={today} onTakeBack={actions.takeBack} busy={busy} />
-              ))}
-            </Stack>
-          ) : (
-            <Muted>Nothing you've asked for is open.</Muted>
-          )}
-        </SectionCard>
-      )}
-
-      {!canSend && !canAskCallings && waiting.length === 0 && (
-        <Alert severity="info" sx={{ mb: 1.5 }}>
-          When the bishopric asks you to do something, it shows here.
-        </Alert>
-      )}
+        {!canSend && !canAskCallings && waiting.length === 0 && (
+          <Alert severity="info" sx={{ mb: 1.5 }}>
+            When the bishopric asks you to do something, it shows here.
+          </Alert>
+        )}
+      </Split>
     </>
   )
 }

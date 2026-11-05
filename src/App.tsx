@@ -21,7 +21,7 @@ import { SacramentPage } from './pages/SacramentPage'
 import { LengthsPage } from './pages/LengthsPage'
 import { MessagesPage } from './pages/MessagesPage'
 import { SchedulePage } from './pages/SchedulePage'
-import { SettingsPage } from './pages/SettingsPage'
+import { SettingsLayout, SettingsPage } from './pages/SettingsPage'
 import { WhoBooksPage } from './pages/WhoBooksPage'
 import { RequestsPage } from './pages/RequestsPage'
 
@@ -59,17 +59,19 @@ function AppRoutes() {
         <Route path="requests" element={<RequestsPage />} />
         {/* Suggesting a name is now one kind of calling request. */}
         <Route path="suggest" element={<Navigate to="/requests?new=calling" replace />} />
-        <Route path="hours" element={<Guard allow={canEditHours}><HoursPage /></Guard>} />
-        <Route path="away" element={<Guard allow={isMember}><AwayPage /></Guard>} />
-        <Route path="schedule" element={<Guard allow={isMember}><SchedulePage /></Guard>} />
-        <Route path="meetings" element={<Guard allow={canManageMeetings}><MeetingsPage /></Guard>} />
-        <Route path="calling-list" element={<Guard allow={canManageCallingList}><CallingListPage /></Guard>} />
-        <Route path="access" element={<Guard allow={canManageAccess}><AccessPage /></Guard>} />
-        <Route path="account" element={<AccountPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="settings/lengths" element={<Guard allow={canSeeAppointments}><LengthsPage /></Guard>} />
-        <Route path="settings/messages" element={<Guard allow={canSeeAppointments}><MessagesPage /></Guard>} />
-        <Route path="settings/who-books" element={<Guard allow={booksForOthers}><WhoBooksPage /></Guard>} />
+        <Route element={<SettingsLayout />}>
+          <Route path="hours" element={<Guard allow={canEditHours}><HoursPage /></Guard>} />
+          <Route path="away" element={<Guard allow={isMember}><AwayPage /></Guard>} />
+          <Route path="schedule" element={<Guard allow={isMember}><SchedulePage /></Guard>} />
+          <Route path="meetings" element={<Guard allow={canManageMeetings}><MeetingsPage /></Guard>} />
+          <Route path="calling-list" element={<Guard allow={canManageCallingList}><CallingListPage /></Guard>} />
+          <Route path="access" element={<Guard allow={canManageAccess}><AccessPage /></Guard>} />
+          <Route path="account" element={<AccountPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="settings/lengths" element={<Guard allow={canSeeAppointments}><LengthsPage /></Guard>} />
+          <Route path="settings/messages" element={<Guard allow={canSeeAppointments}><MessagesPage /></Guard>} />
+          <Route path="settings/who-books" element={<Guard allow={booksForOthers}><WhoBooksPage /></Guard>} />
+        </Route>
         <Route
           path="no-access"
           element={

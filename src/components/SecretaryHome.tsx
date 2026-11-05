@@ -22,7 +22,7 @@ import type { Enums } from '../lib/database.types'
 import type { Appointment, AppointmentLength, AppointmentsData } from '../lib/queries'
 import { adjustMinutes, bookedRange, heldTimes, holdEnds, isHolding, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, type Slot } from '../lib/slots'
 import type { HoursData } from './HoursView'
-import { Muted, SectionCard } from './Layout'
+import { Muted, SectionCard, Side, Split } from './Layout'
 import { MessagePanel } from './Messages'
 import type { Tables } from '../lib/database.types'
 import { ThisMonth } from './ThisMonth'
@@ -391,43 +391,46 @@ export function SecretaryHome({
         </Alert>
       )}
 
-      <SectionCard title={`Needs an appointment (${toSchedule.length})`}>
-        {toSchedule.length ? (
-          <Stack divider={<Divider flexItem />} spacing={1.5}>
-            {toSchedule.map((a) => (
-              <NeedsRow key={a.id} appointment={a} ctx={ctx} />
-            ))}
-          </Stack>
-        ) : (
-          <Muted>No one is waiting. Names the bishopric assigns show up here.</Muted>
-        )}
-      </SectionCard>
+      <Split>
+        <SectionCard title={`Needs an appointment (${toSchedule.length})`}>
+          {toSchedule.length ? (
+            <Stack divider={<Divider flexItem />} spacing={1.5}>
+              {toSchedule.map((a) => (
+                <NeedsRow key={a.id} appointment={a} ctx={ctx} />
+              ))}
+            </Stack>
+          ) : (
+            <Muted>No one is waiting. Names the bishopric assigns show up here.</Muted>
+          )}
+        </SectionCard>
 
-      <SectionCard title={`Booked (${scheduled.length})`}>
-        {scheduled.length ? (
-          <Stack divider={<Divider flexItem />} spacing={1.5}>
-            {scheduled.map((a) => (
-              <BookedRow key={a.id} appointment={a} ctx={ctx} clash={clashes.has(a.id)} />
-            ))}
-          </Stack>
-        ) : (
-          <Muted>Nothing booked yet.</Muted>
-        )}
-      </SectionCard>
+        <SectionCard title={`Booked (${scheduled.length})`}>
+          {scheduled.length ? (
+            <Stack divider={<Divider flexItem />} spacing={1.5}>
+              {scheduled.map((a) => (
+                <BookedRow key={a.id} appointment={a} ctx={ctx} clash={clashes.has(a.id)} />
+              ))}
+            </Stack>
+          ) : (
+            <Muted>Nothing booked yet.</Muted>
+          )}
+        </SectionCard>
 
-      <SectionCard
-        title="Bishopric this week"
-        action={
-          <Button size="small" component={NavLink} to="/hours">
-            Change hours
-          </Button>
-        }
-      >
-        <WeekGlance leaderIds={leaderIds} ctx={ctx} />
-      </SectionCard>
-      <ThisMonth userId={userId} today={today} rotations={data.rotations} />
-      <WhoCovers leaders={data.bishopric} stewardships={data.stewardships} />
-
+        <Side>
+          <SectionCard
+            title="Bishopric this week"
+            action={
+              <Button size="small" component={NavLink} to="/hours">
+                Change hours
+              </Button>
+            }
+          >
+            <WeekGlance leaderIds={leaderIds} ctx={ctx} />
+          </SectionCard>
+          <ThisMonth userId={userId} today={today} rotations={data.rotations} />
+          <WhoCovers leaders={data.bishopric} stewardships={data.stewardships} />
+        </Side>
+      </Split>
     </>
   )
 }

@@ -19,7 +19,7 @@ import type { Enums } from '../lib/database.types'
 import { timeLabel, WEEKDAYS } from '../lib/availability'
 import type { AgendaSection, AgendaTemplate, Appointment, AppointmentsData } from '../lib/queries'
 import { bookedRange, minutesLabel, wardParts } from '../lib/slots'
-import { Muted, SectionCard } from './Layout'
+import { Muted, SectionCard, Side, Split } from './Layout'
 import { ActionButton, Choices, StepFrame } from './Steps'
 import { ThisMonth } from './ThisMonth'
 import type { Rotation } from '../lib/schedule'
@@ -361,11 +361,17 @@ export function BishopricHome(props: Props) {
       <Typography variant="h1" sx={{ mb: 1.5 }}>
         {fullDay(today)}
       </Typography>
-      <Today today={todayPlan} week={week} timeZone={timeZone} />
-      <QuickActions {...props} />
-      <ComingUp week={week} timeZone={timeZone} />
-      <ThisMonth userId={userId} today={today} rotations={data.rotations} />
-      <Waiting data={data} userId={userId} timeZone={timeZone} />
+      <Split>
+        <Today today={todayPlan} week={week} timeZone={timeZone} />
+        <QuickActions {...props} />
+        <Side>
+          <ComingUp week={week} timeZone={timeZone} />
+        </Side>
+        <Side>
+          <ThisMonth userId={userId} today={today} rotations={data.rotations} />
+        </Side>
+        <Waiting data={data} userId={userId} timeZone={timeZone} />
+      </Split>
     </>
   )
 }

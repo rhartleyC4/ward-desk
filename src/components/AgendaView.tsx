@@ -37,7 +37,7 @@ import { followUps, isOpen, requestStatusLine, type Request } from '../lib/reque
 import { awayOn, eventsOn, formatTime, rotationDayLabel, rotationsDue } from '../lib/schedule'
 import { RecipientSelect } from './Requests'
 import { CallingsManager, type CallingsActions } from './CallingsManager'
-import { Muted, SectionCard } from './Layout'
+import { Muted, SectionCard, Side, Split } from './Layout'
 
 export type AgendaActions = CallingsActions & {
   saveHeader: (fields: { opening_prayer: string | null; spiritual_thought: string | null; closing_prayer: string | null }) => void
@@ -474,6 +474,9 @@ function PrayerRoll({ data, actions }: { data: AgendaData; actions: AgendaAction
 }
 
 /** A meeting's agenda, laid out by its template and assembled from live data instead of a copied sheet tab. */
+/** Lists the meeting glances at rather than works through; on a desktop they sit in the side column. */
+const SIDE_SECTIONS: AgendaSection['kind'][] = ['releases', 'sustainings', 'prayer_roll', 'sacrament', 'calendar', 'assignments']
+
 export function AgendaView({
   template,
   date,
@@ -502,9 +505,12 @@ export function AgendaView({
         </Alert>
       )}
 
-      {template.sections.map((section) => (
-        <Section key={section.id} section={section} date={date} data={data} actions={actions} timeZone={timeZone} canEditCallings={canEditCallings} />
-      ))}
+      <Split>
+        {template.sections.map((section) => {
+          const card = <Section key={section.id} section={section} date={date} data={data} actions={actions} timeZone={timeZone} canEditCallings={canEditCallings} />
+          return SIDE_SECTIONS.includes(section.kind) ? <Side key={section.id}>{card}</Side> : card
+        })}
+      </Split>
     </>
   )
 }

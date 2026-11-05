@@ -34,6 +34,7 @@ export function MeetingEditor({
   onSave,
   onCancel,
   busy,
+  heading = true,
 }: {
   date: string
   meeting: Meeting | undefined
@@ -42,6 +43,8 @@ export function MeetingEditor({
   onSave: (form: MeetingForm) => void
   onCancel: () => void
   busy?: boolean
+  /** Off when the card's title bar already shows the date. */
+  heading?: boolean
 }) {
   const [m, setM] = useState<MeetingForm['meeting']>({
     meeting_date: date,
@@ -78,9 +81,11 @@ export function MeetingEditor({
 
   return (
     <Box component="form" onSubmit={submit} aria-label={`Edit ${longDate(date)}`}>
-      <Typography variant="h2" sx={{ mb: 2 }}>
-        {longDate(date)}
-      </Typography>
+      {heading && (
+        <Typography variant="h2" sx={{ mb: 2 }}>
+          {longDate(date)}
+        </Typography>
+      )}
       <Grid container spacing={1.5}>
         <Grid size={half}>
           <TextField select label="Type" slotProps={nativeSelect} value={m.meeting_type} onChange={(e) => set('meeting_type', e.target.value as Meeting['meeting_type'])}>

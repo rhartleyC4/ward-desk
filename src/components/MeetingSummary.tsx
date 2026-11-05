@@ -39,6 +39,9 @@ const STATUS_COLORS: Record<ProgramItem['status'], 'default' | 'info' | 'success
   declined: 'error',
 }
 
+/** What kind of Sunday it is, when it isn't a regular one: "Fast Sunday", a program's title. */
+export const meetingLabel = (meeting: Meeting | undefined) => (meeting && meeting.meeting_type !== 'regular' ? meeting.title || TYPE_LABELS[meeting.meeting_type] : null)
+
 const hymn = (n: number | null) => (n ? `#${n}` : '—')
 
 function Label({ children }: { children: string }) {
@@ -56,21 +59,27 @@ export function MeetingSummary({
   items,
   profiles,
   absences,
+  heading = true,
 }: {
   date: string
   meeting: Meeting | undefined
   items: ProgramItem[]
   profiles: Profile[]
   absences: Absence[]
+  /** Off when the card's title bar already shows the date and kind of Sunday. */
+  heading?: boolean
 }) {
   if (!meeting) {
     return (
       <div>
-        <Typography variant="h2">{longDate(date)}</Typography>
-        <Typography color="text.secondary">Not planned yet.</Typography>
+        {heading && <Typography variant="h2">{longDate(date)}</Typography>}
+        <Typography variant={heading ? 'body1' : 'body2'} color="text.secondary">
+          Not planned yet.
+        </Typography>
       </div>
     )
   }
+  const label = meetingLabel(meeting)
 
   const away = isAway(meeting.conducting_id, date, absences)
   const conducting = personLabel(meeting.conducting_id, profiles)
@@ -79,10 +88,12 @@ export function MeetingSummary({
 
   return (
     <Stack spacing={1}>
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-        <Typography variant="h2">{longDate(date)}</Typography>
-        {meeting.meeting_type !== 'regular' && <Chip size="small" color="secondary" label={meeting.title || TYPE_LABELS[meeting.meeting_type]} />}
-      </Stack>
+      {heading && (
+        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <Typography variant="h2">{longDate(date)}</Typography>
+          {label && <Chip size="small" color="secondary" label={label} />}
+        </Stack>
+      )}
       {away && (
         <Alert severity="warning" role="status">
           {conducting} is away {away.location ? `(${away.location}) ` : ''}this Sunday.
