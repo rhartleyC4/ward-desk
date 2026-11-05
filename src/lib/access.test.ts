@@ -6,8 +6,8 @@ const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
 
 describe('navFor', () => {
   it('keeps the tabs to everyday work for the bishopric', () => {
-    expect(labels(['bishopric'], bishopric)).toEqual(['Agenda', 'Sacrament', 'Appointments'])
-    expect(navFor(['admin', 'bishopric'], bishopric, 'bishop').map((l) => l.label)).toEqual(['Home', 'Agenda', 'Sacrament', 'Appointments'])
+    expect(labels(['bishopric'], bishopric)).toEqual(['Meetings', 'Sacrament', 'Appointments'])
+    expect(navFor(['admin', 'bishopric'], bishopric, 'bishop').map((l) => l.label)).toEqual(['Home', 'Meetings', 'Sacrament', 'Appointments'])
   })
 
   it('limits called leaders to the suggestion form', () => {
@@ -15,7 +15,7 @@ describe('navFor', () => {
   })
 
   it('adds the agenda for a leader who attends a meeting', () => {
-    expect(labels(['leader'], [{ slug: 'ward-council' }])).toEqual(['Agenda', 'Suggest a name'])
+    expect(labels(['leader'], [{ slug: 'ward-council' }])).toEqual(['Meetings', 'Suggest a name'])
   })
 
   it('does not grant appointments to an admin who is not in the bishopric', () => {

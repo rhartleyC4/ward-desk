@@ -52,7 +52,7 @@ export type NavLink = { to: string; label: string }
 export function navFor(roles: AppRole[], templates: readonly unknown[] = [], office: Office = null): NavLink[] {
   const links: NavLink[] = []
   if (hasHome(roles, office)) links.push({ to: '/home', label: 'Home' })
-  if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Agenda' })
+  if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Meetings' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
   if (canSeeAppointments(roles)) links.push({ to: '/appointments', label: 'Appointments' })
   if (canSuggest(roles) && !canSeeCallings(roles)) links.push({ to: '/suggest', label: 'Suggest a name' })

@@ -18,7 +18,7 @@ A mobile-first web app (PWA) for managing ward administration in one place: call
 
 Both modules share the same users, roles, notifications, and calendar.
 
-**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Agenda, Sacrament and Appointments. Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, the day-ahead summary), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
+**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Meetings (each meeting's agenda), Sacrament and Appointments. Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, the day-ahead summary), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
 
 ## Stack
 
@@ -97,9 +97,9 @@ The first shows what everyone would get; the second sends it to one account. **S
 | Sacrament | **Sacrament** page (`meetings`, `program_items`) |
 | Bishopric Schedule | **Schedule** page (`recurring_events`, `rotations`, `stewardships`) |
 | Travel | **Away** page (`absences`). Warns when whoever is conducting is away |
-| Weekly agenda tab (copied every Sunday) | **Agenda** page, assembled live. Upcoming sacrament meetings, callings, releases, and sustainings fill in automatically. Discussion and calendar items carry forward until marked done. |
-| Ward council agenda sheet | **Agenda** page, Ward Council tab. Same idea: the prayer roll and assignments fill in, and each organization's items carry forward until marked done. |
-| Callings Needed table | The callings section of the **Agenda** (`calling_needs`, `calling_candidates`). The bishopric adds callings and names, changes statuses, and picks who meets with each approved name. Marking a name Accepted sets the sustaining and the release for that Sunday (or the coming one), marks the appointment met, and from that Sunday on the calling shows under "Sustainings today" and "Releases today" instead of in the callings list. The bishopric can move either date from those sections |
+| Weekly agenda tab (copied every Sunday) | **Meetings** tab, assembled live. Upcoming sacrament meetings, callings, releases, and sustainings fill in automatically. Discussion and calendar items carry forward until marked done. |
+| Ward council agenda sheet | **Meetings** tab, Ward Council tab. Same idea: the prayer roll and assignments fill in, and each organization's items carry forward until marked done. |
+| Callings Needed table | The callings section of the bishopric agenda on **Meetings** (`calling_needs`, `calling_candidates`). The bishopric adds callings and names, changes statuses, and picks who meets with each approved name. Marking a name Accepted sets the sustaining and the release for that Sunday (or the coming one), marks the appointment met, and from that Sunday on the calling shows under "Sustainings today" and "Releases today" instead of in the callings list. The bishopric can move either date from those sections |
 | Interviews kept by the executive secretary | **Appointments** page (`interviews`, `secretary_assignments`). Approved names arrive without a time; the secretary who covers that leader books them |
 
 ## Setup
