@@ -1,4 +1,4 @@
-import FingerprintIcon from '@mui/icons-material/Fingerprint'
+import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined'
 import LogoutIcon from '@mui/icons-material/Logout'
 import Alert from '@mui/material/Alert'
 import AppBar from '@mui/material/AppBar'
@@ -47,9 +47,9 @@ export function Layout() {
             {profile?.display_name}
           </Typography>
           <ThemeToggle />
-          <Tooltip title="Face ID and fingerprint sign-in">
-            <IconButton color="inherit" aria-label="Face ID and fingerprint sign-in" component={NavLink} to="/account">
-              <FingerprintIcon />
+          <Tooltip title="Sign-in and notifications">
+            <IconButton color="inherit" aria-label="Sign-in and notifications" component={NavLink} to="/account">
+              <AccountCircleOutlinedIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="Sign out">

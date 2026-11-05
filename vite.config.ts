@@ -9,6 +9,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Shows push notifications (day-ahead summaries) and opens the app when one is tapped.
+      workbox: { importScripts: ['/push-handler.js'] },
       manifest: {
         name: 'Ward Desk',
         short_name: 'Ward Desk',

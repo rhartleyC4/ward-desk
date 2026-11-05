@@ -178,6 +178,7 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
           VITE_WARD_TIME_ZONE: ${{ vars.WARD_TIME_ZONE }}
           VITE_ENABLE_GOOGLE: ${{ vars.ENABLE_GOOGLE }}
+          VITE_VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
 
       - name: Deploy to Cloudflare Pages
         run: npx wrangler pages deploy dist --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}" --branch "${{ github.ref_name }}" --commit-hash "${{ github.sha }}"

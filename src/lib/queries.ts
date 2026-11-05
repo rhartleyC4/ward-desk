@@ -592,3 +592,21 @@ export async function listPasskeys(client: Client): Promise<Passkey[]> {
 export async function deletePasskey(client: Client, id: string) {
   check(await client.auth.passkey.delete({ passkeyId: id }))
 }
+
+// ---------------------------------------------------------------------------
+// Notifications (Web Push devices)
+// ---------------------------------------------------------------------------
+
+/** Saves this device for push, taking it over if someone else turned it on here before. */
+export async function savePushSubscription(client: Client, sub: { endpoint: string; p256dh: string; auth: string }) {
+  check(await client.rpc('save_push_subscription', { sub_endpoint: sub.endpoint, sub_p256dh: sub.p256dh, sub_auth: sub.auth }))
+}
+
+export async function deletePushSubscription(client: Client, endpoint: string) {
+  check(await client.from('push_subscriptions').delete().eq('endpoint', endpoint))
+}
+
+/** Whether this device is saved for the signed-in person (it may have been taken over by someone else). */
+export async function hasPushSubscription(client: Client, endpoint: string): Promise<boolean> {
+  return !!maybe(await client.from('push_subscriptions').select('id').eq('endpoint', endpoint).maybeSingle())
+}

@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY: string
   readonly VITE_WARD_TIME_ZONE?: string
   readonly VITE_ENABLE_GOOGLE?: string
+  /** Web Push key for this environment (scripts/write-local-env.mjs makes one locally). */
+  readonly VITE_VAPID_PUBLIC_KEY?: string
   /** 'staging' on the training site, 'production' on the real one, unset locally. */
   readonly VITE_APP_ENV?: 'staging' | 'production' | ''
 }

@@ -23,7 +23,7 @@ Both modules share the same users, roles, notifications, and calendar.
 - **Frontend:** React + TypeScript PWA built with Vite and [MUI](https://mui.com/), hosted on Cloudflare Pages. Light and dark themes follow the device by default; the toggle in the top bar overrides it (see `src/theme.ts`)
 - **Backend:** Supabase (Postgres, Auth, Realtime, Edge Functions)
 - **Auth:** Google sign-in and email magic links, invite-only via an allowlist table
-- **Notifications:** Web Push (VAPID) plus email fallback
+- **Notifications:** Web Push (VAPID), sent by a scheduled GitHub Actions job (`scripts/notify`). See "Notifications" below
 
 ## Roles
 
@@ -55,6 +55,36 @@ For a youth under 18 the secretary texts a parent instead. Ticking "Youth under 
 
 Adjust these as the real needs become clear.
 
+## Notifications
+
+Bishopric members can turn on a **day-ahead summary** for each device on the Account page (the person button in the top bar). The evening before, it lists that person's next day:
+
+- The standing meetings on the **Schedule** page (`recurring_events`) that fall on that day, with their times
+- Conducting sacrament meeting, when they're down to conduct, with how many releases and sustainings there are to read
+- Their own booked appointments: how many, from the first start to the last end
+- For a secretary, the appointments booked for the leaders they schedule for
+- A note when they're marked away that day
+
+Notifications show on lock screens, so the text says when and how many, never who or what an appointment is for. Nothing is sent for a day with nothing on it. The lines are built by `src/lib/daySummary.ts`.
+
+Each device's push subscription lives in `push_subscriptions` (saved through `save_push_subscription`, so whoever turns it on last on a shared device owns it). `notification_log` records each person and day sent, so a rerun never sends twice. The workflow `.github/workflows/notify.yml` runs every evening, hourly from 00:07 to 04:07 UTC. `npm run notify -- --scheduled` sends only between 6 and 10 PM ward time, so the first run in that window sends and the rest find it already sent. Push services that report a device gone (404 or 410) get it removed.
+
+On iPhone, notifications only work from the Home Screen app (see "iPhone users"). The service worker that shows them is only in a built app, so locally use `npm run build && npm run preview`, not `npm run dev`.
+
+**Trying it locally:** `npm run db:env` writes a VAPID key pair for this machine into `.env`. Build and preview the app, sign in as a bishopric account, turn the summary on from the Account page, then:
+
+```bash
+npm run notify -- --date 2026-11-08 --dry-run
+```
+
+```bash
+npm run notify -- --date 2026-11-08 --only bishop@ward.test --force
+```
+
+The first shows what everyone would get; the second sends it to one account. **Show a test** on the Account page checks that the device can display a notification without sending anything.
+
+**Trying it on staging or production:** Actions → "Day-ahead summaries" → Run workflow, on `main` for staging or `production` for production. It's a dry run unless you untick that box; set a date and your own email to send yourself one.
+
 ## How it replaces the Google Sheet
 
 | Sheet tab | In the app |
@@ -84,7 +114,7 @@ Never commit `.env`. See `.env.example`. Secrets needed for a hosted deployment:
 
 - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (safe for the frontend)
 - `SUPABASE_SERVICE_ROLE_KEY` (server only, never in the frontend)
-- `VAPID_PUBLIC_KEY` (frontend) and `VAPID_PRIVATE_KEY` (server only)
+- `VITE_VAPID_PUBLIC_KEY` (frontend) and `VAPID_PRIVATE_KEY` (the notification job only). `npm run db:env` makes a local pair
 - Google OAuth client ID and secret (stored in Supabase Auth settings; set `VITE_ENABLE_GOOGLE=true` once configured)
 
 ## Tests
@@ -93,7 +123,7 @@ Never commit `.env`. See `.env.example`. Secrets needed for a hosted deployment:
 |---------|----------------|----------------------|
 | `npm test` | Unit and component tests (Vitest + Testing Library): dates, schedule rules, agenda assembly, role-based navigation, auth loading, forms | No |
 | `npm run test:db` | pgTAP tests in `supabase/tests/database`. Every RLS rule, checked as each role | Yes |
-| `npm run test:integration` | Signs in as each seeded role and runs the app's real queries (`src/lib/queries.ts`) against the local API | Yes |
+| `npm run test:integration` | Signs in as each seeded role and runs the app's real queries (`src/lib/queries.ts`) against the local API, and runs the notification sender against the local database with a fake push service | Yes |
 | `npm run test:all` | All of the above | Yes |
 
 Integration tests refuse to run against anything but a local Supabase. They clean up the rows they create.
@@ -140,8 +170,8 @@ The deploy job refuses any `production` commit that isn't already on `main`. Eac
    | Where | Secrets | Variables |
    |---|---|---|
    | Repository | `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_ACCOUNT_ID`, `DEPLOY_ENABLED` = `true` (set this last) |
-   | Environment `staging` | `SUPABASE_DB_URL` (session pooler string) | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE` |
-   | Environment `production` | `SUPABASE_DB_URL` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk` |
+   | Environment `staging` | `SUPABASE_DB_URL` (session pooler string), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY` |
+   | Environment `production` | `SUPABASE_DB_URL`, `VAPID_PRIVATE_KEY` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk` |
 
    Limit the `production` environment to the `production` branch under Deployment branches.
 5. Push to `main`, then run "Reset training site". Then promote to production.
@@ -170,9 +200,21 @@ Optional. Email links work without it, but Google sign-in means most people neve
 
 The allowlist still applies. A Google account whose email isn't on the allowlist is refused, and the same address can sign in with either Google or an email link. Google's sign-in screen says "continue to `<ref>.supabase.co`". Showing your own domain there needs Supabase's paid custom-domain add-on.
 
+### Notifications
+
+1. Make a VAPID key pair for each environment. Keep the two separate, so a staging key can't send to production devices:
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. In each GitHub environment, set the variable `VAPID_PUBLIC_KEY` to the public key and the secret `VAPID_PRIVATE_KEY` to the private one. Optionally set `VAPID_SUBJECT` (defaults to `mailto:noreply@warddesk.app`); push services use it to reach you about problems.
+3. Re-run the latest deploy for each environment. The app reads the public key at build time, so the Account page only offers notifications after a fresh build.
+4. Set the repository variable `NOTIFY_ENABLED` to `true`. Until then the nightly job does nothing. Production's nightly run starts only once `notify.yml` is on the `production` branch.
+
+Changing a key pair later signs every device out of notifications; each person turns them on again.
+
 ### Face ID and fingerprint sign-in (passkeys)
 
-After someone signs in once with an email link or Google, the app offers to "Turn on" Face ID or fingerprint sign-in for that device. After that, they tap **Face ID or fingerprint** on the sign-in screen and skip the email. This matters most on iPhone: an email link opens in Safari, not in the Home Screen app, so a link sign-in never reaches the installed app, but a passkey sign-in happens inside it. Each person can see and remove their devices with the fingerprint button in the top bar. Passkeys sync through iCloud Keychain or Google Password Manager, so a new phone usually has them already.
+After someone signs in once with an email link or Google, the app offers to "Turn on" Face ID or fingerprint sign-in for that device. After that, they tap **Face ID or fingerprint** on the sign-in screen and skip the email. This matters most on iPhone: an email link opens in Safari, not in the Home Screen app, so a link sign-in never reaches the installed app, but a passkey sign-in happens inside it. Each person can see and remove their devices on the Account page (the person button in the top bar). Passkeys sync through iCloud Keychain or Google Password Manager, so a new phone usually has them already.
 
 Turn passkeys on in each Supabase project's Auth settings, with that site's own domain. A passkey only works on the domain it was made for, so staging and production passkeys are separate:
 
@@ -233,7 +275,7 @@ A section's kind can't be changed after it's added. Add a new section and remove
 
 - **Free-tier pause:** Supabase free projects pause after about a week of inactivity. A scheduled ping keeps it awake. If it pauses, restore it from the Supabase dashboard.
 - **Backups:** The free tier may not include automatic backups. Export the database on a regular schedule to a private location.
-- **Dead push subscriptions:** The send function should delete subscriptions that return 404 or 410.
+- **Dead push subscriptions:** The notification job deletes subscriptions that return 404 or 410.
 - **Privacy:** Notification text stays generic, with no names. Keep data retention minimal, and remove proposals once decisions are final.
 - **Branding:** Don't use the church's name or logos in the app. Check the church's guidance on third-party tools before sharing widely.
 

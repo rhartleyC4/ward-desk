@@ -343,6 +343,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"notification_log": {
+                  Row: {
+                    "for_date": string,"kind": string,"sent_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "for_date": string,"kind": string,"sent_at"?: string,"user_id": string
+                  }
+                  Update: {
+                    "for_date"?: string,"kind"?: string,"sent_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_log_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"prayer_roll": {
                   Row: {
                     "added_on": string,"id": string,"name": string,"removed_on": string | null
@@ -555,6 +575,9 @@ isOneToOne: false
                            },
 "reorder_agenda_sections":
 { Args: { "section_ids": (string)[],"template": string }; Returns: undefined
+                           },
+"save_push_subscription":
+{ Args: { "sub_auth": string,"sub_endpoint": string,"sub_p256dh": string }; Returns: undefined
                            }
           }
           Enums: {
