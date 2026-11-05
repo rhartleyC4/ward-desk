@@ -378,6 +378,17 @@ export async function loadAgendaTemplates(client: Client): Promise<AgendaTemplat
   return rows.map((t) => ({ ...t, sections: [...t.sections].sort((a, b) => a.position - b.position) }))
 }
 
+/** Sacrament meetings in a range with who's conducting, without their programs. */
+export async function loadSundays(client: Client, from: IsoDate, to: IsoDate) {
+  return must(await client.from('meetings').select('meeting_date, meeting_type, title, conducting_id').gte('meeting_date', from).lte('meeting_date', to).order('meeting_date'))
+}
+
+/** Unresolved items in these sections, to count what's waiting on each upcoming agenda. */
+export async function loadOpenAgendaItems(client: Client, sectionIds: string[]): Promise<AgendaItem[]> {
+  if (!sectionIds.length) return []
+  return must(await client.from('agenda_items').select('*').in('section_id', sectionIds).is('resolved_on', null))
+}
+
 /** Everything one meeting's agenda pulls together. Sections the user can't see come back empty. */
 export async function loadAgenda(client: Client, template: AgendaTemplate, date: IsoDate) {
   const horizon = addDays(date, 9 * 7)

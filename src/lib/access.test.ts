@@ -45,8 +45,16 @@ describe('homeFor', () => {
 
   it('asks a bishop or counselor without appointment hours to set them first', () => {
     expect(homeFor(['bishopric'], bishopric, 'second_counselor', true)).toBe('/hours')
-    expect(homeFor(['bishopric'], bishopric, 'second_counselor', false)).toBe('/agenda')
+    expect(homeFor(['bishopric'], bishopric, 'second_counselor', false)).toBe('/home')
     expect(homeFor(['leader'], [], null, true)).toBe('/suggest')
+  })
+
+  it('lands the bishop and counselors on their home screen', () => {
+    expect(homeFor(['bishopric'], bishopric, 'bishop')).toBe('/home')
+    expect(homeFor(['bishopric'], bishopric, 'first_counselor')).toBe('/home')
+    expect(navFor(['bishopric'], bishopric, 'second_counselor')[0]).toEqual({ to: '/home', label: 'Home' })
+    // A bishop's office without the bishopric role (a stale profile) gets no home.
+    expect(homeFor(['admin'], [], 'bishop')).toBe('/sacrament')
   })
 
   it('lands the executive secretary on the home screen', () => {

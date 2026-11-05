@@ -5,6 +5,8 @@ import {
   addPrayerName,
   loadAgenda,
   loadAgendaTemplates,
+  loadOpenAgendaItems,
+  loadSundays,
   removePrayerName,
   resolveAgendaItem,
   saveAgendaHeader,
@@ -119,5 +121,35 @@ describe('ward council agenda', () => {
     expect((await loadAgenda(bishop, bishopric, DATE)).agendaItems.map((i) => i.body)).not.toContain(`${TAG} Teacher council room`)
 
     await expect(addAgendaItem(rs, sectionOf(bishopric, 'Action / discussion items'), `${TAG} Not allowed`)).rejects.toThrow(/row-level security/)
+  })
+})
+
+describe('the bishopric home', () => {
+  it("counts each meeting's open items and reads who conducts, without programs", async () => {
+    const bishop = await signIn('bishop')
+    const templates = await loadAgendaTemplates(bishop)
+    const [bishopric] = templates
+    const discussion = sectionOf(bishopric, 'Action / discussion items')
+    await addAgendaItem(bishop, discussion, `${TAG} Home count`)
+
+    const open = await loadOpenAgendaItems(bishop, templates.flatMap((t) => t.sections.map((s) => s.id)))
+    expect(open.map((i) => i.body)).toContain(`${TAG} Home count`)
+    expect(open.every((i) => i.resolved_on === null)).toBe(true)
+    const added = open.find((i) => i.body === `${TAG} Home count`)!
+    await resolveAgendaItem(bishop, added.id, '2030-06-02')
+    expect((await loadOpenAgendaItems(bishop, [discussion.id])).map((i) => i.body)).not.toContain(`${TAG} Home count`)
+
+    const sundays = await loadSundays(bishop, '2026-11-01', '2026-11-08')
+    expect(sundays.map((m) => m.meeting_date)).toEqual(['2026-11-01', '2026-11-08'])
+    expect(Object.keys(sundays[0]).sort()).toEqual(['conducting_id', 'meeting_date', 'meeting_type', 'title'])
+  })
+
+  it("shows a ward council member only their meeting's items", async () => {
+    const rs = await signIn('rspres')
+    const bishop = await signIn('bishop')
+    const all = (await loadAgendaTemplates(bishop)).flatMap((t) => t.sections.map((s) => s.id))
+    const open = await loadOpenAgendaItems(rs, all)
+    expect(open.map((i) => i.body)).not.toContain('Ward website / bulletin')
+    expect(open.map((i) => i.body)).toContain('Summer camp planning')
   })
 })

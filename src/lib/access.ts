@@ -34,11 +34,20 @@ export const isSecretaryOffice = (office: Office) => !!office && SECRETARY_OFFIC
 /** The executive secretaries' home: who needs an appointment, open times, and the week ahead. */
 export const hasSecretaryHome = (roles: AppRole[], office: Office) => isSecretaryOffice(office) && canSeeAppointments(roles)
 
+/** The offices that hold interviews themselves. */
+export const LEADER_OFFICES: Enums<'bishopric_office'>[] = ['bishop', 'first_counselor', 'second_counselor']
+
+/** The bishop's and counselors' home: their day, quick actions, and the week ahead. */
+export const hasBishopricHome = (roles: AppRole[], office: Office) => !!office && LEADER_OFFICES.includes(office) && canSeeAppointments(roles)
+
+/** Whether this person has a Home screen of either kind. */
+export const hasHome = (roles: AppRole[], office: Office) => hasSecretaryHome(roles, office) || hasBishopricHome(roles, office)
+
 export type NavLink = { to: string; label: string }
 
 export function navFor(roles: AppRole[], templates: readonly unknown[] = [], office: Office = null): NavLink[] {
   const links: NavLink[] = []
-  if (hasSecretaryHome(roles, office)) links.push({ to: '/home', label: 'Home' })
+  if (hasHome(roles, office)) links.push({ to: '/home', label: 'Home' })
   if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Agenda' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
   if (canSeeAppointments(roles)) links.push({ to: '/appointments', label: 'Appointments' })
