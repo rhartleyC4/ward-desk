@@ -1,5 +1,5 @@
 import '@fontsource-variable/lexend'
-import { createTheme } from '@mui/material/styles'
+import { createTheme, type Theme } from '@mui/material/styles'
 
 // Harbor blue on cool greys, matching the app icon (public/favicon.svg).
 const ink = '#14213d'
@@ -48,6 +48,20 @@ export const theme = createTheme({
     MuiCard: { defaultProps: { variant: 'outlined' } },
     MuiTableCell: { styleOverrides: { root: { paddingLeft: 6, paddingRight: 6 } } },
   },
+})
+
+/**
+ * Frosted glass for bars that content scrolls behind (the top bar and the bottom tabs).
+ * Falls back to a solid surface where blur isn't supported or the person asked for less transparency.
+ */
+export const glass = (t: Theme) => ({
+  backgroundColor: `rgba(${t.vars!.palette.background.paperChannel} / 0.72)`,
+  backdropFilter: 'blur(20px) saturate(180%)',
+  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+  boxShadow: 'inset 0 1px 0 rgba(255 255 255 / 0.6), 0 8px 24px rgba(20 33 61 / 0.10)',
+  ...t.applyStyles('dark', { boxShadow: 'inset 0 1px 0 rgba(255 255 255 / 0.08), 0 8px 24px rgba(0 0 0 / 0.45)' }),
+  '@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)))': { backgroundColor: t.vars!.palette.background.paper },
+  '@media (prefers-reduced-transparency: reduce)': { backgroundColor: t.vars!.palette.background.paper, backdropFilter: 'none', WebkitBackdropFilter: 'none' },
 })
 
 /** Native <select> inside a TextField: better on phones, and simpler to drive in tests. */

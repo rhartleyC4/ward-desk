@@ -32,6 +32,7 @@ import { nextStep } from '../lib/setup'
 import { InstallPrompt } from './InstallPrompt'
 import { PasskeyOffer } from './PasskeyOffer'
 import { SetupProvider, useSetupSteps } from './Setup'
+import { glass } from '../theme'
 import { useWaitingCount, WaitingProvider } from './WaitingCount'
 
 const TAB_ICONS: Record<string, ReactNode> = {
@@ -88,7 +89,7 @@ function Shell() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', pt: 'env(safe-area-inset-top, 0px)' }}>
+      <AppBar position="sticky" color="inherit" elevation={0} sx={[glass, { borderBottom: 1, borderColor: 'divider', pt: 'env(safe-area-inset-top, 0px)' }]}>
         <Toolbar sx={{ gap: 1, minHeight: { xs: 52 } }}>
           {back ? (
             <Button component={NavLink} to={back.to} startIcon={<ChevronLeftIcon />} sx={{ ml: -1.5, fontSize: '1rem', '& .MuiButton-startIcon': { mr: 0 } }}>
@@ -132,7 +133,7 @@ function Shell() {
           </Tooltip>
         </Toolbar>
       </AppBar>
-      <Container maxWidth="md" sx={{ pt: 2, pb: showTabs ? { xs: 'calc(88px + env(safe-area-inset-bottom, 0px))', md: 4 } : 4 }}>
+      <Container maxWidth="md" sx={{ pt: 2, pb: showTabs ? { xs: 'calc(96px + env(safe-area-inset-bottom, 0px))', md: 4 } : 4 }}>
         {landing && (
           <>
             <InstallPrompt />
@@ -142,14 +143,30 @@ function Shell() {
         <Outlet />
       </Container>
       {showTabs && (
+        // A floating glass pill, like the iOS tab bar, so the page shows through as it scrolls.
         <Paper
           component="nav"
           aria-label="Main"
           elevation={0}
-          square
-          sx={{ display: { md: 'none' }, position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 'appBar', borderTop: 1, borderColor: 'divider', pb: 'env(safe-area-inset-bottom, 0px)' }}
+          sx={[
+            glass,
+            {
+              display: { md: 'none' },
+              position: 'fixed',
+              left: 8,
+              right: 8,
+              bottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+              mx: 'auto',
+              maxWidth: 560,
+              zIndex: 'appBar',
+              borderRadius: 999,
+              border: 1,
+              borderColor: 'divider',
+              overflow: 'hidden',
+            },
+          ]}
         >
-          <BottomNavigation showLabels value={current} sx={{ height: 60, bgcolor: 'transparent' }}>
+          <BottomNavigation showLabels value={current} sx={{ height: 64, px: 0.5, alignItems: 'center', bgcolor: 'transparent' }}>
             {links.map((l) => (
               <BottomNavigationAction
                 key={l.to}
@@ -159,7 +176,15 @@ function Shell() {
                 icon={tabIcon(l.to)}
                 component={NavLink}
                 to={l.to}
-                sx={{ minWidth: 0, px: 0.5, '& .MuiBottomNavigationAction-label': { fontSize: '0.75rem', whiteSpace: 'nowrap' }, '& .MuiBottomNavigationAction-label.Mui-selected': { fontSize: '0.75rem' } }}
+                sx={{
+                  minWidth: 0,
+                  px: 0.25,
+                  height: 52,
+                  borderRadius: 999,
+                  '&.Mui-selected': { bgcolor: 'action.selected' },
+                  // iOS-sized labels, so five tabs fit in the pill at phone width.
+                  '& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected': { fontSize: '0.6875rem', whiteSpace: 'nowrap' },
+                }}
               />
             ))}
           </BottomNavigation>
