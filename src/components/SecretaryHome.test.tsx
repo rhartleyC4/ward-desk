@@ -102,7 +102,7 @@ describe('SecretaryHome', () => {
     expect(a.book).toHaveBeenCalledWith('a1', '2026-11-12T02:00:00.000Z', 5)
   })
 
-  it('writes a message offering the times picked, ready to copy or open in Messages', async () => {
+  it('writes a message offering the times picked, ready to copy, open in Messages or email', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined)
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     const a = view()
@@ -116,6 +116,7 @@ describe('SecretaryHome', () => {
     const text = 'Hi Sister Nash, Bishop Avery would like to meet for 10 minutes:\n• Sun, November 8th at 9:25 AM\n• Wed, November 11th at 7 PM\nBrother Quinn'
     expect(within(nash).getByLabelText('Message')).toHaveValue(text)
     expect(within(nash).getByRole('link', { name: 'Open Messages' })).toHaveAttribute('href', `sms:?&body=${encodeURIComponent(text)}`)
+    expect(within(nash).getByRole('link', { name: 'Email' })).toHaveAttribute('href', `mailto:?subject=Appointment%20with%20Bishop%20Avery&body=${encodeURIComponent(text.replaceAll('\n', '\r\n'))}`)
 
     await userEvent.click(within(nash).getByRole('button', { name: 'Copy' }))
     expect(writeText).toHaveBeenCalledWith(text)

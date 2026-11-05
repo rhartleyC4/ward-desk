@@ -1,5 +1,6 @@
 import ContentCopyIcon from '@mui/icons-material/ContentCopy'
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
 import SmsOutlinedIcon from '@mui/icons-material/SmsOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -9,12 +10,12 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useRef, useState, type FormEvent } from 'react'
-import { AUDIENCE_LABELS, CHOICE_HELP, fillTemplate, KIND_LABELS, smsLink, templatesFor, unknownVariables, VARIABLES, type MessageAudience, type MessageKind, type MessageTemplate, type MessageValues } from '../lib/messages'
+import { AUDIENCE_LABELS, CHOICE_HELP, emailLink, emailSubject, fillTemplate, KIND_LABELS, smsLink, templatesFor, unknownVariables, VARIABLES, type MessageAudience, type MessageKind, type MessageTemplate, type MessageValues } from '../lib/messages'
 import { nativeSelect } from '../theme'
 import { Muted } from './Layout'
 
 /**
- * A message filled in from a template, ready to copy or open in the phone's messaging app. The
+ * A message filled in from a template, ready to copy or open in the phone's messaging or mail app. The
  * text can be changed before sending; picking another template starts it over.
  */
 export function MessagePanel({
@@ -99,7 +100,7 @@ export function MessagePanel({
       />
       {copyFailed && (
         <Typography variant="body2" color="warning.main" sx={{ mt: 0.5 }}>
-          This browser wouldn't copy. The text is selected, so copy it from your phone's menu, or use Open Messages.
+          This browser wouldn't copy. The text is selected, so copy it from your phone's menu, or use Open Messages or Email.
         </Typography>
       )}
       <Stack direction="row" useFlexGap sx={{ mt: 1, gap: 1, flexWrap: 'wrap' }}>
@@ -108,6 +109,9 @@ export function MessagePanel({
         </Button>
         <Button variant="outlined" startIcon={<SmsOutlinedIcon />} component="a" href={smsLink(text)} onClick={() => onSent?.()}>
           Open Messages
+        </Button>
+        <Button variant="outlined" startIcon={<EmailOutlinedIcon />} component="a" href={emailLink(emailSubject(values.leader), text)} onClick={() => onSent?.()}>
+          Email
         </Button>
       </Stack>
     </Box>

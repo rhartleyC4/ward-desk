@@ -82,6 +82,15 @@ export function fillTemplate(body: string, values: MessageValues): string {
  */
 export const smsLink = (text: string) => `sms:?&body=${encodeURIComponent(text)}`
 
+/** Mail clients expect CRLF line breaks in a mailto link; some run lines together on a bare LF. */
+const mailtoEncode = (text: string) => encodeURIComponent(text.replace(/\r?\n/g, '\r\n'))
+
+/** A subject that says who the appointment is with but never what it is for. */
+export const emailSubject = (leader: string) => (leader.trim() ? `Appointment with ${leader.trim()}` : 'Appointment')
+
+/** Like smsLink, but opens the mail app: a new email with the subject and text and no recipient. */
+export const emailLink = (subject: string, text: string) => `mailto:?subject=${mailtoEncode(subject)}&body=${mailtoEncode(text)}`
+
 /** Who a message for this appointment goes to: a parent for a youth, otherwise the person. */
 export const audienceFor = (appointment: { is_youth: boolean }): MessageAudience => (appointment.is_youth ? 'parent' : 'member')
 

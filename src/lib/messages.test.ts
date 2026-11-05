@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { audienceFor, fillTemplate, firstName, lengthWords, smsLink, templatesFor, unknownVariables, type MessageTemplate } from './messages'
+import { audienceFor, emailLink, emailSubject, fillTemplate, firstName, lengthWords, smsLink, templatesFor, unknownVariables, type MessageTemplate } from './messages'
 
 const OFFER = 'Hi {first_name}, {leader} would like to meet with you for about {length}. Would one of these times work?\n{times}\nThanks, {my_name}'
 
@@ -87,5 +87,21 @@ describe('unknownVariables', () => {
 describe('smsLink', () => {
   it('opens a new message with the text and no recipient', () => {
     expect(smsLink('Hi Jordan,\n• 9 AM & 10 AM')).toBe('sms:?&body=Hi%20Jordan%2C%0A%E2%80%A2%209%20AM%20%26%2010%20AM')
+  })
+})
+
+describe('emailLink', () => {
+  it('opens a new email with the subject and text, CRLF line breaks and no recipient', () => {
+    expect(emailLink('Appointment with Bishop Avery', 'Hi Jordan,\n• 9 AM & 10 AM')).toBe(
+      'mailto:?subject=Appointment%20with%20Bishop%20Avery&body=Hi%20Jordan%2C%0D%0A%E2%80%A2%209%20AM%20%26%2010%20AM',
+    )
+    expect(emailLink('A', 'one\r\ntwo')).toBe('mailto:?subject=A&body=one%0D%0Atwo')
+  })
+})
+
+describe('emailSubject', () => {
+  it('names the leader but not the purpose', () => {
+    expect(emailSubject('Bishop Avery')).toBe('Appointment with Bishop Avery')
+    expect(emailSubject(' ')).toBe('Appointment')
   })
 })
