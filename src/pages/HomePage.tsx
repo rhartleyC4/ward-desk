@@ -59,14 +59,14 @@ function SecretaryHomePage() {
   const { profile } = useAuth()
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
-    const [appointments, hours, templates, lengths, rotations] = await Promise.all([
+    const [appointments, hours, templates, lengths, schedule] = await Promise.all([
       q.loadAppointments(supabase),
       q.loadHours(supabase, today, addDays(today, DAYS_AHEAD - 1)),
       q.loadTemplates(supabase),
       q.loadLengths(supabase),
-      q.loadRotations(supabase),
+      q.loadSchedule(supabase),
     ])
-    return { ...appointments, ...hours, templates, lengths, rotations }
+    return { ...appointments, ...hours, templates, lengths, rotations: schedule.rotations, stewardships: schedule.stewardships }
   }, [today])
   const save = useAction()
   // Times before this are past. Fixed for the visit; reopening the page moves it on.

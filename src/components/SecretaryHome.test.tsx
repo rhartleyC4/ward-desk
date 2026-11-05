@@ -57,6 +57,7 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
       { id: 't3', name: 'Offer to a parent', kind: 'offer', audience: 'parent', body: 'Hi {parent_name}, {leader} would like to meet with {first_name}:\n{times}' },
     ],
     rotations: [],
+    stewardships: [],
     ...extra,
   }
 }
@@ -257,6 +258,23 @@ describe('SecretaryHome', () => {
     expect(screen.queryByText(/aren't assigned to schedule for anyone/)).not.toBeInTheDocument()
     expect(within(section(/Needs an appointment/)).getByText('Sister Reed')).toBeInTheDocument()
     expect(section(/Bishopric this week/)).toHaveTextContent('Brother Ortiz')
+  })
+
+  it('keeps who covers what folded away until asked', async () => {
+    const user = userEvent.setup()
+    view(data({ stewardships: [{ id: 's1', user_id: 'o', area: 'Primary' }, { id: 's2', user_id: 'l', area: 'Young Women' }] }))
+    const card = section(/Who covers what/)
+    expect(within(card).getByText(/Each leader's organizations/)).toBeInTheDocument()
+    await user.click(within(card).getByRole('button', { name: 'Show' }))
+    expect(within(card).getByRole('button', { name: 'Hide' })).toHaveAttribute('aria-expanded', 'true')
+    expect(card).toHaveTextContent('Brother OrtizPrimary')
+    expect(card).toHaveTextContent('Brother LaneYoung Women')
+    expect(card).toHaveTextContent('Bishop AveryNo areas yet')
+  })
+
+  it('leaves out who covers what when there are no assignments', () => {
+    view()
+    expect(screen.queryByText('Who covers what')).not.toBeInTheDocument()
   })
 
   it('shows everyone to a secretary not yet assigned, and says so', () => {

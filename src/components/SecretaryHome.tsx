@@ -24,10 +24,12 @@ import { adjustMinutes, bookedRange, heldTimes, holdEnds, isHolding, minutesLabe
 import type { HoursData } from './HoursView'
 import { Muted, SectionCard } from './Layout'
 import { MessagePanel } from './Messages'
+import type { Tables } from '../lib/database.types'
 import { ThisMonth } from './ThisMonth'
+import { WhoCovers } from './WhoCovers'
 import type { Rotation } from '../lib/schedule'
 
-export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[]; lengths: AppointmentLength[]; rotations: Rotation[] }
+export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[]; lengths: AppointmentLength[]; rotations: Rotation[]; stewardships: Pick<Tables<'stewardships'>, 'id' | 'user_id' | 'area'>[] }
 
 export type SecretaryHomeActions = {
   book: (id: string, at: string, minutes: number) => Promise<boolean>
@@ -424,6 +426,7 @@ export function SecretaryHome({
         <WeekGlance leaderIds={leaderIds} ctx={ctx} />
       </SectionCard>
       <ThisMonth userId={userId} today={today} rotations={data.rotations} />
+      <WhoCovers leaders={data.bishopric} stewardships={data.stewardships} />
 
     </>
   )
