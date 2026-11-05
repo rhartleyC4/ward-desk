@@ -6,12 +6,10 @@ import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
 import Chip from '@mui/material/Chip'
 import FormControlLabel from '@mui/material/FormControlLabel'
-import Radio from '@mui/material/Radio'
-import RadioGroup from '@mui/material/RadioGroup'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import type { AgendaItem } from '../lib/agenda'
 import { WEEK_AHEAD, isEmptyDay, meetingChoices, planDays, schedulersFor, waitingForTime, writableSections, type DayPlan, type HomeSacrament } from '../lib/bishopricHome'
@@ -21,6 +19,7 @@ import { timeLabel, WEEKDAYS } from '../lib/availability'
 import type { AgendaSection, AgendaTemplate, Appointment, AppointmentsData } from '../lib/queries'
 import { bookedRange, minutesLabel, wardParts } from '../lib/slots'
 import { Muted, SectionCard } from './Layout'
+import { ActionButton, Choices, StepFrame } from './Steps'
 import { ThisMonth } from './ThisMonth'
 import type { Rotation } from '../lib/schedule'
 
@@ -190,69 +189,6 @@ function Waiting({ data, userId, timeZone }: { data: BishopricHomeData; userId: 
 // Guided steps
 // ---------------------------------------------------------------------------
 
-/** One question per screen, with Back, Next and Cancel always in the same place. */
-function StepFrame({ step, of, question, children, onBack, onCancel, nextLabel, canNext, busy, onNext }: {
-  step: number
-  of: number
-  question: string
-  children: ReactNode
-  onBack: () => void
-  onCancel: () => void
-  nextLabel: string
-  canNext: boolean
-  busy: boolean
-  onNext: () => void
-}) {
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    if (canNext && !busy) onNext()
-  }
-  return (
-    <Box component="form" onSubmit={submit} aria-label={question}>
-      <Typography variant="body2" color="text.secondary">
-        Step {step} of {of}
-      </Typography>
-      <Typography variant="h2" sx={{ mt: 0.5, mb: 1.5 }}>
-        {question}
-      </Typography>
-      {children}
-      <Stack direction="row" useFlexGap sx={{ mt: 2, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Button type="submit" variant="contained" size="large" disabled={!canNext || busy}>
-          {nextLabel}
-        </Button>
-        {step > 1 && (
-          <Button size="large" variant="outlined" onClick={onBack}>
-            Back
-          </Button>
-        )}
-        <Button size="large" onClick={onCancel}>
-          Cancel
-        </Button>
-      </Stack>
-    </Box>
-  )
-}
-
-function Choices<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: { value: T; label: string; hint?: string }[]; onChange: (v: T) => void }) {
-  return (
-    <RadioGroup aria-label={label} value={value} onChange={(e) => onChange(e.target.value as T)}>
-      {options.map((o) => (
-        <FormControlLabel
-          key={o.value}
-          value={o.value}
-          control={<Radio />}
-          label={
-            <Box sx={{ py: 0.5 }}>
-              <Typography>{o.label}</Typography>
-              {o.hint && <Muted>{o.hint}</Muted>}
-            </Box>
-          }
-        />
-      ))}
-    </RadioGroup>
-  )
-}
-
 function Done({ message, again, onAgain, onClose }: { message: string; again: string; onAgain: () => void; onClose: () => void }) {
   return (
     <Box role="status">
@@ -382,29 +318,6 @@ function AddToMeeting({ data, today, actions, busy, onClose }: { data: Bishopric
         It will show on {choice.template.name}, {choice.date === today ? 'today' : fullDay(choice.date)}.
       </Muted>
     </StepFrame>
-  )
-}
-
-function ActionButton({ icon, label, hint, onClick, to, disabled }: { icon: ReactNode; label: string; hint: string; onClick?: () => void; to?: string; disabled?: boolean }) {
-  // Pages opened from here offer a way back to Home.
-  const link = to ? { component: Link, to, state: { back: { to: '/home', label: 'Home' } } } : {}
-  return (
-    <Button
-      {...link}
-      onClick={onClick}
-      disabled={disabled}
-      variant="outlined"
-      fullWidth
-      startIcon={icon}
-      sx={{ justifyContent: 'flex-start', textAlign: 'left', py: 1.5, px: 2, textTransform: 'none', '& .MuiButton-startIcon': { mr: 1.5 } }}
-    >
-      <Box>
-        <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>{label}</Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {hint}
-        </Typography>
-      </Box>
-    </Button>
   )
 }
 
