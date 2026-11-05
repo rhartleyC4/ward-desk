@@ -1,6 +1,7 @@
 import EventNoteIcon from '@mui/icons-material/EventNote'
 import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import PersonAddIcon from '@mui/icons-material/PersonAddAlt1'
+import SendIcon from '@mui/icons-material/SendOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Checkbox from '@mui/material/Checkbox'
@@ -341,6 +342,7 @@ function QuickActions(props: Props) {
             onClick={() => setOpen('agenda')}
             disabled={!canAdd}
           />
+          <ActionButton icon={<SendIcon />} label="Ask someone to do something" hint="They'll let you know they've seen it and when it's done." to="/requests?new=request" />
           <ActionButton icon={<FlightTakeoffIcon />} label="I'll be away" hint="Let the bishopric know the days you're gone." to="/away" />
         </Stack>
       )}

@@ -5,7 +5,7 @@ import { agendaData } from '../test/fixtures'
 import { CallingsManager, type CallingsActions } from './CallingsManager'
 
 function actions(): CallingsActions {
-  return { addNeed: vi.fn(), updateNeed: vi.fn(), deleteNeed: vi.fn(), addCandidate: vi.fn(), updateCandidate: vi.fn(), acceptCandidate: vi.fn(), approveCandidate: vi.fn(), assignAppointment: vi.fn() }
+  return { addNeed: vi.fn(), updateNeed: vi.fn(), deleteNeed: vi.fn(), addCandidate: vi.fn(), updateCandidate: vi.fn(), acceptCandidate: vi.fn(), approveCandidate: vi.fn(), assignAppointment: vi.fn(), receiveCallingRequest: vi.fn() }
 }
 
 const need = (title: string) => screen.getByRole('article', { name: title })
@@ -174,5 +174,25 @@ describe('CallingsManager', () => {
     expect(within(list).getByText('Added by the ward')).toBeInTheDocument()
     expect(within(list).getByRole('option', { name: 'RS Teacher' })).toBeInTheDocument()
     expect(within(list).getByRole('option', { name: 'Relief Society Teacher' })).toBeInTheDocument()
+  })
+
+  it('shows who asked for a calling and lets the bishopric mark the request received', async () => {
+    const a = actions()
+    const data = agendaData()
+    data.profiles = [...data.profiles, { id: 'lead', email: 'leader@ward.test', display_name: 'Sister Reyes', short_name: null }]
+    data.callingRequests = [
+      { id: 'cr1', requested_by: 'lead', kind: 'replace', calling_title: 'Primary Teacher', organization: 'Primary', release_name: 'Brother Ivey', needed_by: '2026-12-01', notes: 'Sunbeams need one', need_id: 'n1', routed_to: ['o'], received_by: null, received_at: null, created_at: '2026-10-20T10:00:00Z' },
+    ]
+    data.candidates = [...data.candidates, { ...data.candidates[2], id: 'c9', person_name: 'Sister Vale', status: 'suggested', suggested_by: 'lead', request_id: 'cr1' }]
+    render(<CallingsManager date="2026-10-25" data={data} actions={a} timeZone="America/Denver" />)
+
+    const primary = need('Primary Teacher')
+    expect(within(primary).getByText('Asked for by Sister Reyes (Primary) · needed by December 1st · not marked received yet')).toBeInTheDocument()
+    expect(within(primary).getByText('“Sunbeams need one”')).toBeInTheDocument()
+    expect(within(primary).getByText('Suggested by Sister Reyes')).toBeInTheDocument()
+
+    const request = screen.getByRole('article', { name: 'Release Brother Ivey and call someone new as Primary Teacher' })
+    await userEvent.click(within(request).getByRole('button', { name: 'Got it' }))
+    expect(a.receiveCallingRequest).toHaveBeenCalledWith('cr1')
   })
 })

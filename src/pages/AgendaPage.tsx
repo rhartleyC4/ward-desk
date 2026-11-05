@@ -18,7 +18,7 @@ import { useAction, useAsync } from '../lib/useAsync'
 const isIsoDate = (s: string | undefined) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s)
 
 export function AgendaPage() {
-  const { roles, templates } = useAuth()
+  const { roles, templates, profile } = useAuth()
   const params = useParams()
   // Links from before templates were /agenda/:date and meant the bishopric meeting.
   const legacyDate = isIsoDate(params.slug) ? params.slug : undefined
@@ -49,6 +49,19 @@ export function AgendaPage() {
         if (leaderId) await q.assignCallingAppointment(supabase, candidate, leaderId)
       }),
     assignAppointment: (candidate, leaderId) => run(() => q.assignCallingAppointment(supabase, candidate, leaderId)),
+    receiveCallingRequest: (id) =>
+      run(async () => {
+        await q.receiveCallingRequest(supabase, id, profile?.id ?? '')
+        void q.pushAbout(supabase, 'calling_request_received', id)
+      }),
+    assignItem: (item, toId, dueOn) =>
+      save.act(async () => {
+        const id = await q.sendRequest(supabase, { to_id: toId, title: item.body, details: null, due_on: dueOn, agenda_item_id: item.id })
+        void q.pushAbout(supabase, 'request_sent', id)
+      }).then((ok) => {
+        if (ok) reload()
+        return ok
+      }),
   }
 
   const prev = previousMeeting(template, date)

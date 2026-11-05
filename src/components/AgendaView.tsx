@@ -1,3 +1,4 @@
+import AssignmentIndOutlinedIcon from '@mui/icons-material/AssignmentIndOutlined'
 import CheckIcon from '@mui/icons-material/Check'
 import CloseIcon from '@mui/icons-material/Close'
 import EditIcon from '@mui/icons-material/Edit'
@@ -32,7 +33,9 @@ import {
 } from '../lib/agenda'
 import { longDate, type IsoDate } from '../lib/dates'
 import type { AgendaData, AgendaSection, AgendaTemplate } from '../lib/queries'
+import { followUps, isOpen, requestStatusLine, type Request } from '../lib/requests'
 import { awayOn, eventsOn, formatTime, rotationDayLabel, rotationsDue } from '../lib/schedule'
+import { RecipientSelect } from './Requests'
 import { CallingsManager, type CallingsActions } from './CallingsManager'
 import { Muted, SectionCard } from './Layout'
 
@@ -42,6 +45,45 @@ export type AgendaActions = CallingsActions & {
   resolveItem: (id: string) => void
   addPrayerName: (name: string) => void
   removePrayerName: (id: string) => void
+  /** Turns an item into a request for someone, linked back to the item. */
+  assignItem: (item: { id: string; body: string }, toId: string, dueOn: IsoDate | null) => Promise<boolean>
+}
+
+/** A person's full name, for sentences like "Bishop Avery asked Brother Lane". */
+const fullName = (id: string, data: AgendaData) => data.profiles.find((p) => p.id === id)?.display_name || personLabel(id, data.profiles) || 'someone'
+
+/** Who an item was handed to, and where that stands. */
+function assignmentLine(itemId: string, data: AgendaData, today: IsoDate): string | null {
+  const r = data.requests.filter((x) => x.agenda_item_id === itemId).sort((a, b) => b.created_at.localeCompare(a.created_at))[0]
+  if (!r) return null
+  return `Asked ${fullName(r.to_id, data)} · ${requestStatusLine(r, today)}${r.reply ? ` · “${r.reply}”` : ''}`
+}
+
+function AssignForm({ item, data, actions, onClose }: { item: { id: string; body: string }; data: AgendaData; actions: AgendaActions; onClose: () => void }) {
+  const [to, setTo] = useState('')
+  const [due, setDue] = useState('')
+  return (
+    <Stack
+      component="form"
+      spacing={1}
+      aria-label={`Ask someone to do ${item.body}`}
+      sx={{ mt: 1, mb: 1.5, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}
+      onSubmit={(e) => {
+        e.preventDefault()
+        if (to) void actions.assignItem(item, to, due || null).then((ok) => ok && onClose())
+      }}
+    >
+      <Typography variant="body2">Ask someone to take care of “{item.body}”. They'll see it on their Requests page and can say when it's done.</Typography>
+      <RecipientSelect recipients={data.recipients} value={to} onChange={setTo} label="Who?" />
+      <TextField type="date" label="By when (optional)" slotProps={{ inputLabel: { shrink: true } }} value={due} onChange={(e) => setDue(e.target.value)} sx={{ maxWidth: 220 }} />
+      <Stack direction="row" spacing={1}>
+        <Button type="submit" variant="contained" disabled={!to}>
+          Send request
+        </Button>
+        <Button onClick={onClose}>Cancel</Button>
+      </Stack>
+    </Stack>
+  )
 }
 
 function AddLine({ label, name = label, onAdd, withDate }: { label: string; name?: string; onAdd: (text: string, date: IsoDate | null) => void; withDate?: boolean }) {
@@ -68,34 +110,48 @@ function AddLine({ label, name = label, onAdd, withDate }: { label: string; name
 }
 
 function ItemList({ date, data, section, actions }: { date: IsoDate; data: AgendaData; section: AgendaSection; actions: AgendaActions }) {
+  const [assigning, setAssigning] = useState<string | null>(null)
   const items = openItems(date, data.agendaItems, section)
   const dated = section.kind === 'calendar'
+  // Only the bishopric gets a list of people to ask.
+  const canAssign = data.recipients.length > 0
   return (
     <>
       {items.length ? (
         <List dense disablePadding>
           {items.map((i) => (
-            <ListItem
-              key={i.id}
-              disableGutters
-              secondaryAction={
-                !i.resolved_on && (
-                  <Button size="small" startIcon={<CheckIcon />} onClick={() => actions.resolveItem(i.id)}>
-                    Done
-                  </Button>
-                )
-              }
-            >
-              <ListItemText
-                primary={
-                  <>
-                    {i.event_date && <strong>{longDate(i.event_date)}: </strong>}
-                    {i.body}
-                  </>
+            <Box component="li" key={i.id} sx={{ listStyle: 'none' }}>
+              <ListItem
+                component="div"
+                disableGutters
+                secondaryAction={
+                  !i.resolved_on && (
+                    <Stack direction="row" spacing={0.5}>
+                      {canAssign && (
+                        <IconButton size="small" aria-label={`Ask someone to do ${i.body}`} onClick={() => setAssigning(assigning === i.id ? null : i.id)}>
+                          <AssignmentIndOutlinedIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                      <Button size="small" startIcon={<CheckIcon />} onClick={() => actions.resolveItem(i.id)}>
+                        Done
+                      </Button>
+                    </Stack>
+                  )
                 }
-                sx={i.resolved_on ? { textDecoration: 'line-through', color: 'text.secondary' } : { pr: 9 }}
-              />
-            </ListItem>
+              >
+                <ListItemText
+                  primary={
+                    <>
+                      {i.event_date && <strong>{longDate(i.event_date)}: </strong>}
+                      {i.body}
+                    </>
+                  }
+                  secondary={assignmentLine(i.id, data, date)}
+                  sx={i.resolved_on ? { textDecoration: 'line-through', color: 'text.secondary' } : { pr: canAssign ? 14 : 9 }}
+                />
+              </ListItem>
+              {assigning === i.id && <AssignForm item={i} data={data} actions={actions} onClose={() => setAssigning(null)} />}
+            </Box>
           ))}
         </List>
       ) : (
@@ -240,6 +296,13 @@ function Section({
         </SectionCard>
       )
 
+    case 'follow_ups':
+      return (
+        <SectionCard title={section.title}>
+          <FollowUps date={date} data={data} />
+        </SectionCard>
+      )
+
     case 'interviews':
       // Retired: interviews live on the Appointments page, and the database refuses new ones.
       return null
@@ -352,6 +415,22 @@ function Section({
         </SectionCard>
       )
   }
+}
+
+/** Open requests, and ones finished in the week before, so the meeting can follow up on each. */
+function FollowUps({ date, data }: { date: IsoDate; data: AgendaData }) {
+  const rows = followUps(date, data.requests)
+  if (!rows.length) return <Muted>Nothing to follow up on.</Muted>
+  const line = (r: Request) => [`${fullName(r.from_id, data)} asked ${fullName(r.to_id, data)}`, requestStatusLine(r, date), r.reply && `“${r.reply}”`].filter(Boolean).join(' · ')
+  return (
+    <List dense disablePadding>
+      {rows.map((r) => (
+        <ListItem key={r.id} disableGutters>
+          <ListItemText primary={r.title} secondary={line(r)} sx={isOpen(r) ? undefined : { '& .MuiListItemText-primary': { textDecoration: 'line-through', color: 'text.secondary' } }} />
+        </ListItem>
+      ))}
+    </List>
+  )
 }
 
 function PrayerRoll({ data, actions }: { data: AgendaData; actions: AgendaActions }) {

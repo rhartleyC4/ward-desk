@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { Layout, Loading } from './components/Layout'
-import { canEditHours, hasHome, canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, canSuggest, homeFor, isMember, type AppRole } from './lib/access'
+import { canEditHours, hasHome, canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, homeFor, isMember, type AppRole } from './lib/access'
 import { keepsHours } from './lib/availability'
 import type { AgendaTemplate } from './lib/queries'
 import { AccessPage } from './pages/AccessPage'
@@ -23,7 +23,7 @@ import { MessagesPage } from './pages/MessagesPage'
 import { SchedulePage } from './pages/SchedulePage'
 import { SettingsPage } from './pages/SettingsPage'
 import { WhoBooksPage } from './pages/WhoBooksPage'
-import { SuggestPage } from './pages/SuggestPage'
+import { RequestsPage } from './pages/RequestsPage'
 
 function Guard({ allow, children }: { allow: (roles: AppRole[], templates: AgendaTemplate[]) => boolean; children: ReactNode }) {
   const { roles, templates, office } = useAuth()
@@ -56,7 +56,9 @@ function AppRoutes() {
         <Route path="appointments" element={<Guard allow={canSeeAppointments}><AppointmentsPage /></Guard>} />
         {/* Callings moved onto the bishopric agenda. */}
         <Route path="callings" element={<Navigate to="/agenda/bishopric" replace />} />
-        <Route path="suggest" element={<Guard allow={canSuggest}><SuggestPage /></Guard>} />
+        <Route path="requests" element={<RequestsPage />} />
+        {/* Suggesting a name is now one kind of calling request. */}
+        <Route path="suggest" element={<Navigate to="/requests?new=calling" replace />} />
         <Route path="hours" element={<Guard allow={canEditHours}><HoursPage /></Guard>} />
         <Route path="away" element={<Guard allow={isMember}><AwayPage /></Guard>} />
         <Route path="schedule" element={<Guard allow={isMember}><SchedulePage /></Guard>} />

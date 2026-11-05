@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { BishopricHome, type BishopricHomeActions } from '../components/BishopricHome'
 import { ErrorNote, Loading } from '../components/Layout'
+import { RequestsOnHome } from '../components/RequestsOnHome'
 import { SetupCard } from '../components/Setup'
 import { DAYS_AHEAD, SecretaryHome, type SecretaryHomeActions } from '../components/SecretaryHome'
 import { hasSecretaryHome } from '../lib/access'
@@ -50,6 +51,7 @@ function BishopricHomePage() {
     <>
       <ErrorNote error={save.error} />
       <SetupCard />
+      <RequestsOnHome />
       <BishopricHome data={data} userId={userId} today={today} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
     </>
   )
@@ -94,6 +96,7 @@ function SecretaryHomePage() {
     <>
       <ErrorNote error={save.error} />
       <SetupCard />
+      <RequestsOnHome />
       <SecretaryHome data={data} userId={profile?.id ?? ''} myName={profile?.display_name ?? ''} today={today} now={now} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
     </>
   )

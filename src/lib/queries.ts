@@ -6,6 +6,7 @@ import { tidyTitle, type ListedCalling } from './callings'
 import type { MessageTemplate } from './messages'
 import { addDays, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
+import type { CallingRequest, CallingRequestKind, MyCallingRequest, Recipient, Request, RequestStatus } from './requests'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
 
@@ -344,6 +345,109 @@ export async function submitSuggestion(client: Client, s: { calling_title: strin
 }
 
 // ---------------------------------------------------------------------------
+// Requests (the bishopric asks someone to do something) and calling requests (from ward leaders)
+// ---------------------------------------------------------------------------
+
+/** Every request this user can see: sent to them, sent by them, and (bishopric) the bishopric's own. */
+export async function loadRequests(client: Client): Promise<Request[]> {
+  return must(await client.from('requests').select('*').order('created_at', { ascending: false }))
+}
+
+/** Who the picker offers. Bishopric only; empty for anyone else. */
+export async function loadRecipients(client: Client): Promise<Recipient[]> {
+  return must(await client.rpc('request_recipients'))
+}
+
+export type RequestDraft = Pick<TablesInsert<'requests'>, 'to_id' | 'title' | 'details' | 'due_on' | 'agenda_item_id'>
+
+/** Sends a request and returns its id, so the caller can notify the person. */
+export async function sendRequest(client: Client, draft: RequestDraft): Promise<string> {
+  const row = must(await client.from('requests').insert({ ...draft, title: draft.title.trim(), details: draft.details?.trim() || null }).select('id').single())
+  return row.id
+}
+
+/** The person asked answers: seen, done, or can't do it, with an optional note. */
+export async function answerRequest(client: Client, id: string, status: Exclude<RequestStatus, 'sent'>, reply?: string | null) {
+  const changes: TablesUpdate<'requests'> = { status }
+  if (reply !== undefined) changes.reply = reply?.trim() || null
+  check(await client.from('requests').update(changes).eq('id', id))
+}
+
+/** The sender rewords it, changes the date, or hands it to someone else (which starts it over). */
+export async function updateRequest(client: Client, id: string, changes: Pick<TablesUpdate<'requests'>, 'to_id' | 'title' | 'details' | 'due_on'>) {
+  check(await client.from('requests').update(changes).eq('id', id))
+}
+
+export async function deleteRequest(client: Client, id: string) {
+  check(await client.from('requests').delete().eq('id', id))
+}
+
+/** Bishopric only: every calling request, newest first. */
+export async function loadCallingRequests(client: Client): Promise<CallingRequest[]> {
+  return must(await client.from('calling_requests').select('*').order('created_at', { ascending: false }))
+}
+
+export async function receiveCallingRequest(client: Client, id: string, userId: string) {
+  check(await client.from('calling_requests').update({ received_by: userId, received_at: new Date().toISOString() }).eq('id', id).is('received_at', null))
+}
+
+export type CallingRequestDraft = {
+  kind: CallingRequestKind
+  calling_title: string
+  organization?: string | null
+  release_name?: string | null
+  needed_by?: IsoDate | null
+  notes?: string | null
+  names?: string[]
+}
+
+/** A ward leader's request. It also adds the calling to the bishopric's list; returns the request's id. */
+export async function submitCallingRequest(client: Client, r: CallingRequestDraft): Promise<string> {
+  return must(
+    await client.rpc('submit_calling_request', {
+      request_kind: r.kind,
+      title: r.calling_title,
+      org: r.organization ?? undefined,
+      releasing: r.release_name ?? undefined,
+      needed: r.needed_by ?? undefined,
+      request_notes: r.notes ?? undefined,
+      names: r.names ?? [],
+    }),
+  )
+}
+
+/** A leader's own calling requests and how far along each one is. */
+export async function loadMyCallingRequests(client: Client): Promise<MyCallingRequest[]> {
+  return must(await client.rpc('my_calling_requests'))
+}
+
+/** Unread requests for this person, plus (bishopric) calling requests sent to them and not received. */
+export async function countWaiting(client: Client, userId: string, bishopric: boolean): Promise<number> {
+  const [requests, calling] = await Promise.all([
+    client.from('requests').select('id', { count: 'exact', head: true }).eq('to_id', userId).eq('status', 'sent'),
+    bishopric ? client.from('calling_requests').select('id', { count: 'exact', head: true }).is('received_at', null).contains('routed_to', [userId]) : null,
+  ])
+  check(requests)
+  if (calling) check(calling)
+  return (requests.count ?? 0) + (calling?.count ?? 0)
+}
+
+export type PushEvent = 'request_sent' | 'request_answered' | 'calling_request_sent' | 'calling_request_received'
+
+/**
+ * Asks the push function to notify whoever this change concerns. Best effort: a phone that misses
+ * it still sees the request in the app, so a failure here is logged, never shown.
+ */
+export async function pushAbout(client: Client, event: PushEvent, id: string): Promise<void> {
+  try {
+    const { error } = await client.functions.invoke('push', { body: { event, id } })
+    if (error) console.warn('Notification not sent:', error.message)
+  } catch (e) {
+    console.warn('Notification not sent:', (e as Error).message)
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Appointments (assigned by the bishopric, scheduled by the executive secretaries)
 // ---------------------------------------------------------------------------
 
@@ -428,7 +532,7 @@ export async function loadOpenAgendaItems(client: Client, sectionIds: string[]):
 /** Everything one meeting's agenda pulls together. Sections the user can't see come back empty. */
 export async function loadAgenda(client: Client, template: AgendaTemplate, date: IsoDate) {
   const horizon = addDays(date, 9 * 7)
-  const [agenda, sacrament, callings, callingList, appointments, items, prayer, schedule, absences, profiles, bishopric] = await Promise.all([
+  const [agenda, sacrament, callings, callingList, appointments, items, prayer, schedule, absences, profiles, bishopric, requests, callingRequests, recipients] = await Promise.all([
     client.from('agendas').select('*').eq('template_id', template.id).eq('meeting_date', date).maybeSingle(),
     loadSacrament(client, date, horizon),
     loadCallings(client),
@@ -440,8 +544,16 @@ export async function loadAgenda(client: Client, template: AgendaTemplate, date:
     loadAbsences(client, addDays(date, -7)),
     loadProfiles(client),
     loadBishopric(client),
+    // RLS limits both: requests to the ones this user is part of (or the bishopric's own), and
+    // calling requests to the bishopric.
+    loadRequests(client),
+    loadCallingRequests(client),
+    loadRecipients(client),
   ])
   return {
+    requests,
+    callingRequests,
+    recipients,
     agenda: maybe(agenda),
     ...sacrament,
     ...callings,

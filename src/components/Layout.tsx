@@ -3,7 +3,7 @@ import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted'
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined'
 import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
-import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined'
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import Alert from '@mui/material/Alert'
 import AppBar from '@mui/material/AppBar'
 import Avatar from '@mui/material/Avatar'
@@ -32,13 +32,14 @@ import { nextStep } from '../lib/setup'
 import { InstallPrompt } from './InstallPrompt'
 import { PasskeyOffer } from './PasskeyOffer'
 import { SetupProvider, useSetupSteps } from './Setup'
+import { useWaitingCount, WaitingProvider } from './WaitingCount'
 
 const TAB_ICONS: Record<string, ReactNode> = {
   '/home': <HomeOutlinedIcon />,
   '/agenda': <FormatListBulletedIcon />,
   '/sacrament': <MenuBookOutlinedIcon />,
   '/appointments': <EventOutlinedIcon />,
-  '/suggest': <PersonAddAltOutlinedIcon />,
+  '/requests': <AssignmentOutlinedIcon />,
 }
 
 type Back = { to: string; label: string }
@@ -54,7 +55,9 @@ function backFor(pathname: string, state: unknown): Back | null {
 export function Layout() {
   return (
     <SetupProvider>
-      <Shell />
+      <WaitingProvider>
+        <Shell />
+      </WaitingProvider>
     </SetupProvider>
   )
 }
@@ -71,6 +74,17 @@ function Shell() {
   const landing = pathname === links[0]?.to
   const pending = !!nextStep(steps)
   const settingsLabel = pending ? 'Settings (setup not finished)' : 'Settings'
+  const waiting = useWaitingCount()
+  /** The tab's label, with how many requests are waiting for this person. */
+  const tabLabel = (l: { to: string; label: string }) => (l.to === '/requests' && waiting ? `${l.label} (${waiting} new)` : l.label)
+  const tabIcon = (to: string) =>
+    to === '/requests' ? (
+      <Badge color="error" badgeContent={waiting} invisible={!waiting}>
+        {TAB_ICONS[to]}
+      </Badge>
+    ) : (
+      TAB_ICONS[to]
+    )
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -86,7 +100,23 @@ function Shell() {
           {showTabs && (
             <Tabs value={current} variant="scrollable" scrollButtons={false} aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, flexGrow: 1, minHeight: 52 }}>
               {links.map((l) => (
-                <Tab key={l.to} value={l.to} label={l.label} component={NavLink} to={l.to} sx={{ minHeight: 52 }} />
+                <Tab
+                  key={l.to}
+                  value={l.to}
+                  label={
+                    l.to === '/requests' && waiting ? (
+                      <Badge color="error" badgeContent={waiting} sx={{ '& .MuiBadge-badge': { right: -10 } }}>
+                        {l.label}
+                      </Badge>
+                    ) : (
+                      l.label
+                    )
+                  }
+                  aria-label={tabLabel(l)}
+                  component={NavLink}
+                  to={l.to}
+                  sx={{ minHeight: 52 }}
+                />
               ))}
             </Tabs>
           )}
@@ -125,7 +155,8 @@ function Shell() {
                 key={l.to}
                 value={l.to}
                 label={l.label}
-                icon={TAB_ICONS[l.to]}
+                aria-label={tabLabel(l)}
+                icon={tabIcon(l.to)}
                 component={NavLink}
                 to={l.to}
                 sx={{ minWidth: 0, px: 0.5, '& .MuiBottomNavigationAction-label': { fontSize: '0.75rem', whiteSpace: 'nowrap' }, '& .MuiBottomNavigationAction-label.Mui-selected': { fontSize: '0.75rem' } }}

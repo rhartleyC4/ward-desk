@@ -39,7 +39,7 @@ Guidance for AI coding agents (and humans) working in this repo. See [README.md]
 
 Optional, but use one when the change is confined to an area:
 
-`sacrament`, `agenda`, `callings`, `away`, `schedule`, `suggest`, `auth`, `notify` (push notifications and the job that sends them), `db` (migrations, RLS, seed), `ui` (theme, shared components), `pwa`, `deps`.
+`sacrament`, `agenda`, `callings`, `requests` (requests between people and leaders' calling requests), `away`, `schedule`, `suggest`, `auth`, `notify` (push notifications and the job that sends them), `db` (migrations, RLS, seed), `ui` (theme, shared components), `pwa`, `deps`.
 
 ### Examples
 

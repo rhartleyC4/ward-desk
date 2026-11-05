@@ -219,14 +219,14 @@ isOneToOne: false
                   ]
                 },"calling_candidates": {
                   Row: {
-                    "calling_title": string | null,"created_at": string,"id": string,"need_id": string | null,"notes": string | null,"person_name": string,"status": Database["public"]['Enums']["candidate_status"],"suggested_by": string | null,"sustain_on": string | null,"updated_at": string
+                    "calling_title": string | null,"created_at": string,"id": string,"need_id": string | null,"notes": string | null,"person_name": string,"request_id": string | null,"status": Database["public"]['Enums']["candidate_status"],"suggested_by": string | null,"sustain_on": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "calling_title"?: string | null,"created_at"?: string,"id"?: string,"need_id"?: string | null,"notes"?: string | null,"person_name": string,"status"?: Database["public"]['Enums']["candidate_status"],"suggested_by"?: string | null,"sustain_on"?: string | null,"updated_at"?: string
+                    "calling_title"?: string | null,"created_at"?: string,"id"?: string,"need_id"?: string | null,"notes"?: string | null,"person_name": string,"request_id"?: string | null,"status"?: Database["public"]['Enums']["candidate_status"],"suggested_by"?: string | null,"sustain_on"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "calling_title"?: string | null,"created_at"?: string,"id"?: string,"need_id"?: string | null,"notes"?: string | null,"person_name"?: string,"status"?: Database["public"]['Enums']["candidate_status"],"suggested_by"?: string | null,"sustain_on"?: string | null,"updated_at"?: string
+                    "calling_title"?: string | null,"created_at"?: string,"id"?: string,"need_id"?: string | null,"notes"?: string | null,"person_name"?: string,"request_id"?: string | null,"status"?: Database["public"]['Enums']["candidate_status"],"suggested_by"?: string | null,"sustain_on"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -234,6 +234,12 @@ isOneToOne: false
       columns: ["need_id"]
 isOneToOne: false
       referencedRelation: "calling_needs"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "calling_candidates_request_id_fkey"
+      columns: ["request_id"]
+isOneToOne: false
+      referencedRelation: "calling_requests"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "calling_candidates_suggested_by_fkey"
@@ -260,6 +266,38 @@ isOneToOne: false
       columns: ["calling_id"]
 isOneToOne: false
       referencedRelation: "callings"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"calling_requests": {
+                  Row: {
+                    "calling_title": string,"created_at": string,"id": string,"kind": Database["public"]['Enums']["calling_request_kind"],"need_id": string | null,"needed_by": string | null,"notes": string | null,"organization": string | null,"received_at": string | null,"received_by": string | null,"release_name": string | null,"requested_by": string,"routed_to": (string)[]
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "calling_title": string,"created_at"?: string,"id"?: string,"kind": Database["public"]['Enums']["calling_request_kind"],"need_id"?: string | null,"needed_by"?: string | null,"notes"?: string | null,"organization"?: string | null,"received_at"?: string | null,"received_by"?: string | null,"release_name"?: string | null,"requested_by"?: string,"routed_to"?: (string)[]
+                  }
+                  Update: {
+                    "calling_title"?: string,"created_at"?: string,"id"?: string,"kind"?: Database["public"]['Enums']["calling_request_kind"],"need_id"?: string | null,"needed_by"?: string | null,"notes"?: string | null,"organization"?: string | null,"received_at"?: string | null,"received_by"?: string | null,"release_name"?: string | null,"requested_by"?: string,"routed_to"?: (string)[]
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "calling_requests_need_id_fkey"
+      columns: ["need_id"]
+isOneToOne: false
+      referencedRelation: "calling_needs"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "calling_requests_received_by_fkey"
+      columns: ["received_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "calling_requests_requested_by_fkey"
+      columns: ["requested_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -445,6 +483,38 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"requests": {
+                  Row: {
+                    "agenda_item_id": string | null,"closed_at": string | null,"created_at": string,"details": string | null,"due_on": string | null,"from_id": string,"id": string,"reply": string | null,"seen_at": string | null,"status": Database["public"]['Enums']["request_status"],"title": string,"to_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "agenda_item_id"?: string | null,"closed_at"?: string | null,"created_at"?: string,"details"?: string | null,"due_on"?: string | null,"from_id"?: string,"id"?: string,"reply"?: string | null,"seen_at"?: string | null,"status"?: Database["public"]['Enums']["request_status"],"title": string,"to_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "agenda_item_id"?: string | null,"closed_at"?: string | null,"created_at"?: string,"details"?: string | null,"due_on"?: string | null,"from_id"?: string,"id"?: string,"reply"?: string | null,"seen_at"?: string | null,"status"?: Database["public"]['Enums']["request_status"],"title"?: string,"to_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "requests_agenda_item_id_fkey"
+      columns: ["agenda_item_id"]
+isOneToOne: false
+      referencedRelation: "agenda_items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "requests_from_id_fkey"
+      columns: ["from_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "requests_to_id_fkey"
+      columns: ["to_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"roles": {
                   Row: {
                     "granted_at": string,"role": Database["public"]['Enums']["app_role"],"user_id": string
@@ -546,6 +616,12 @@ isOneToOne: false
 "bishopric_template":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"calling_request_recipients":
+{ Args: { "org": string }; Returns: (string)[]
+                           },
+"calling_request_stage":
+{ Args: { "request_id": string }; Returns: string
+                           },
 "can_manage_meetings":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
@@ -558,11 +634,17 @@ isOneToOne: false
 "delete_agenda_template":
 { Args: { "template": string }; Returns: undefined
                            },
+"has_a_role":
+{ Args: { "person": string }; Returns: boolean
+                           },
 "has_any_role":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "has_role":
 { Args: { "check_role": Database["public"]['Enums']["app_role"] }; Returns: boolean
+                           },
+"holds_role":
+{ Args: { "check_role": Database["public"]['Enums']["app_role"],"person": string }; Returns: boolean
                            },
 "is_planner":
 { Args: Record<PropertyKey, never>; Returns: boolean
@@ -573,15 +655,28 @@ isOneToOne: false
 "merge_calling":
 { Args: { "keep_id": string,"stray_id": string }; Returns: undefined
                            },
+"my_calling_requests":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "calling_title": string,"created_at": string,"id": string,"kind": Database["public"]['Enums']["calling_request_kind"],"names": (string)[],"needed_by": string,"notes": string,"organization": string,"received_at": string,"received_by_name": string,"release_name": string,"stage": string
+            }[]
+                           },
 "reorder_agenda_sections":
 { Args: { "section_ids": (string)[],"template": string }; Returns: undefined
                            },
+"request_recipients":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "display_name": string,"id": string,"in_bishopric": boolean,"office": Database["public"]['Enums']["bishopric_office"]
+            }[]
+                           },
 "save_push_subscription":
 { Args: { "sub_auth": string,"sub_endpoint": string,"sub_p256dh": string }; Returns: undefined
+                           },
+"submit_calling_request":
+{ Args: { "names"?: (string)[],"needed"?: string,"org"?: string,"releasing"?: string,"request_kind": Database["public"]['Enums']["calling_request_kind"],"request_notes"?: string,"title": string }; Returns: string
                            }
           }
           Enums: {
-            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"assistant_executive_secretary"|"ward_clerk","candidate_status": "suggested"|"discussing"|"approved"|"extended"|"accepted"|"declined"|"sustained"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","message_audience": "member"|"parent","message_kind": "offer"|"confirm","need_status": "open"|"filled"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other"
+            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer"|"follow_ups","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"assistant_executive_secretary"|"ward_clerk","calling_request_kind": "fill"|"release"|"replace"|"suggest","candidate_status": "suggested"|"discussing"|"approved"|"extended"|"accepted"|"declined"|"sustained"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","message_audience": "member"|"parent","message_kind": "offer"|"confirm","need_status": "open"|"filled"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other","request_status": "sent"|"seen"|"done"|"declined"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -701,7 +796,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "assistant_executive_secretary", "ward_clerk"],"candidate_status": ["suggested", "discussing", "approved", "extended", "accepted", "declined", "sustained", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"message_audience": ["member", "parent"],"message_kind": ["offer", "confirm"],"need_status": ["open", "filled", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"]
+            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer", "follow_ups"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "assistant_executive_secretary", "ward_clerk"],"calling_request_kind": ["fill", "release", "replace", "suggest"],"candidate_status": ["suggested", "discussing", "approved", "extended", "accepted", "declined", "sustained", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"message_audience": ["member", "parent"],"message_kind": ["offer", "confirm"],"need_status": ["open", "filled", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"],"request_status": ["sent", "seen", "done", "declined"]
           }
         }
 } as const

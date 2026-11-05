@@ -1,25 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { homeFor, isSettingsPage, navFor, settingsFor } from './access'
+import { canAskForCallings, canSendRequests, homeFor, isSettingsPage, navFor, settingsFor } from './access'
 
 const labels = (roles: Parameters<typeof navFor>[0], templates: unknown[] = []) => navFor(roles, templates).map((l) => l.label)
 const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
 
 describe('navFor', () => {
   it('keeps the tabs to everyday work for the bishopric', () => {
-    expect(labels(['bishopric'], bishopric)).toEqual(['Meetings', 'Sacrament', 'Appointments'])
-    expect(navFor(['admin', 'bishopric'], bishopric, 'bishop').map((l) => l.label)).toEqual(['Home', 'Meetings', 'Sacrament', 'Appointments'])
+    expect(labels(['bishopric'], bishopric)).toEqual(['Meetings', 'Sacrament', 'Appointments', 'Requests'])
+    expect(navFor(['admin', 'bishopric'], bishopric, 'bishop').map((l) => l.label)).toEqual(['Home', 'Meetings', 'Sacrament', 'Appointments', 'Requests'])
   })
 
-  it('limits called leaders to the suggestion form', () => {
-    expect(labels(['leader'])).toEqual(['Suggest a name'])
+  it('gives called leaders only their requests', () => {
+    expect(labels(['leader'])).toEqual(['Requests'])
   })
 
   it('adds the agenda for a leader who attends a meeting', () => {
-    expect(labels(['leader'], [{ slug: 'ward-council' }])).toEqual(['Meetings', 'Suggest a name'])
+    expect(labels(['leader'], [{ slug: 'ward-council' }])).toEqual(['Meetings', 'Requests'])
   })
 
   it('does not grant appointments to an admin who is not in the bishopric', () => {
     expect(labels(['admin'])).not.toContain('Appointments')
+  })
+
+  it('lets only the bishopric send requests, and only leaders ask for calling changes', () => {
+    expect(canSendRequests(['bishopric'])).toBe(true)
+    expect(canSendRequests(['leader'])).toBe(false)
+    expect(canAskForCallings(['leader'])).toBe(true)
+    expect(canAskForCallings(['leader', 'bishopric'])).toBe(false)
   })
 
   it('shows nothing without a role', () => {
@@ -64,14 +71,14 @@ describe('isSettingsPage', () => {
 describe('homeFor', () => {
   it('lands each role on its main page', () => {
     expect(homeFor(['admin', 'bishopric'], bishopric)).toBe('/agenda')
-    expect(homeFor(['leader'])).toBe('/suggest')
+    expect(homeFor(['leader'])).toBe('/requests')
     expect(homeFor([])).toBe('/no-access')
   })
 
   it('asks a bishop or counselor without appointment hours to set them first', () => {
     expect(homeFor(['bishopric'], bishopric, 'second_counselor', true)).toBe('/hours')
     expect(homeFor(['bishopric'], bishopric, 'second_counselor', false)).toBe('/home')
-    expect(homeFor(['leader'], [], null, true)).toBe('/suggest')
+    expect(homeFor(['leader'], [], null, true)).toBe('/requests')
   })
 
   it('lands the bishop and counselors on their home screen', () => {

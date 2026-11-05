@@ -16,9 +16,14 @@ A mobile-first web app (PWA) for managing ward administration in one place: call
 - Speakers, topics, and talk assignments
 - Reminders to the people assigned
 
-Both modules share the same users, roles, notifications, and calendar.
+**Requests**
+- The bishopric asks someone to do something. The person taps **Got it**, then **It's done** (or **I can't do this**), with an optional note. The sender sees each step, and a request unread after two days is flagged
+- An agenda item can be handed to someone the same way, and shows who has it and where it stands
+- Ward leaders ask for a calling change (fill a calling, release someone, both, or just suggest names). It goes onto the bishopric's callings list right away and to the bishop or counselor over that organization, who marks it received. The leader sees how far along it is (sent, received, being worked on, finished) but never names or decisions
 
-**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Meetings (each meeting's agenda), Sacrament and Appointments. Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, the day-ahead summary), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
+All three modules share the same users, roles, notifications, and calendar.
+
+**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Meetings (each meeting's agenda), Sacrament, Appointments and Requests. The Requests tab shows a count of what's waiting on you. Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, the day-ahead summary), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
 
 ## Stack
 
@@ -35,7 +40,9 @@ Roles live in the `roles` table, not in Google. Access is enforced by Row Level 
 |------|--------|
 | admin | Manage users, roles, settings |
 | bishopric | The bishop, 1st and 2nd counselors, executive secretaries and ward clerk. View and decide on calling proposals, schedule appointments, manage meetings and their agendas |
-| leader | Other called leaders. Submit name suggestions only; **cannot** see calling proposals |
+| leader | Other called leaders. Send calling requests (with suggested names) and follow their own; answer requests sent to them. **Cannot** see calling proposals |
+
+Requests are between the sender and the person asked. A request between two bishopric members is bishopric business, so the whole bishopric can read it (the bishopric agenda's **Follow-ups** section lists those still open and those finished in the past week). Only the bishopric sends requests. Calling requests are readable by the bishopric only; a leader follows their own through `my_calling_requests()`, which gives a stage, never names or decisions. A calling request goes to the bishop or counselor whose assignment on the Standing schedule names the calling's organization (`calling_request_recipients()`), and to the bishop when no one's does.
 
 Meeting agendas follow attendance, not roles. The bishopric sees every agenda. Anyone else sees only the meetings they're listed for in `agenda_attendees`, plus the shared prayer roll if one of those agendas shows it. A leader who attends ward council can read and edit the ward council agenda, but still can't see appointments or callings.
 

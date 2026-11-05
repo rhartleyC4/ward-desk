@@ -12,7 +12,10 @@ export const canSeeAppointments = (roles: AppRole[]) => roles.includes('bishopri
 /** Agendas follow attendance, not roles: RLS returns only the templates someone may open. */
 export const canSeeAgenda = (templates: readonly unknown[]) => templates.length > 0
 export const canPlanMeetings = (roles: AppRole[]) => roles.includes('bishopric')
-export const canSuggest = (roles: AppRole[]) => roles.includes('leader') || roles.includes('bishopric')
+/** Ask someone to do something. Matches the insert policy on requests. */
+export const canSendRequests = (roles: AppRole[]) => roles.includes('bishopric')
+/** Ward leaders ask the bishopric for calling changes; the bishopric adds callings to fill directly. */
+export const canAskForCallings = (roles: AppRole[]) => roles.includes('leader') && !roles.includes('bishopric')
 export const canEditSchedule = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
 /** Set appointment hours, your own or (for secretaries) a leader's. Matches can_manage_meetings() on the hours tables. */
 export const canEditHours = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
@@ -55,7 +58,8 @@ export function navFor(roles: AppRole[], templates: readonly unknown[] = [], off
   if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Meetings' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
   if (canSeeAppointments(roles)) links.push({ to: '/appointments', label: 'Appointments' })
-  if (canSuggest(roles) && !canSeeCallings(roles)) links.push({ to: '/suggest', label: 'Suggest a name' })
+  // Anyone can be sent a request, so everyone with a role has the tab.
+  if (roles.length) links.push({ to: '/requests', label: 'Requests' })
   return links
 }
 

@@ -121,6 +121,7 @@ export const SECTION_KINDS: Record<Exclude<Enums<'agenda_section_kind'>, 'interv
   assignments: 'Assignments due this month',
   sacrament: 'Upcoming sacrament meetings',
   callings: 'Callings needed',
+  follow_ups: 'Follow-ups (open requests)',
   releases: 'Releases that day',
   sustainings: 'Sustainings that day',
   prayer_roll: 'Prayer roll',

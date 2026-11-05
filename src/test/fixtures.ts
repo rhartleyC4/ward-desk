@@ -91,9 +91,9 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
       { id: 'n3', calling_id: null, calling_title: 'Sunday School', release_name: 'Sister Kemp', release_on: '2026-11-01', status: 'open', notes: null, created_at: ts, updated_at: ts },
     ],
     candidates: [
-      { id: 'c1', need_id: 'n2', calling_title: null, person_name: 'Sister Moss', status: 'accepted', sustain_on: '2026-11-01', notes: null, suggested_by: 'b', created_at: ts, updated_at: ts },
-      { id: 'c2', need_id: null, calling_title: 'Primary Teacher', person_name: 'Brother Vale', status: 'suggested', sustain_on: null, notes: null, suggested_by: null, created_at: ts, updated_at: ts },
-      { id: 'c3', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, notes: null, suggested_by: 'b', created_at: ts, updated_at: ts },
+      { id: 'c1', need_id: 'n2', calling_title: null, person_name: 'Sister Moss', status: 'accepted', sustain_on: '2026-11-01', notes: null, suggested_by: 'b', request_id: null, created_at: ts, updated_at: ts },
+      { id: 'c2', need_id: null, calling_title: 'Primary Teacher', person_name: 'Brother Vale', status: 'suggested', sustain_on: null, notes: null, suggested_by: null, request_id: null, created_at: ts, updated_at: ts },
+      { id: 'c3', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, notes: null, suggested_by: 'b', request_id: null, created_at: ts, updated_at: ts },
     ],
     callingList: [
       { id: 'l1', title: 'Primary Teacher', organization: 'Primary' },
@@ -117,6 +117,9 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
     stewardships: [],
     profiles,
     bishopric: profiles,
+    requests: [],
+    callingRequests: [],
+    recipients: [],
     ...overrides,
   }
 }

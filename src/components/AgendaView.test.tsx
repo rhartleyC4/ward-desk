@@ -19,6 +19,8 @@ function actions(): AgendaActions {
     acceptCandidate: vi.fn(),
     approveCandidate: vi.fn(),
     assignAppointment: vi.fn(),
+    receiveCallingRequest: vi.fn(),
+    assignItem: vi.fn().mockResolvedValue(true),
   }
 }
 
@@ -136,5 +138,45 @@ describe('AgendaView', () => {
     await user.type(within(section('Relief Society')).getByLabelText('New item for Relief Society'), 'Teacher council room')
     await user.click(within(section('Relief Society')).getByRole('button', { name: 'Add' }))
     expect(a.addItem).toHaveBeenCalledWith(wardCouncilTemplate.sections[3], 'Teacher council room', null)
+  })
+
+  it('follows up on open requests and those just finished', () => {
+    const template = { ...bishopricTemplate, sections: [...bishopricTemplate.sections, { id: 'bishopric-fu', template_id: 'bishopric', position: 11, kind: 'follow_ups' as const, title: 'Follow-ups' }] }
+    const base = { from_id: 'b', to_id: 'l', details: null, due_on: null, reply: null, agenda_item_id: null, seen_at: null, created_at: '2026-10-25T10:00:00Z', updated_at: '2026-10-25T10:00:00Z' }
+    const requests = [
+      { ...base, id: 'q1', title: 'Order the program covers', status: 'seen' as const, closed_at: null },
+      { ...base, id: 'q2', title: 'Visit the Lees', status: 'done' as const, reply: 'Went Tuesday', closed_at: '2026-10-28T10:00:00Z' },
+      { ...base, id: 'q3', title: 'Old news', status: 'done' as const, closed_at: '2026-09-01T10:00:00Z' },
+    ]
+    render(<AgendaView template={template} date="2026-11-01" data={agendaData({ requests })} actions={actions()} timeZone="America/Denver" />)
+
+    const followUps = section('Follow-ups')
+    expect(within(followUps).getByText('Order the program covers')).toBeInTheDocument()
+    expect(within(followUps).getByText('Bishop Avery asked Brother Lane · Seen')).toBeInTheDocument()
+    expect(within(followUps).getByText('Bishop Avery asked Brother Lane · Done · “Went Tuesday”')).toBeInTheDocument()
+    expect(within(followUps).queryByText('Old news')).not.toBeInTheDocument()
+  })
+
+  it('hands an item to someone as a request and shows where it stands', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    const recipients = [{ id: 'l', display_name: 'Brother Lane', office: 'first_counselor' as const, in_bishopric: true }]
+    const requests = [
+      { id: 'q1', from_id: 'b', to_id: 'o', title: 'Ward Christmas party', details: null, due_on: null, status: 'seen' as const, reply: null, agenda_item_id: 'e1', seen_at: null, closed_at: null, created_at: '2026-10-25T10:00:00Z', updated_at: '2026-10-25T10:00:00Z' },
+    ]
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData({ recipients, requests })} actions={a} timeZone="America/Denver" />)
+
+    expect(within(section('Calendar')).getByText('Asked Brother Ortiz · Seen')).toBeInTheDocument()
+
+    const items = section('Action / discussion items')
+    await user.click(within(items).getByRole('button', { name: 'Ask someone to do Fifth Sunday topic' }))
+    await user.selectOptions(within(items).getByRole('combobox', { name: /Who/ }), 'l')
+    await user.click(within(items).getByRole('button', { name: 'Send request' }))
+    expect(a.assignItem).toHaveBeenCalledWith(expect.objectContaining({ id: 'd1', body: 'Fifth Sunday topic' }), 'l', null)
+  })
+
+  it('offers no Assign button to someone who can’t send requests', () => {
+    render(<AgendaView template={bishopricTemplate} date="2026-11-01" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
+    expect(screen.queryByRole('button', { name: /Ask someone to do/ })).not.toBeInTheDocument()
   })
 })

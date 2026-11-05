@@ -15,12 +15,14 @@ import { useState, type FormEvent } from 'react'
 import { needsToDiscuss, unsortedSuggestions } from '../lib/agenda'
 import { coveringLeader, organizationFor, type ListedCalling } from '../lib/callings'
 import { appointmentFor, NEEDS_APPOINTMENT, whenLabel } from '../lib/appointments'
-import type { IsoDate } from '../lib/dates'
+import { longDate, type IsoDate } from '../lib/dates'
+import { unreceived, type CallingRequest } from '../lib/requests'
 import type { Enums, TablesUpdate } from '../lib/database.types'
 import type { Appointment, CallingNeed, Candidate, Profile } from '../lib/queries'
 import { nativeSelect } from '../theme'
 import { CallingField } from './CallingField'
 import { Muted } from './Layout'
+import { CallingRequestRow } from './Requests'
 
 type Status = Enums<'candidate_status'>
 
@@ -58,6 +60,8 @@ export type CallingsData = {
   profiles: Profile[]
   /** Bishopric assignments, which pick who meets with a newly approved name. */
   stewardships: { user_id: string; area: string }[]
+  /** Ward leaders' requests; each one that asked for a change points at its calling. */
+  callingRequests: CallingRequest[]
 }
 
 export type CallingsActions = {
@@ -73,6 +77,28 @@ export type CallingsActions = {
   approveCandidate: (candidate: Candidate, leaderId: string | null) => void
   /** Who in the bishopric meets with the person; null takes the appointment back. */
   assignAppointment: (candidate: Candidate, leaderId: string | null) => void
+  /** Tells the leader who asked that the bishopric has their request. */
+  receiveCallingRequest: (id: string) => void
+}
+
+const nameIn = (id: string | null, data: CallingsData) => data.profiles.find((p) => p.id === id)?.display_name ?? 'a leader'
+
+/** "Asked for by Sister Reyes (Primary) · needed by December 1st · Sunbeams need one" */
+function RequestedBy({ need, data }: { need: CallingNeed; data: CallingsData }) {
+  const r = data.callingRequests.find((x) => x.need_id === need.id)
+  if (!r) return null
+  const parts = [
+    `Asked for by ${nameIn(r.requested_by, data)}${r.organization ? ` (${r.organization})` : ''}`,
+    r.kind === 'release' && 'release only, no one new',
+    r.needed_by && `needed by ${longDate(r.needed_by)}`,
+    r.received_at ? `received by ${nameIn(r.received_by, data)}` : 'not marked received yet',
+  ].filter(Boolean)
+  return (
+    <Box sx={{ mb: 1 }}>
+      <Muted>{parts.join(' · ')}</Muted>
+      {r.notes && <Typography variant="body2">“{r.notes}”</Typography>}
+    </Box>
+  )
 }
 
 /** Where the appointment stands, for the line under the "Meets with" picker. */
@@ -101,7 +127,10 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
           ...(c.status === 'declined' && { textDecoration: 'line-through', color: 'text.secondary' }),
         }}
       >
-        {c.person_name}
+        <Box>
+          {c.person_name}
+          {c.request_id && <Muted>Suggested by {nameIn(c.suggested_by, data)}</Muted>}
+        </Box>
       </Grid>
       <Grid size={{ xs: 6, sm: 3 }}>
         <TextField
@@ -293,6 +322,7 @@ function NeedBlock({ need, data, actions, timeZone }: { need: CallingNeed; data:
           <DeleteOutlinedIcon fontSize="small" />
         </IconButton>
       </Stack>
+      <RequestedBy need={need} data={data} />
       <ReleaseLine need={need} actions={actions} showDate={accepted} />
       {all.length > 0 && (
         <Stack divider={<Divider flexItem />} spacing={1.5}>
@@ -343,9 +373,23 @@ function AddNeed({ onAdd, callings }: { onAdd: CallingsActions['addNeed']; calli
 export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDate; data: CallingsData; actions: CallingsActions; timeZone: string }) {
   const suggestions = unsortedSuggestions(data.candidates)
   const openNeeds = needsToDiscuss(date, data.needs, data.candidates)
+  const newRequests = unreceived(data.callingRequests)
 
   return (
     <Stack divider={<Divider flexItem />} spacing={2}>
+      {newRequests.length > 0 && (
+        <Box>
+          <Typography variant="h3" sx={{ mb: 0.5 }}>
+            New requests from leaders
+          </Typography>
+          <Muted>Mark each one received so the leader knows the bishopric has it. The callings are already on the list below.</Muted>
+          <Stack divider={<Divider flexItem />}>
+            {newRequests.map((r) => (
+              <CallingRequestRow key={r.id} request={r} people={data.profiles} candidates={data.candidates} onReceive={actions.receiveCallingRequest} busy={false} showAgendaLink={false} />
+            ))}
+          </Stack>
+        </Box>
+      )}
       {suggestions.length > 0 && (
         <Box>
           <Typography variant="h3" sx={{ mb: 0.5 }}>
@@ -356,6 +400,12 @@ export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDa
               <ListItem key={s.id} disableGutters sx={{ gap: 1, flexWrap: 'wrap' }}>
                 <Box sx={{ flex: '1 1 12rem' }}>
                   <strong>{s.person_name}</strong> for {s.calling_title}
+                  {s.suggested_by && (
+                    <Box component="span" sx={{ color: 'text.secondary' }}>
+                      {' '}
+                      (from {nameIn(s.suggested_by, data)})
+                    </Box>
+                  )}
                   {s.notes ? (
                     <Box component="span" sx={{ color: 'text.secondary' }}>
                       {' '}
