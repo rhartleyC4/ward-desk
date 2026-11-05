@@ -13,7 +13,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { needsToDiscuss, unsortedSuggestions } from '../lib/agenda'
-import type { ListedCalling } from '../lib/callings'
+import { coveringLeader, organizationFor, type ListedCalling } from '../lib/callings'
 import { appointmentFor, NEEDS_APPOINTMENT, whenLabel } from '../lib/appointments'
 import type { IsoDate } from '../lib/dates'
 import type { Enums, TablesUpdate } from '../lib/database.types'
@@ -56,6 +56,8 @@ export type CallingsData = {
   appointments: Appointment[]
   bishopric: Profile[]
   profiles: Profile[]
+  /** Bishopric assignments, which pick who meets with a newly approved name. */
+  stewardships: { user_id: string; area: string }[]
 }
 
 export type CallingsActions = {
@@ -67,6 +69,8 @@ export type CallingsActions = {
   updateCandidate: (id: string, changes: TablesUpdate<'calling_candidates'>) => void
   /** Sets the sustain and release dates and marks the appointment met. */
   acceptCandidate: (candidate: Candidate) => void
+  /** Marks a name approved and, when given a leader, hands them the appointment. */
+  approveCandidate: (candidate: Candidate, leaderId: string | null) => void
   /** Who in the bishopric meets with the person; null takes the appointment back. */
   assignAppointment: (candidate: Candidate, leaderId: string | null) => void
 }
@@ -108,7 +112,11 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
           onChange={(e) => {
             const status = e.target.value as Status
             if (status === 'accepted') actions.acceptCandidate(c)
-            else actions.updateCandidate(c.id, { status })
+            else if (status === 'approved') {
+              // The leader assigned to the calling's organization meets with them, unless someone already does.
+              const leader = open ? null : coveringLeader(organizationFor(c, data.needs, data.callingList), data.stewardships, data.bishopric.map((p) => p.id))
+              actions.approveCandidate(c, leader)
+            } else actions.updateCandidate(c.id, { status })
           }}
         >
           {STATUSES.map((s) => (

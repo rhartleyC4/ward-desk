@@ -17,6 +17,7 @@ function actions(): AgendaActions {
     addCandidate: vi.fn(),
     updateCandidate: vi.fn(),
     acceptCandidate: vi.fn(),
+    approveCandidate: vi.fn(),
     assignAppointment: vi.fn(),
   }
 }

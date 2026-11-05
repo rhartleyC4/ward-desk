@@ -5,7 +5,7 @@ import { agendaData } from '../test/fixtures'
 import { CallingsManager, type CallingsActions } from './CallingsManager'
 
 function actions(): CallingsActions {
-  return { addNeed: vi.fn(), updateNeed: vi.fn(), deleteNeed: vi.fn(), addCandidate: vi.fn(), updateCandidate: vi.fn(), acceptCandidate: vi.fn(), assignAppointment: vi.fn() }
+  return { addNeed: vi.fn(), updateNeed: vi.fn(), deleteNeed: vi.fn(), addCandidate: vi.fn(), updateCandidate: vi.fn(), acceptCandidate: vi.fn(), approveCandidate: vi.fn(), assignAppointment: vi.fn() }
 }
 
 const need = (title: string) => screen.getByRole('article', { name: title })
@@ -42,6 +42,29 @@ describe('CallingsManager', () => {
     expect(a.assignAppointment).toHaveBeenCalledWith(data.candidates[2], 'o')
     await user.selectOptions(screen.getByLabelText('Who meets with Sister Nash'), '—')
     expect(a.assignAppointment).toHaveBeenLastCalledWith(data.candidates[2], null)
+  })
+
+  it("hands an approved name to the leader assigned to the calling's organization", async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    const data = agendaData({ appointments: [], stewardships: [{ id: 's1', user_id: 'o', area: 'Primary', notes: null, created_at: '' }] })
+    data.candidates[2] = { ...data.candidates[2], status: 'discussing' }
+    render(<CallingsManager date="2026-10-25" data={data} actions={a} timeZone="America/Denver" />)
+
+    await user.selectOptions(screen.getByLabelText('Status for Sister Nash'), 'Approved')
+    expect(a.approveCandidate).toHaveBeenCalledWith(data.candidates[2], 'o')
+    expect(a.updateCandidate).not.toHaveBeenCalled()
+  })
+
+  it('leaves Meets with alone when someone already meets with them', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    const data = agendaData({ stewardships: [{ id: 's1', user_id: 'o', area: 'Primary', notes: null, created_at: '' }] })
+    data.candidates[2] = { ...data.candidates[2], status: 'discussing' }
+    render(<CallingsManager date="2026-10-25" data={data} actions={a} timeZone="America/Denver" />)
+
+    await user.selectOptions(screen.getByLabelText('Status for Sister Nash'), 'Approved')
+    expect(a.approveCandidate).toHaveBeenCalledWith(data.candidates[2], null)
   })
 
   it('records an acceptance so it moves to Sustainings', async () => {

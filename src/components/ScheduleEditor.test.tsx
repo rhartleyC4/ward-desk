@@ -110,13 +110,32 @@ describe('ScheduleEditor', () => {
     )
   })
 
+  it('warns when an organization is already covered, and refuses a repeat', async () => {
+    const { user } = setup()
+    const form = within(screen.getByRole('form', { name: 'Add an assignment' }))
+    await user.selectOptions(form.getByLabelText('Who'), 'Brother Lane')
+    await user.selectOptions(form.getByLabelText('Area'), 'Something else…')
+    await user.type(form.getByLabelText('Other area'), 'sunday school')
+    expect(form.getByRole('button', { name: 'Add' })).toBeDisabled()
+
+    await user.selectOptions(form.getByLabelText('Who'), 'Brother Ortiz')
+    await user.selectOptions(form.getByLabelText('Area'), 'Sunday School')
+    expect(form.getByText("Brother Lane also covers Sunday School, so Meets with won't fill in for its callings.")).toBeInTheDocument()
+    expect(form.getByRole('button', { name: 'Add' })).toBeEnabled()
+  })
+
   it('adds and removes an assignment', async () => {
     const { actions, user } = setup()
     const form = within(screen.getByRole('form', { name: 'Add an assignment' }))
     await user.selectOptions(form.getByLabelText('Who'), 'Brother Ortiz')
-    await user.type(form.getByLabelText('Area'), 'Primary')
+    await user.selectOptions(form.getByLabelText('Area'), 'Primary')
     await user.click(form.getByRole('button', { name: 'Add' }))
     expect(actions.addStewardship).toHaveBeenCalledWith('o', 'Primary')
+
+    await user.selectOptions(form.getByLabelText('Area'), 'Something else…')
+    await user.type(form.getByLabelText('Other area'), 'Young Single Adults')
+    await user.click(form.getByRole('button', { name: 'Add' }))
+    expect(actions.addStewardship).toHaveBeenLastCalledWith('o', 'Young Single Adults')
 
     const chip = within(card('Bishopric assignments')).getByRole('button', { name: 'Sunday School' })
     await user.click(within(chip).getByTestId('CancelIcon'))

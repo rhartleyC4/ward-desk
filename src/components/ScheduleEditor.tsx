@@ -13,6 +13,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { personLabel } from '../lib/agenda'
 import type { EventDraft, Profile, RotationDraft, StandingEvent, StandingRotation } from '../lib/queries'
 import { formatTime, monthsLabel, rotationDayLabel } from '../lib/schedule'
+import { ORGANIZATIONS } from '../lib/callings'
 import type { Tables } from '../lib/database.types'
 import { nativeSelect } from '../theme'
 import { Muted, SectionCard } from './Layout'
@@ -251,34 +252,63 @@ function RotationForm({ rotation, bishopric, busy, onSave, onCancel, onDelete }:
 // Assignments
 // ---------------------------------------------------------------------------
 
-function AddAssignment({ bishopric, busy, onAdd }: { bishopric: Profile[]; busy: boolean; onAdd: (userId: string, area: string) => Promise<boolean> }) {
+/** The calling list's organizations, which fill in who meets with a newly approved name. */
+const AREAS = ORGANIZATIONS.filter((o) => o !== 'Other')
+const OTHER_AREA = ''
+
+function AddAssignment({ bishopric, taken, busy, onAdd }: { bishopric: Profile[]; taken: Tables<'stewardships'>[]; busy: boolean; onAdd: (userId: string, area: string) => Promise<boolean> }) {
   const [userId, setUserId] = useState(bishopric[0]?.id ?? '')
-  const [area, setArea] = useState('')
+  const [choice, setChoice] = useState(AREAS[0])
+  const [typed, setTyped] = useState('')
+  const area = choice === OTHER_AREA ? typed.trim() : choice
+  const already = taken.some((t) => t.user_id === userId && t.area.toLowerCase() === area.toLowerCase())
+  const sharedWith = taken.find((t) => t.user_id !== userId && t.area.toLowerCase() === area.toLowerCase() && AREAS.includes(t.area))
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (userId && area.trim() && (await onAdd(userId, area))) setArea('')
+    if (userId && area && !already && (await onAdd(userId, area))) setTyped('')
   }
   if (!bishopric.length) return null
   return (
-    <Grid component="form" container spacing={1.5} onSubmit={submit} aria-label="Add an assignment" sx={{ mt: 2 }}>
-      <Grid size={{ xs: 12, sm: 4 }}>
-        <TextField select label="Who" slotProps={nativeSelect} value={userId} onChange={(e) => setUserId(e.target.value)}>
-          {bishopric.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.display_name}
-            </option>
-          ))}
-        </TextField>
+    <Box component="form" onSubmit={submit} aria-label="Add an assignment" sx={{ mt: 2 }}>
+      <Grid container spacing={1.5}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <TextField select label="Who" slotProps={nativeSelect} value={userId} onChange={(e) => setUserId(e.target.value)}>
+            {bishopric.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.display_name}
+              </option>
+            ))}
+          </TextField>
+        </Grid>
+        <Grid size={{ xs: 12, sm: choice === OTHER_AREA ? 4 : 5 }}>
+          <TextField select label="Area" slotProps={nativeSelect} value={choice} onChange={(e) => setChoice(e.target.value)}>
+            {AREAS.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+            <option value={OTHER_AREA}>Something else…</option>
+          </TextField>
+        </Grid>
+        {choice === OTHER_AREA && (
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField label="Other area" placeholder="Young Single Adults" value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus />
+          </Grid>
+        )}
+        <Grid size={{ xs: 12, sm: choice === OTHER_AREA ? 12 : 3 }}>
+          <Button type="submit" variant="contained" fullWidth disabled={busy || !area || already} sx={{ height: '100%', minHeight: 40 }}>
+            Add
+          </Button>
+        </Grid>
       </Grid>
-      <Grid size={{ xs: 12, sm: 5 }}>
-        <TextField label="Area" placeholder="Young Women" value={area} onChange={(e) => setArea(e.target.value)} />
-      </Grid>
-      <Grid size={{ xs: 12, sm: 3 }}>
-        <Button type="submit" variant="contained" fullWidth disabled={busy || !area.trim()} sx={{ height: '100%' }}>
-          Add
-        </Button>
-      </Grid>
-    </Grid>
+      <Box sx={{ mt: 1 }}>
+        <Muted>
+          {sharedWith
+            ? `${bishopric.find((p) => p.id === sharedWith.user_id)?.display_name ?? 'Someone'} also covers ${area}, so Meets with won't fill in for its callings.`
+            : 'Areas from the calling list fill in who meets with a newly approved name. Other areas are for reference.'}
+        </Muted>
+      </Box>
+    </Box>
   )
 }
 
@@ -389,7 +419,7 @@ export function ScheduleEditor({ data, canEdit, actions, busy }: Props) {
             ))}
         </Grid>
         {!data.stewardships.length && !canEdit && <Muted>No assignments yet.</Muted>}
-        {canEdit && <AddAssignment bishopric={data.bishopric} busy={busy} onAdd={actions.addStewardship} />}
+        {canEdit && <AddAssignment bishopric={data.bishopric} taken={data.stewardships} busy={busy} onAdd={actions.addStewardship} />}
       </SectionCard>
     </>
   )

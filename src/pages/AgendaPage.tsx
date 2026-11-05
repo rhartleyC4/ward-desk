@@ -43,6 +43,11 @@ export function AgendaPage() {
     addCandidate: (needId, name) => run(() => q.addCandidate(supabase, { need_id: needId, person_name: name, status: 'discussing' })),
     updateCandidate: (id, changes) => run(() => q.updateCandidate(supabase, id, changes)),
     acceptCandidate: (candidate) => run(() => q.acceptCandidate(supabase, candidate, sustainingSunday(todayIso()))),
+    approveCandidate: (candidate, leaderId) =>
+      run(async () => {
+        await q.updateCandidate(supabase, candidate.id, { status: 'approved' })
+        if (leaderId) await q.assignCallingAppointment(supabase, candidate, leaderId)
+      }),
     assignAppointment: (candidate, leaderId) => run(() => q.assignCallingAppointment(supabase, candidate, leaderId)),
   }
 
