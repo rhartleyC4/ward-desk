@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { homeFor, navFor } from './access'
+import { homeFor, isSettingsPage, navFor, settingsFor } from './access'
 
 const labels = (roles: Parameters<typeof navFor>[0], templates: unknown[] = []) => navFor(roles, templates).map((l) => l.label)
 const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
 
 describe('navFor', () => {
-  it('gives the bishopric everything', () => {
-    expect(labels(['bishopric'], bishopric)).toEqual(['Agenda', 'Sacrament', 'Appointments', 'Hours', 'Away', 'Schedule', 'Meetings'])
+  it('keeps the tabs to everyday work for the bishopric', () => {
+    expect(labels(['bishopric'], bishopric)).toEqual(['Agenda', 'Sacrament', 'Appointments'])
+    expect(navFor(['admin', 'bishopric'], bishopric, 'bishop').map((l) => l.label)).toEqual(['Home', 'Agenda', 'Sacrament', 'Appointments'])
   })
 
   it('limits called leaders to the suggestion form', () => {
@@ -21,18 +22,42 @@ describe('navFor', () => {
     expect(labels(['admin'])).not.toContain('Appointments')
   })
 
-  it('lets only admins manage sign-in access', () => {
-    expect(labels(['admin', 'bishopric'], bishopric)).toContain('Access')
-    expect(labels(['bishopric'], bishopric)).not.toContain('Access')
-  })
-
-  it('lets only admins tidy the calling list', () => {
-    expect(labels(['admin'])).toContain('Calling list')
-    expect(labels(['bishopric'], bishopric)).not.toContain('Calling list')
-  })
-
   it('shows nothing without a role', () => {
     expect(labels([])).toEqual([])
+  })
+})
+
+const settings = (roles: Parameters<typeof settingsFor>[0], office: Parameters<typeof settingsFor>[1] = null) =>
+  Object.fromEntries(settingsFor(roles, office).map((g) => [g.title, g.links.map((l) => l.label)]))
+
+describe('settingsFor', () => {
+  it('groups the setup pages for the bishop', () => {
+    expect(settings(['admin', 'bishopric'], 'bishop')).toEqual({
+      You: ["Dates I'll be away"],
+      Appointments: ['Appointment hours', 'Usual lengths', 'Message templates', 'Who books for whom'],
+      Meetings: ['Agendas', 'Standing schedule', 'Calling list'],
+      Ward: ['Who can sign in'],
+    })
+  })
+
+  it('lets only admins manage sign-in access and tidy the calling list', () => {
+    expect(settings(['bishopric'], 'first_counselor').Ward).toBeUndefined()
+    expect(settings(['bishopric'], 'first_counselor').Meetings).not.toContain('Calling list')
+    expect(settings(['admin'])).toEqual({ You: ["Dates I'll be away"], Appointments: ['Appointment hours'], Meetings: ['Agendas', 'Standing schedule', 'Calling list'], Ward: ['Who can sign in'] })
+  })
+
+  it('leaves out empty groups', () => {
+    expect(settings(['leader'])).toEqual({})
+  })
+})
+
+describe('isSettingsPage', () => {
+  it('knows the pages opened from Settings', () => {
+    expect(isSettingsPage('/settings')).toBe(true)
+    expect(isSettingsPage('/settings/lengths')).toBe(true)
+    expect(isSettingsPage('/hours')).toBe(true)
+    expect(isSettingsPage('/home')).toBe(false)
+    expect(isSettingsPage('/agenda/bishopric')).toBe(false)
   })
 })
 

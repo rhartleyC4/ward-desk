@@ -1,13 +1,12 @@
 import { useAuth } from '../auth/AuthProvider'
 import { AppointmentsView, type AppointmentsActions } from '../components/AppointmentsView'
 import { ErrorNote, Loading } from '../components/Layout'
-import { canManageMeetings } from '../lib/access'
 import * as q from '../lib/queries'
 import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 
 export function AppointmentsPage() {
-  const { roles, profile } = useAuth()
+  const { profile } = useAuth()
   const { data, error, reload } = useAsync(() => q.loadAppointments(supabase), [])
   const save = useAction()
   const run = (fn: () => Promise<void>) => save.act(fn).then((ok) => ok && reload())
@@ -27,7 +26,7 @@ export function AppointmentsPage() {
   return (
     <>
       <ErrorNote error={save.error} />
-      <AppointmentsView data={data} userId={profile?.id ?? ''} actions={actions} timeZone={WARD_TIME_ZONE} canAssign={canManageMeetings(roles)} />
+      <AppointmentsView data={data} userId={profile?.id ?? ''} actions={actions} timeZone={WARD_TIME_ZONE} />
     </>
   )
 }

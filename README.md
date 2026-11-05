@@ -18,9 +18,11 @@ A mobile-first web app (PWA) for managing ward administration in one place: call
 
 Both modules share the same users, roles, notifications, and calendar.
 
+**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Agenda, Sacrament and Appointments. Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, the day-ahead summary), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
+
 ## Stack
 
-- **Frontend:** React + TypeScript PWA built with Vite and [MUI](https://mui.com/), hosted on Cloudflare Pages. Light and dark themes follow the device by default; the toggle in the top bar overrides it (see `src/theme.ts`)
+- **Frontend:** React + TypeScript PWA built with Vite and [MUI](https://mui.com/), hosted on Cloudflare Pages. Light and dark themes follow the device by default; Appearance in Settings overrides it (see `src/theme.ts`)
 - **Backend:** Supabase (Postgres, Auth, Realtime, Edge Functions)
 - **Auth:** Google sign-in and email magic links, invite-only via an allowlist table
 - **Notifications:** Web Push (VAPID), sent by a scheduled GitHub Actions job (`scripts/notify`). See "Notifications" below
@@ -39,9 +41,9 @@ Meeting agendas follow attendance, not roles. The bishopric sees every agenda. A
 
 Each bishopric member's profile also has an `office` (bishop, first or second counselor, executive secretary, assistant executive secretary, ward clerk) that only an admin can set. The Conducting and "Meets with" pickers list only the bishop and counselors.
 
-Who schedules appointments for whom lives in `secretary_assignments`, set on the **Appointments** page. The executive and assistant executive secretaries can be picked, and a leader can have more than one. Each secretary's list starts with the leaders they cover. A leader no one has been picked for falls to the executive secretary when there's only one, so a ward with a single secretary needs no setup, and the Appointments page doesn't show who schedules for whom until there's an assistant to share the leaders with.
+Who schedules appointments for whom lives in `secretary_assignments`, set in **Settings › Who books for whom**. The executive and assistant executive secretaries can be picked, and a leader can have more than one. Each secretary's list starts with the leaders they cover. A leader no one has been picked for falls to the executive secretary when there's only one, so a ward with a single secretary needs no setup, and that page just says so until there's an assistant to share the leaders with.
 
-The bishop and counselors keep appointment hours on the **Hours** page: usual weekly blocks (`availability`) plus single dates that differ (`availability_changes`), either different hours or not available at all. Away dates take a whole day out on top of that. A bishop or counselor who hasn't set usual hours lands on the Hours page at sign-in. Anyone in the bishopric can read and change everyone's hours, so a secretary can take out a day when a leader says he can't make it.
+The bishop and counselors keep appointment hours in **Settings › Appointment hours**: usual weekly blocks (`availability`) plus single dates that differ (`availability_changes`), either different hours or not available at all. Away dates take a whole day out on top of that. A bishop or counselor who hasn't set usual hours lands there at sign-in, where two short steps ask which days, then what times. Anyone in the bishopric can read and change everyone's hours, so a secretary can take out a day when a leader says he can't make it.
 
 Each appointment has a length (`interviews.duration_minutes`): 10 minutes unless the secretary changes it, in 5-minute steps, with at least 10 for a temple recommend interview. Open times (`src/lib/slots.ts`) fill each block of hours one appointment after another and start the next one right after whatever is booked ends, so lengthening or shortening a booking moves the open times around it.
 
@@ -57,7 +59,7 @@ Adjust these as the real needs become clear.
 
 ## Notifications
 
-Bishopric members can turn on a **day-ahead summary** for each device on the Account page (the person button in the top bar). The evening before, it lists that person's next day:
+Bishopric members can turn on a **day-ahead summary** for each device on the Account page (Settings, then their name at the top). The evening before, it lists that person's next day:
 
 - The standing meetings on the **Schedule** page (`recurring_events`) that fall on that day, with their times
 - Conducting sacrament meeting, when they're down to conduct, with how many releases and sustainings there are to read
@@ -214,7 +216,7 @@ Changing a key pair later signs every device out of notifications; each person t
 
 ### Face ID and fingerprint sign-in (passkeys)
 
-After someone signs in once with an email link or Google, the app offers to "Turn on" Face ID or fingerprint sign-in for that device. After that, they tap **Face ID or fingerprint** on the sign-in screen and skip the email. This matters most on iPhone: an email link opens in Safari, not in the Home Screen app, so a link sign-in never reaches the installed app, but a passkey sign-in happens inside it. Each person can see and remove their devices on the Account page (the person button in the top bar). Passkeys sync through iCloud Keychain or Google Password Manager, so a new phone usually has them already.
+After someone signs in once with an email link or Google, the app offers to "Turn on" Face ID or fingerprint sign-in for that device. After that, they tap **Face ID or fingerprint** on the sign-in screen and skip the email. This matters most on iPhone: an email link opens in Safari, not in the Home Screen app, so a link sign-in never reaches the installed app, but a passkey sign-in happens inside it. Each person can see and remove their devices on the Account page (Settings, then their name at the top). Passkeys sync through iCloud Keychain or Google Password Manager, so a new phone usually has them already.
 
 Turn passkeys on in each Supabase project's Auth settings, with that site's own domain. A passkey only works on the domain it was made for, so staging and production passkeys are separate:
 

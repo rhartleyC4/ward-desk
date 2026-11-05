@@ -45,20 +45,61 @@ export const hasHome = (roles: AppRole[], office: Office) => hasSecretaryHome(ro
 
 export type NavLink = { to: string; label: string }
 
+/**
+ * The everyday tabs. Things set up once (hours, meetings, the calling list, access) live in
+ * Settings instead, so the tab bar stays short.
+ */
 export function navFor(roles: AppRole[], templates: readonly unknown[] = [], office: Office = null): NavLink[] {
   const links: NavLink[] = []
   if (hasHome(roles, office)) links.push({ to: '/home', label: 'Home' })
   if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Agenda' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
   if (canSeeAppointments(roles)) links.push({ to: '/appointments', label: 'Appointments' })
-  if (canEditHours(roles)) links.push({ to: '/hours', label: 'Hours' })
   if (canSuggest(roles) && !canSeeCallings(roles)) links.push({ to: '/suggest', label: 'Suggest a name' })
-  if (isMember(roles)) links.push({ to: '/away', label: 'Away' }, { to: '/schedule', label: 'Schedule' })
-  if (canManageMeetings(roles)) links.push({ to: '/meetings', label: 'Meetings' })
-  if (canManageCallingList(roles)) links.push({ to: '/calling-list', label: 'Calling list' })
-  if (canManageAccess(roles)) links.push({ to: '/access', label: 'Access' })
   return links
 }
+
+export type SettingsIcon = 'away' | 'hours' | 'lengths' | 'messages' | 'whoBooks' | 'agendas' | 'schedule' | 'callingList' | 'access'
+export type SettingsLink = NavLink & { hint: string; icon: SettingsIcon }
+export type SettingsGroup = { title: string; links: SettingsLink[] }
+
+/** Settings, grouped by what they're about. Each person sees only what their role can change. */
+export function settingsFor(roles: AppRole[], office: Office = null): SettingsGroup[] {
+  const you: SettingsLink[] = []
+  if (isMember(roles)) you.push({ to: '/away', label: "Dates I'll be away", hint: 'Taken out of your appointment hours', icon: 'away' })
+
+  const appointments: SettingsLink[] = []
+  if (canEditHours(roles)) appointments.push({ to: '/hours', label: 'Appointment hours', hint: keepsHoursOffice(office) ? 'When you can meet' : 'When each leader can meet', icon: 'hours' })
+  if (canSeeAppointments(roles)) {
+    appointments.push(
+      { to: '/settings/lengths', label: 'Usual lengths', hint: 'How long each kind of interview takes', icon: 'lengths' },
+      { to: '/settings/messages', label: 'Message templates', hint: 'The texts and emails you send', icon: 'messages' },
+    )
+  }
+  if (canSeeAppointments(roles) && canManageMeetings(roles)) appointments.push({ to: '/settings/who-books', label: 'Who books for whom', hint: 'Which secretary schedules each leader', icon: 'whoBooks' })
+
+  const meetings: SettingsLink[] = []
+  if (canManageMeetings(roles)) meetings.push({ to: '/meetings', label: 'Agendas', hint: 'Sections and who attends', icon: 'agendas' })
+  if (isMember(roles)) meetings.push({ to: '/schedule', label: 'Standing schedule', hint: 'Regular meetings, rotations, assignments', icon: 'schedule' })
+  if (canManageCallingList(roles)) meetings.push({ to: '/calling-list', label: 'Calling list', hint: "The ward's callings", icon: 'callingList' })
+
+  const ward: SettingsLink[] = []
+  if (canManageAccess(roles)) ward.push({ to: '/access', label: 'Who can sign in', hint: 'People, roles and positions', icon: 'access' })
+
+  return [
+    { title: 'You', links: you },
+    { title: 'Appointments', links: appointments },
+    { title: 'Meetings', links: meetings },
+    { title: 'Ward', links: ward },
+  ].filter((g) => g.links.length > 0)
+}
+
+/** Pages opened from Settings, which show a way back to it. */
+export const SETTINGS_PAGES = ['/account', '/away', '/hours', '/schedule', '/meetings', '/calling-list', '/access', '/settings/']
+
+export const isSettingsPage = (pathname: string) => pathname === '/settings' || SETTINGS_PAGES.some((p) => (p.endsWith('/') ? pathname.startsWith(p) : pathname === p))
+
+const keepsHoursOffice = (office: Office) => !!office && LEADER_OFFICES.includes(office)
 
 /** Where to land after sign-in. A bishop or counselor who hasn't set appointment hours is asked to first. */
 export function homeFor(roles: AppRole[], templates: readonly unknown[] = [], office: Office = null, needsHours = false): string {

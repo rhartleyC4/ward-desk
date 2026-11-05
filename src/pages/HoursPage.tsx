@@ -49,7 +49,7 @@ export function HoursPage() {
   return (
     <>
       <ErrorNote error={save.error} />
-      <HoursView data={data} leaderId={leaderId} onLeader={setPicked} from={today} firstTime={firstTime} actions={actions} busy={save.busy} />
+      <HoursView data={data} leaderId={leaderId} onLeader={setPicked} from={today} firstTime={firstTime} selfId={isLeader ? profile?.id : undefined} actions={actions} busy={save.busy} />
     </>
   )
 }

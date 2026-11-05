@@ -23,7 +23,7 @@ import type { Appointment, AppointmentLength, AppointmentsData } from '../lib/qu
 import { adjustMinutes, bookedRange, heldTimes, holdEnds, isHolding, minutesLabel, openSlots, overlapping, slotLabel, slotsByDay, wardParts, type Slot } from '../lib/slots'
 import type { HoursData } from './HoursView'
 import { Muted, SectionCard } from './Layout'
-import { MessagePanel, TemplatesEditor } from './Messages'
+import { MessagePanel } from './Messages'
 
 export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[]; lengths: AppointmentLength[] }
 
@@ -35,11 +35,8 @@ export type SecretaryHomeActions = {
   offer: (id: string, times: string[]) => void
   /** Marks an appointment as a youth's, so messages go to a parent. */
   setYouth: (id: string, isYouth: boolean, parentName: string | null) => void
-  saveTemplate: (t: Omit<MessageTemplate, 'id'> & { id?: string }) => Promise<boolean>
   /** Lets times offered to someone go, so they can be offered to others. */
   release: (id: string) => void
-  setUsualLength: (purpose: Enums<'interview_purpose'>, minutes: number) => void
-  deleteTemplate: (id: string) => void
 }
 
 const USUAL_LENGTH_LABELS: Record<Enums<'interview_purpose'>, string> = {
@@ -179,7 +176,7 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
         <LengthControl minutes={minutes} onChange={changeLength} purpose={a.purpose} name={a.person_name ?? 'this appointment'} busy={busy} />
       </Stack>
       {!hasHours ? (
-        <Muted>{leader} hasn't set appointment hours yet. Add them on the Hours page, or book a time on the Appointments page.</Muted>
+        <Muted>{leader} hasn't set appointment hours yet. Add them in Settings under Appointment hours, or book a time on the Appointments page.</Muted>
       ) : !days.length ? (
         <Muted>No open {minutesLabel(minutes)} times with {leader} in the next two weeks.</Muted>
       ) : (
@@ -386,7 +383,7 @@ export function SecretaryHome({
 
       {!assigned.length && (
         <Alert severity="info" sx={{ mb: 1.5 }}>
-          You aren't assigned to schedule for anyone yet, so this shows every leader. The bishopric sets who schedules for whom on the Appointments page.
+          You aren't assigned to schedule for anyone yet, so this shows every leader. The bishopric sets who books for whom in Settings.
         </Alert>
       )}
 
@@ -425,24 +422,23 @@ export function SecretaryHome({
         <WeekGlance leaderIds={leaderIds} ctx={ctx} />
       </SectionCard>
 
-      <SectionCard title="Usual lengths">
-        <Muted>New appointments start at these. You can still change any one when booking.</Muted>
-        <Stack divider={<Divider flexItem />} sx={{ mt: 1 }}>
-          {USUAL_LENGTH_ORDER.map((purpose) => {
-            const minutes = data.lengths.find((l) => l.purpose === purpose)?.minutes ?? 10
-            return (
-              <Stack key={purpose} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', py: 0.25 }}>
-                <Typography variant="body2">{USUAL_LENGTH_LABELS[purpose]}</Typography>
-                <LengthControl minutes={minutes} onChange={(m) => actions.setUsualLength(purpose, m)} purpose={purpose} name={USUAL_LENGTH_LABELS[purpose]} busy={busy} />
-              </Stack>
-            )
-          })}
-        </Stack>
-      </SectionCard>
-
-      <SectionCard title="Message templates">
-        <TemplatesEditor templates={data.templates} onSave={actions.saveTemplate} onDelete={actions.deleteTemplate} busy={busy} />
-      </SectionCard>
     </>
+  )
+}
+
+/** How long each kind of appointment usually takes; new appointments start at these. */
+export function UsualLengths({ lengths, onChange, busy }: { lengths: AppointmentLength[]; onChange: (purpose: Enums<'interview_purpose'>, minutes: number) => void; busy: boolean }) {
+  return (
+    <Stack divider={<Divider flexItem />}>
+      {USUAL_LENGTH_ORDER.map((purpose) => {
+        const minutes = lengths.find((l) => l.purpose === purpose)?.minutes ?? 10
+        return (
+          <Stack key={purpose} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', py: 0.25 }}>
+            <Typography variant="body2">{USUAL_LENGTH_LABELS[purpose]}</Typography>
+            <LengthControl minutes={minutes} onChange={(m) => onChange(purpose, m)} purpose={purpose} name={USUAL_LENGTH_LABELS[purpose]} busy={busy} />
+          </Stack>
+        )
+      })}
+    </Stack>
   )
 }

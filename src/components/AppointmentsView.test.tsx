@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { AppointmentsData } from '../lib/queries'
 import { agendaData, profiles } from '../test/fixtures'
-import { AppointmentsView, type AppointmentsActions } from './AppointmentsView'
+import { AppointmentsView, WhoSchedules, type AppointmentsActions } from './AppointmentsView'
 
 const ts = '2026-10-01T00:00:00Z'
 
@@ -44,7 +44,7 @@ const card = (title: string | RegExp) => screen.getByRole('heading', { name: tit
 describe('AppointmentsView', () => {
   it('starts with the leaders this secretary schedules for', async () => {
     const user = userEvent.setup()
-    render(<AppointmentsView data={data()} userId="asst" actions={actions()} timeZone="America/Denver" canAssign />)
+    render(<AppointmentsView data={data()} userId="asst" actions={actions()} timeZone="America/Denver" />)
 
     const waiting = card('To schedule (1)')
     expect(within(waiting).getByRole('article', { name: 'Sister Nash' })).toHaveTextContent('Extend call: Primary Teacher')
@@ -56,7 +56,7 @@ describe('AppointmentsView', () => {
   })
 
   it('shows everyone to someone who schedules for no one', () => {
-    render(<AppointmentsView data={data()} userId="b" actions={actions()} timeZone="America/Denver" canAssign={false} />)
+    render(<AppointmentsView data={data()} userId="b" actions={actions()} timeZone="America/Denver" />)
     expect(screen.queryByRole('group', { name: 'Whose appointments' })).not.toBeInTheDocument()
     expect(card('To schedule (2)')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Who schedules for whom' })).not.toBeInTheDocument()
@@ -65,7 +65,7 @@ describe('AppointmentsView', () => {
   it('books, finishes and drops appointments', async () => {
     const user = userEvent.setup()
     const a = actions()
-    render(<AppointmentsView data={data()} userId="asst" actions={a} timeZone="America/Denver" canAssign />)
+    render(<AppointmentsView data={data()} userId="asst" actions={a} timeZone="America/Denver" />)
 
     const nash = screen.getByRole('article', { name: 'Sister Nash' })
     await user.type(within(nash).getByLabelText('Date for Sister Nash'), '2026-11-15')
@@ -86,7 +86,7 @@ describe('AppointmentsView', () => {
   it('adds an appointment that can be scheduled later', async () => {
     const user = userEvent.setup()
     const a = actions()
-    render(<AppointmentsView data={data()} userId="asst" actions={a} timeZone="America/Denver" canAssign />)
+    render(<AppointmentsView data={data()} userId="asst" actions={a} timeZone="America/Denver" />)
 
     const form = screen.getByRole('form', { name: 'Add an appointment' })
     await user.type(within(form).getByLabelText('Name'), 'Sister Ames')
@@ -99,7 +99,7 @@ describe('AppointmentsView', () => {
   it('changes who schedules for whom', async () => {
     const user = userEvent.setup()
     const a = actions()
-    render(<AppointmentsView data={data()} userId="asst" actions={a} timeZone="America/Denver" canAssign />)
+    render(<WhoSchedules data={data()} onChange={a.setSecretary} />)
 
     const bishop = screen.getByRole('group', { name: 'Who schedules for Bishop' })
     expect(within(bishop).getByLabelText('Brother Quinn')).toBeChecked()
@@ -110,10 +110,9 @@ describe('AppointmentsView', () => {
     expect(a.setSecretary).toHaveBeenCalledWith('b', 'exec', false)
   })
 
-  it('skips who schedules for whom, and the switch, when the only executive secretary does it all', () => {
+  it('skips the switch when the only executive secretary does it all', () => {
     const d = { ...data(), assignments: [{ leader_id: 'b', secretary_id: 'exec', created_at: ts }] }
-    render(<AppointmentsView data={d} userId="exec" actions={actions()} timeZone="America/Denver" canAssign />)
-    expect(screen.queryByRole('heading', { name: 'Who schedules for whom' })).not.toBeInTheDocument()
+    render(<AppointmentsView data={d} userId="exec" actions={actions()} timeZone="America/Denver" />)
     expect(screen.queryByRole('group', { name: 'Whose appointments' })).not.toBeInTheDocument()
     // He covers the counselors by default, so their appointments are on his list.
     expect(screen.getByRole('article', { name: 'Sister Nash' })).toBeInTheDocument()
@@ -129,7 +128,7 @@ describe('AppointmentsView', () => {
         { id: 'clerk', email: 'clerk@ward.test', display_name: 'Brother Pike', short_name: 'Pike', office: 'ward_clerk' as const },
       ],
     }
-    render(<AppointmentsView data={d} userId="exec" actions={actions()} timeZone="America/Denver" canAssign />)
+    render(<WhoSchedules data={d} onChange={vi.fn()} />)
     const bishop = screen.getByRole('group', { name: 'Who schedules for Bishop' })
     expect(bishop).toHaveTextContent('No one picked, so Brother Quinn schedules')
     expect(within(bishop).getByLabelText('Brother Tate')).not.toBeChecked()
@@ -138,7 +137,7 @@ describe('AppointmentsView', () => {
 
   it('says who covers a leader no one was picked for', () => {
     const d = { ...data(), assignments: [{ leader_id: 'o', secretary_id: 'asst', created_at: ts }] }
-    render(<AppointmentsView data={d} userId="asst" actions={actions()} timeZone="America/Denver" canAssign />)
+    render(<WhoSchedules data={d} onChange={vi.fn()} />)
     expect(screen.getByRole('group', { name: 'Who schedules for Bishop' })).toHaveTextContent('No one picked, so Brother Quinn schedules')
     expect(screen.getByRole('group', { name: 'Who schedules for Ortiz' })).not.toHaveTextContent('No one picked')
   })

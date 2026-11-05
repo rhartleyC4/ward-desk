@@ -18,7 +18,11 @@ import { HoursPage } from './pages/HoursPage'
 import { LoginPage } from './pages/LoginPage'
 import { MeetingsPage } from './pages/MeetingsPage'
 import { SacramentPage } from './pages/SacramentPage'
+import { LengthsPage } from './pages/LengthsPage'
+import { MessagesPage } from './pages/MessagesPage'
 import { SchedulePage } from './pages/SchedulePage'
+import { SettingsPage } from './pages/SettingsPage'
+import { WhoBooksPage } from './pages/WhoBooksPage'
 import { SuggestPage } from './pages/SuggestPage'
 
 function Guard({ allow, children }: { allow: (roles: AppRole[], templates: AgendaTemplate[]) => boolean; children: ReactNode }) {
@@ -30,6 +34,8 @@ function HomeGuard({ children }: { children: ReactNode }) {
   const { roles, templates, office } = useAuth()
   return hasHome(roles, office) ? children : <Navigate to={homeFor(roles, templates, office)} replace />
 }
+
+const booksForOthers = (roles: AppRole[]) => canSeeAppointments(roles) && canManageMeetings(roles)
 
 const attendsAMeeting = (_: AppRole[], templates: AgendaTemplate[]) => canSeeAgenda(templates)
 
@@ -58,6 +64,10 @@ function AppRoutes() {
         <Route path="calling-list" element={<Guard allow={canManageCallingList}><CallingListPage /></Guard>} />
         <Route path="access" element={<Guard allow={canManageAccess}><AccessPage /></Guard>} />
         <Route path="account" element={<AccountPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+        <Route path="settings/lengths" element={<Guard allow={canSeeAppointments}><LengthsPage /></Guard>} />
+        <Route path="settings/messages" element={<Guard allow={canSeeAppointments}><MessagesPage /></Guard>} />
+        <Route path="settings/who-books" element={<Guard allow={booksForOthers}><WhoBooksPage /></Guard>} />
         <Route
           path="no-access"
           element={

@@ -3,7 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import { agendaData, profiles } from '../test/fixtures'
-import { SecretaryHome, type SecretaryHomeActions, type SecretaryHomeData } from './SecretaryHome'
+import { TemplatesEditor } from './Messages'
+import { SecretaryHome, UsualLengths, type SecretaryHomeActions, type SecretaryHomeData } from './SecretaryHome'
 
 const TZ = 'America/Denver'
 // Today is Sunday 2026-11-08, 8:00 AM in Denver.
@@ -60,7 +61,7 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
 }
 
 function actions(): SecretaryHomeActions {
-  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), complete: vi.fn(), offer: vi.fn(), setYouth: vi.fn(), release: vi.fn(), setUsualLength: vi.fn(), saveTemplate: vi.fn().mockResolvedValue(true), deleteTemplate: vi.fn() }
+  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), complete: vi.fn(), offer: vi.fn(), setYouth: vi.fn(), release: vi.fn() }
 }
 
 const view = (d = data(), userId = 'exec') => {
@@ -180,13 +181,14 @@ describe('SecretaryHome', () => {
   })
 
   it('sets how long each kind of appointment usually takes', async () => {
-    const a = view()
-    const lengths = section(/Usual lengths/)
-    expect(within(lengths).getByRole('group', { name: 'Length for Extending a calling' })).toHaveTextContent('5 min')
-    expect(within(lengths).getByRole('group', { name: 'Length for Temple recommend' })).toHaveTextContent('10 min')
-    expect(within(lengths).getByRole('button', { name: 'Shorter for Temple recommend' })).toBeDisabled()
-    await userEvent.click(within(lengths).getByRole('button', { name: 'Longer for Extending a calling' }))
-    expect(a.setUsualLength).toHaveBeenCalledWith('calling', 10)
+    const onChange = vi.fn()
+    const { container } = render(<UsualLengths lengths={data().lengths} onChange={onChange} busy={false} />)
+    const lengths = within(container)
+    expect(lengths.getByRole('group', { name: 'Length for Extending a calling' })).toHaveTextContent('5 min')
+    expect(lengths.getByRole('group', { name: 'Length for Temple recommend' })).toHaveTextContent('10 min')
+    expect(lengths.getByRole('button', { name: 'Shorter for Temple recommend' })).toBeDisabled()
+    await userEvent.click(lengths.getByRole('button', { name: 'Longer for Extending a calling' }))
+    expect(onChange).toHaveBeenCalledWith('calling', 10)
   })
 
   it('marks times already offered and when', async () => {
@@ -205,15 +207,16 @@ describe('SecretaryHome', () => {
   })
 
   it('lets the secretary add a template and warns about a mistyped variable', async () => {
-    const a = view()
-    const card = section(/Message templates/)
+    const onSave = vi.fn().mockResolvedValue(true)
+    const { container } = render(<TemplatesEditor templates={data().templates} onSave={onSave} onDelete={vi.fn()} busy={false} />)
+    const card = container
     await userEvent.click(within(card).getByRole('button', { name: 'Add a template' }))
     const form = within(card).getByRole('form', { name: 'New template' })
     await userEvent.type(within(form).getByLabelText('Name'), 'Short')
     await userEvent.type(within(form).getByLabelText('Text'), 'Hi {{frist_name}')
     expect(within(form).getByText(/Not a variable: \{frist_name\}/)).toBeInTheDocument()
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }))
-    expect(a.saveTemplate).toHaveBeenCalledWith({ name: 'Short', kind: 'offer', audience: 'member', body: 'Hi {frist_name}' })
+    expect(onSave).toHaveBeenCalledWith({ name: 'Short', kind: 'offer', audience: 'member', body: 'Hi {frist_name}' })
   })
 
   it('keeps a temple recommend interview at 10 minutes or more', async () => {

@@ -376,7 +376,8 @@ function AddToMeeting({ data, today, actions, busy, onClose }: { data: Bishopric
 }
 
 function ActionButton({ icon, label, hint, onClick, to, disabled }: { icon: ReactNode; label: string; hint: string; onClick?: () => void; to?: string; disabled?: boolean }) {
-  const link = to ? { component: Link, to } : {}
+  // Pages opened from here offer a way back to Home.
+  const link = to ? { component: Link, to, state: { back: { to: '/home', label: 'Home' } } } : {}
   return (
     <Button
       {...link}

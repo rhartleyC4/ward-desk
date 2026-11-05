@@ -83,9 +83,44 @@ describe('HoursView', () => {
     expect(a.addDay).toHaveBeenCalledWith('2026-11-08', { starts_at: '12:00', ends_at: '12:30' })
   })
 
-  it('welcomes a leader sent here on sign-in', () => {
-    view({ firstTime: true, data: { ...data(), hours: [] } })
-    expect(screen.getByText(/usually free for appointments/)).toBeInTheDocument()
-    expect(screen.getByText(/No usual hours yet/)).toBeInTheDocument()
+  it('walks a leader with no hours through days, then times', async () => {
+    const a = actions()
+    const d = { ...data(), hours: [] }
+    render(<HoursView data={d} leaderId="b" onLeader={vi.fn()} from={FROM} firstTime actions={a} busy={false} selfId="b" />)
+    expect(screen.getByText('Step 1 of 2')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Which days can you usually meet/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Sunday' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Wednesday' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getByText('Step 2 of 2')).toBeInTheDocument()
+
+    const wednesday = screen.getByRole('group', { name: 'Wednesday' })
+    expect(within(wednesday).getByLabelText('From')).toHaveValue('19:00')
+    await userEvent.clear(within(wednesday).getByLabelText('To'))
+    await userEvent.type(within(wednesday).getByLabelText('To'), '21:00')
+    await userEvent.click(screen.getByRole('button', { name: 'Save hours' }))
+    expect(a.addUsual).toHaveBeenNthCalledWith(1, 0, { starts_at: '09:00', ends_at: '11:00' })
+    expect(a.addUsual).toHaveBeenNthCalledWith(2, 3, { starts_at: '19:00', ends_at: '21:00' })
+  })
+
+  it('names the leader when a secretary sets someone else\'s first hours, and can skip to the form', async () => {
+    render(<HoursView data={{ ...data(), hours: [] }} leaderId="b" onLeader={vi.fn()} from={FROM} firstTime={false} actions={actions()} busy={false} />)
+    expect(screen.getByRole('heading', { name: /Which days can Bishop Avery usually meet/ })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Add them one at a time instead' }))
+    expect(screen.getByRole('heading', { name: 'Usual hours' })).toBeInTheDocument()
+  })
+
+  it('rejects an end time before the start', async () => {
+    const a = actions()
+    render(<HoursView data={{ ...data(), hours: [] }} leaderId="b" onLeader={vi.fn()} from={FROM} firstTime actions={a} busy={false} selfId="b" />)
+    await userEvent.click(screen.getByRole('button', { name: 'Sunday' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await userEvent.clear(screen.getByLabelText('To'))
+    await userEvent.type(screen.getByLabelText('To'), '08:00')
+    await userEvent.click(screen.getByRole('button', { name: 'Save hours' }))
+    expect(screen.getByText(/Sunday: The end time must be after the start time/)).toBeInTheDocument()
+    expect(a.addUsual).not.toHaveBeenCalled()
   })
 })

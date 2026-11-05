@@ -1,13 +1,23 @@
-import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined'
-import LogoutIcon from '@mui/icons-material/Logout'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined'
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted'
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined'
+import MenuBookOutlinedIcon from '@mui/icons-material/MenuBookOutlined'
+import PersonAddAltOutlinedIcon from '@mui/icons-material/PersonAddAltOutlined'
 import Alert from '@mui/material/Alert'
 import AppBar from '@mui/material/AppBar'
+import Avatar from '@mui/material/Avatar'
+import Badge from '@mui/material/Badge'
+import BottomNavigation from '@mui/material/BottomNavigation'
+import BottomNavigationAction from '@mui/material/BottomNavigationAction'
 import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import CircularProgress from '@mui/material/CircularProgress'
 import Container from '@mui/material/Container'
 import IconButton from '@mui/material/IconButton'
+import Paper from '@mui/material/Paper'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Toolbar from '@mui/material/Toolbar'
@@ -16,55 +26,114 @@ import Typography from '@mui/material/Typography'
 import type { ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
-import { navFor } from '../lib/access'
-import { HoursPrompt } from './HoursPrompt'
+import { isSettingsPage, navFor } from '../lib/access'
+import { initials } from '../lib/names'
+import { nextStep } from '../lib/setup'
 import { InstallPrompt } from './InstallPrompt'
 import { PasskeyOffer } from './PasskeyOffer'
-import { ThemeToggle } from './ThemeToggle'
+import { SetupProvider, useSetupSteps } from './Setup'
+
+const TAB_ICONS: Record<string, ReactNode> = {
+  '/home': <HomeOutlinedIcon />,
+  '/agenda': <FormatListBulletedIcon />,
+  '/sacrament': <MenuBookOutlinedIcon />,
+  '/appointments': <EventOutlinedIcon />,
+  '/suggest': <PersonAddAltOutlinedIcon />,
+}
+
+type Back = { to: string; label: string }
+
+/** Where the top-left back button goes: wherever sent us here, else Settings for a page opened from it. */
+function backFor(pathname: string, state: unknown): Back | null {
+  const sent = (state as { back?: Back } | null)?.back
+  if (sent) return sent
+  if (pathname !== '/settings' && isSettingsPage(pathname)) return { to: '/settings', label: 'Settings' }
+  return null
+}
 
 export function Layout() {
-  const { roles, templates, office, profile, signOut } = useAuth()
-  const { pathname } = useLocation()
+  return (
+    <SetupProvider>
+      <Shell />
+    </SetupProvider>
+  )
+}
+
+function Shell() {
+  const { roles, templates, office, profile } = useAuth()
+  const { pathname, state } = useLocation()
+  const steps = useSetupSteps()
   const links = navFor(roles, templates, office)
   const current = links.find((l) => pathname === l.to || pathname.startsWith(`${l.to}/`))?.to ?? false
+  const back = backFor(pathname, state)
+  const showTabs = links.length > 1
+  // Offers to install and to turn on Face ID show on the landing page only, not on every page.
+  const landing = pathname === links[0]?.to
+  const pending = !!nextStep(steps)
+  const settingsLabel = pending ? 'Settings (setup not finished)' : 'Settings'
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Toolbar sx={{ gap: 1, flexWrap: 'wrap', minHeight: { xs: 52 } }}>
-          <Tabs
-            value={current}
-            variant="scrollable"
-            scrollButtons={false}
-            aria-label="Main"
-            sx={{ order: { xs: 3, md: 0 }, width: { xs: '100%', md: 'auto' }, flexGrow: { md: 1 }, minHeight: 44 }}
-          >
-            {links.map((l) => (
-              <Tab key={l.to} value={l.to} label={l.label} component={NavLink} to={l.to} sx={{ minHeight: 44 }} />
-            ))}
-          </Tabs>
-          <Typography variant="body2" color="text.secondary" noWrap sx={{ flexGrow: { xs: 1, md: 0 } }}>
-            {profile?.display_name}
-          </Typography>
-          <ThemeToggle />
-          <Tooltip title="Sign-in and notifications">
-            <IconButton color="inherit" aria-label="Sign-in and notifications" component={NavLink} to="/account">
-              <AccountCircleOutlinedIcon />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title="Sign out">
-            <IconButton color="inherit" aria-label="Sign out" onClick={signOut}>
-              <LogoutIcon />
+      <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: 1, borderColor: 'divider', pt: 'env(safe-area-inset-top, 0px)' }}>
+        <Toolbar sx={{ gap: 1, minHeight: { xs: 52 } }}>
+          {back ? (
+            <Button component={NavLink} to={back.to} startIcon={<ChevronLeftIcon />} sx={{ ml: -1.5, fontSize: '1rem', '& .MuiButton-startIcon': { mr: 0 } }}>
+              {back.label}
+            </Button>
+          ) : (
+            <Typography sx={{ fontWeight: 700, display: { md: showTabs ? 'none' : 'block' } }}>Ward Desk</Typography>
+          )}
+          {showTabs && (
+            <Tabs value={current} variant="scrollable" scrollButtons={false} aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, flexGrow: 1, minHeight: 52 }}>
+              {links.map((l) => (
+                <Tab key={l.to} value={l.to} label={l.label} component={NavLink} to={l.to} sx={{ minHeight: 52 }} />
+              ))}
+            </Tabs>
+          )}
+          <Box sx={{ flexGrow: { xs: 1, md: showTabs ? 0 : 1 } }} />
+          <Tooltip title={settingsLabel}>
+            <IconButton component={NavLink} to="/settings" aria-label={settingsLabel} sx={{ mr: -1 }}>
+              <Badge color="error" variant="dot" overlap="circular" invisible={!pending}>
+                <Avatar sx={{ width: 34, height: 34, fontSize: '0.875rem', fontWeight: 700, bgcolor: pathname === '/settings' ? 'primary.main' : 'secondary.main', color: 'primary.contrastText' }}>
+                  {initials(profile?.display_name)}
+                </Avatar>
+              </Badge>
             </IconButton>
           </Tooltip>
         </Toolbar>
       </AppBar>
-      <Container maxWidth="md" sx={{ py: 2 }}>
-        <HoursPrompt />
-        <InstallPrompt />
-        <PasskeyOffer />
+      <Container maxWidth="md" sx={{ pt: 2, pb: showTabs ? { xs: 'calc(88px + env(safe-area-inset-bottom, 0px))', md: 4 } : 4 }}>
+        {landing && (
+          <>
+            <InstallPrompt />
+            <PasskeyOffer />
+          </>
+        )}
         <Outlet />
       </Container>
+      {showTabs && (
+        <Paper
+          component="nav"
+          aria-label="Main"
+          elevation={0}
+          square
+          sx={{ display: { md: 'none' }, position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 'appBar', borderTop: 1, borderColor: 'divider', pb: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          <BottomNavigation showLabels value={current} sx={{ height: 60, bgcolor: 'transparent' }}>
+            {links.map((l) => (
+              <BottomNavigationAction
+                key={l.to}
+                value={l.to}
+                label={l.label}
+                icon={TAB_ICONS[l.to]}
+                component={NavLink}
+                to={l.to}
+                sx={{ minWidth: 0, px: 0.5, '& .MuiBottomNavigationAction-label': { fontSize: '0.75rem', whiteSpace: 'nowrap' }, '& .MuiBottomNavigationAction-label.Mui-selected': { fontSize: '0.75rem' } }}
+              />
+            ))}
+          </BottomNavigation>
+        </Paper>
+      )}
     </Box>
   )
 }

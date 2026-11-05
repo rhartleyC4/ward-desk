@@ -12,7 +12,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { personLabel } from '../lib/agenda'
-import { appointmentPurpose, defaultSecretaryFor, leadersScheduledBy, schedulersFrom, soleScheduler, splitAppointments, toInputs, toTimestamp, whenLabel, withDefaultSecretary } from '../lib/appointments'
+import { appointmentPurpose, defaultSecretaryFor, leadersScheduledBy, schedulersFrom, splitAppointments, toInputs, toTimestamp, whenLabel, withDefaultSecretary } from '../lib/appointments'
 import type { Enums } from '../lib/database.types'
 import type { Appointment, AppointmentsData } from '../lib/queries'
 import { nativeSelect } from '../theme'
@@ -157,9 +157,10 @@ function AddAppointment({ data, onAdd }: { data: AppointmentsData; onAdd: Appoin
   )
 }
 
-function WhoSchedules({ data, onChange }: { data: AppointmentsData; onChange: AppointmentsActions['setSecretary'] }) {
+/** Which secretaries schedule for each leader. */
+export function WhoSchedules({ data, onChange }: { data: AppointmentsData; onChange: AppointmentsActions['setSecretary'] }) {
   const schedulers = schedulersFrom(data.secretaries, data.assignments)
-  if (!schedulers.length) return <Muted>No executive secretaries yet. An admin sets each person's office on the Access page.</Muted>
+  if (!schedulers.length) return <Muted>No executive secretaries yet. An admin sets each person's office in Settings, under Who can sign in.</Muted>
   return (
     <Stack divider={<Divider flexItem />} spacing={1.5}>
       {data.bishopric.map((leader) => {
@@ -199,14 +200,11 @@ export function AppointmentsView({
   userId,
   actions,
   timeZone,
-  canAssign,
 }: {
   data: AppointmentsData
   userId: string
   actions: AppointmentsActions
   timeZone: string
-  /** May change who schedules for whom. */
-  canAssign: boolean
 }) {
   const mine = leadersScheduledBy(userId, withDefaultSecretary(data.assignments, data.bishopric.map((l) => l.id), data.secretaries))
   const [scope, setScope] = useState<'mine' | 'all'>(mine.length ? 'mine' : 'all')
@@ -254,11 +252,6 @@ export function AppointmentsView({
         <AddAppointment data={data} onAdd={actions.add} />
       </SectionCard>
 
-      {canAssign && !soleScheduler(data.assignments, data.secretaries) && (
-        <SectionCard title="Who schedules for whom">
-          <WhoSchedules data={data} onChange={actions.setSecretary} />
-        </SectionCard>
-      )}
     </>
   )
 }

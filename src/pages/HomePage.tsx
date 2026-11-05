@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { BishopricHome, type BishopricHomeActions } from '../components/BishopricHome'
 import { ErrorNote, Loading } from '../components/Layout'
+import { SetupCard } from '../components/Setup'
 import { DAYS_AHEAD, SecretaryHome, type SecretaryHomeActions } from '../components/SecretaryHome'
 import { hasSecretaryHome } from '../lib/access'
 import { WEEK_AHEAD } from '../lib/bishopricHome'
@@ -47,6 +48,7 @@ function BishopricHomePage() {
   return (
     <>
       <ErrorNote error={save.error} />
+      <SetupCard />
       <BishopricHome data={data} userId={userId} today={today} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
     </>
   )
@@ -83,15 +85,13 @@ function SecretaryHomePage() {
     complete: (id) => void run(() => q.updateAppointment(supabase, id, { status: 'completed' })),
     offer: (id, times) => void run(() => q.markOffered(supabase, id, times)),
     setYouth: (id, isYouth, parentName) => void run(() => q.updateAppointment(supabase, id, { is_youth: isYouth, parent_name: parentName })),
-    saveTemplate: (t) => run(() => q.saveTemplate(supabase, t)),
-    deleteTemplate: (id) => void run(() => q.deleteTemplate(supabase, id)),
     release: (id) => void run(() => q.releaseOffered(supabase, id)),
-    setUsualLength: (purpose, minutes) => void run(() => q.setUsualLength(supabase, purpose, minutes)),
   }
 
   return (
     <>
       <ErrorNote error={save.error} />
+      <SetupCard />
       <SecretaryHome data={data} userId={profile?.id ?? ''} myName={profile?.display_name ?? ''} today={today} now={now} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
     </>
   )
