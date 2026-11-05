@@ -87,13 +87,13 @@ insert into public.recurring_events (title, weekday, week_of_month, start_time, 
   ('Ministering nights or interviews', 3, null, null, null),
   ('Interviews', 4, null, null, null);
 
-insert into public.rotations (title, assignee_id, assignee_label, months) values
-  ('PPI: Elders Quorum President', null, 'EQ President', '{2,6,10}'),
-  ('PPI: Relief Society President', null, 'RS President', '{1,4,8}'),
-  ('PPI: Young Women President', null, 'YW President', '{3,7,11}'),
-  ('Primary message (3rd Sunday)', '00000000-0000-0000-0000-00000000000b', null, '{1,4,7,10}'),
-  ('Primary message (3rd Sunday)', '00000000-0000-0000-0000-000000000001', null, '{3,6,9,12}'),
-  ('Primary message (3rd Sunday)', '00000000-0000-0000-0000-000000000002', null, '{2,5,8,11}');
+insert into public.rotations (title, assignee_id, assignee_label, months, weekday, week_of_month) values
+  ('PPI: Elders Quorum President', null, 'EQ President', '{2,6,10}', null, null),
+  ('PPI: Relief Society President', null, 'RS President', '{1,4,8}', null, null),
+  ('PPI: Young Women President', null, 'YW President', '{3,7,11}', null, null),
+  ('Primary message', '00000000-0000-0000-0000-00000000000b', null, '{1,4,7,10}', 0, 3),
+  ('Primary message', '00000000-0000-0000-0000-000000000001', null, '{3,6,9,12}', 0, 3),
+  ('Primary message', '00000000-0000-0000-0000-000000000002', null, '{2,5,8,11}', 0, 3);
 
 insert into public.stewardships (user_id, area) values
   ('00000000-0000-0000-0000-00000000000b', 'Relief Society'),

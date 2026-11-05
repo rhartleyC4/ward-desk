@@ -113,7 +113,7 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
       { id: 'r1', title: 'Bishopric meeting', weekday: 0, week_of_month: null, start_time: '08:30:00', notes: null, created_at: ts },
       { id: 'r2', title: 'Welfare', weekday: 0, week_of_month: 1, start_time: '09:15:00', notes: null, created_at: ts },
     ],
-    rotations: [{ id: 'ro1', title: 'PPI: YW President', assignee_id: null, assignee_label: 'YW President', months: [3, 7, 11], notes: null, created_at: ts }],
+    rotations: [{ id: 'ro1', title: 'PPI: YW President', assignee_id: null, assignee_label: 'YW President', months: [3, 7, 11], weekday: null, week_of_month: null, notes: null, created_at: ts }],
     stewardships: [],
     profiles,
     bishopric: profiles,

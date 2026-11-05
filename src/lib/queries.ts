@@ -210,10 +210,46 @@ export async function deleteAbsence(client: Client, id: string) {
 export async function loadSchedule(client: Client) {
   const [events, rotations, stewardships] = await Promise.all([
     client.from('recurring_events').select('*').order('weekday').order('week_of_month').order('start_time'),
-    client.from('rotations').select('*').order('title'),
+    client.from('rotations').select('*').order('title').order('created_at'),
     client.from('stewardships').select('*').order('area'),
   ])
   return { events: must(events), rotations: must(rotations), stewardships: must(stewardships) }
+}
+
+export type StandingEvent = Tables<'recurring_events'>
+export type StandingRotation = Tables<'rotations'>
+export type EventDraft = Pick<StandingEvent, 'title' | 'weekday' | 'week_of_month' | 'start_time'>
+export type RotationDraft = Pick<StandingRotation, 'title' | 'months' | 'assignee_id' | 'assignee_label' | 'weekday' | 'week_of_month'>
+
+/** Every rotation, for Home and the day-ahead summary. */
+export async function loadRotations(client: Client): Promise<StandingRotation[]> {
+  return must(await client.from('rotations').select('*').order('title').order('created_at'))
+}
+
+/** Adds a regular meeting, or changes one when `id` is given. */
+export async function saveEvent(client: Client, event: EventDraft, id?: string) {
+  check(id ? await client.from('recurring_events').update(event).eq('id', id) : await client.from('recurring_events').insert(event))
+}
+
+export async function deleteEvent(client: Client, id: string) {
+  check(await client.from('recurring_events').delete().eq('id', id))
+}
+
+/** Adds a rotation, or changes one when `id` is given. */
+export async function saveRotation(client: Client, rotation: RotationDraft, id?: string) {
+  check(id ? await client.from('rotations').update(rotation).eq('id', id) : await client.from('rotations').insert(rotation))
+}
+
+export async function deleteRotation(client: Client, id: string) {
+  check(await client.from('rotations').delete().eq('id', id))
+}
+
+export async function addStewardship(client: Client, userId: string, area: string) {
+  check(await client.from('stewardships').insert({ user_id: userId, area: area.trim() }))
+}
+
+export async function deleteStewardship(client: Client, id: string) {
+  check(await client.from('stewardships').delete().eq('id', id))
 }
 
 // ---------------------------------------------------------------------------

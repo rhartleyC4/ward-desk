@@ -32,7 +32,7 @@ import {
 } from '../lib/agenda'
 import { longDate, type IsoDate } from '../lib/dates'
 import type { AgendaData, AgendaSection, AgendaTemplate } from '../lib/queries'
-import { awayOn, eventsOn, formatTime, rotationsDue } from '../lib/schedule'
+import { awayOn, eventsOn, formatTime, rotationDayLabel, rotationsDue } from '../lib/schedule'
 import { CallingsManager, type CallingsActions } from './CallingsManager'
 import { Muted, SectionCard } from './Layout'
 
@@ -225,7 +225,11 @@ function Section({
 }) {
   const who = (id: string | null) => personLabel(id, data.profiles) || 'Unassigned'
   const rotations = rotationsDue(date, data.rotations)
-  const rotationLine = (r: (typeof rotations)[number]) => (r.assignee_id ? `${r.title} — ${who(r.assignee_id)}` : r.assignee_label ? `${r.title} — ${r.assignee_label}` : r.title)
+  const rotationLine = (r: (typeof rotations)[number]) => {
+    const title = rotationDayLabel(r) ? `${r.title} (${rotationDayLabel(r)})` : r.title
+    const person = r.assignee_id ? who(r.assignee_id) : r.assignee_label
+    return person ? `${title} — ${person}` : title
+  }
 
   switch (section.kind) {
     case 'items':

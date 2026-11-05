@@ -467,14 +467,14 @@ isOneToOne: false
                   ]
                 },"rotations": {
                   Row: {
-                    "assignee_id": string | null,"assignee_label": string | null,"created_at": string,"id": string,"months": (number)[],"notes": string | null,"title": string
+                    "assignee_id": string | null,"assignee_label": string | null,"created_at": string,"id": string,"months": (number)[],"notes": string | null,"title": string,"week_of_month": number | null,"weekday": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "assignee_id"?: string | null,"assignee_label"?: string | null,"created_at"?: string,"id"?: string,"months": (number)[],"notes"?: string | null,"title": string
+                    "assignee_id"?: string | null,"assignee_label"?: string | null,"created_at"?: string,"id"?: string,"months": (number)[],"notes"?: string | null,"title": string,"week_of_month"?: number | null,"weekday"?: number | null
                   }
                   Update: {
-                    "assignee_id"?: string | null,"assignee_label"?: string | null,"created_at"?: string,"id"?: string,"months"?: (number)[],"notes"?: string | null,"title"?: string
+                    "assignee_id"?: string | null,"assignee_label"?: string | null,"created_at"?: string,"id"?: string,"months"?: (number)[],"notes"?: string | null,"title"?: string,"week_of_month"?: number | null,"weekday"?: number | null
                   }
                   Relationships: [
                     {

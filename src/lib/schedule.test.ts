@@ -9,7 +9,12 @@ import {
   meetsOn,
   nextMeeting,
   previousMeeting,
+  myRotationsThisMonth,
+  reminds,
+  rotationDateIn,
+  rotationDayLabel,
   rotationsDue,
+  rotationsOn,
   type Absence,
   type MeetingPattern,
   type RecurringEvent,
@@ -41,15 +46,56 @@ describe('eventsOn', () => {
 })
 
 describe('rotationsDue', () => {
-  const rotations: Rotation[] = [
-    { title: 'PPI: EQ President', months: [2, 6, 10], assignee_id: null, assignee_label: 'EQ President' },
-    { title: 'PPI: YW President', months: [3, 7, 11], assignee_id: null, assignee_label: 'YW President' },
-    { title: 'Primary message', months: [2, 5, 8, 11], assignee_id: 'u2', assignee_label: null },
-  ]
-
   it('returns rotations scheduled for the month', () => {
-    expect(rotationsDue('2026-11-15', rotations).map((r) => r.title)).toEqual(['PPI: YW President', 'Primary message'])
+    expect(rotationsDue('2026-11-15', rotations).map((r) => r.title)).toEqual(['PPI: YW President', 'Primary message', 'Fifth Sunday talk'])
     expect(rotationsDue('2026-01-04', rotations)).toEqual([])
+  })
+})
+
+const anyDay = { weekday: null, week_of_month: null }
+const rotations: Rotation[] = [
+  { title: 'PPI: EQ President', months: [2, 6, 10], assignee_id: null, assignee_label: 'EQ President', ...anyDay },
+  { title: 'PPI: YW President', months: [3, 7, 11], assignee_id: null, assignee_label: 'YW President', ...anyDay },
+  { title: 'Primary message', months: [2, 5, 8, 11], assignee_id: 'u2', assignee_label: null, weekday: 0, week_of_month: 3 },
+  { title: 'Fifth Sunday talk', months: [11, 12], assignee_id: 'u1', assignee_label: null, weekday: 0, week_of_month: 5 },
+]
+
+describe('rotations with a set day', () => {
+  it('fall on that day in their months only', () => {
+    expect(rotationsOn('2026-11-15', rotations).map((r) => r.title)).toEqual(['Primary message']) // 3rd Sunday
+    expect(rotationsOn('2026-11-08', rotations)).toEqual([])
+    expect(rotationsOn('2026-12-20', rotations)).toEqual([]) // 3rd Sunday, but not a Primary month
+    expect(rotationsOn('2026-11-29', rotations).map((r) => r.title)).toEqual(['Fifth Sunday talk'])
+  })
+
+  it('finds the date in a month, or none when that day does not exist', () => {
+    expect(rotationDateIn('2026-11-02', rotations[2])).toBe('2026-11-15')
+    expect(rotationDateIn('2026-11-02', rotations[3])).toBe('2026-11-29')
+    expect(rotationDateIn('2026-12-02', rotations[3])).toBeUndefined() // December 2026 has four Sundays
+    expect(rotationDateIn('2026-12-02', rotations[2])).toBeUndefined() // not due
+    expect(rotationDateIn('2026-11-02', rotations[0])).toBeUndefined() // no set day
+  })
+
+  it('label the day', () => {
+    expect(rotationDayLabel(rotations[2])).toBe('3rd Sunday')
+    expect(rotationDayLabel(rotations[0])).toBe('')
+  })
+})
+
+describe('who a rotation reminds', () => {
+  it('is its assignee, or the whole bishopric when it names someone outside the app', () => {
+    expect(reminds(rotations[2], 'u2')).toBe(true)
+    expect(reminds(rotations[2], 'u1')).toBe(false)
+    expect(reminds(rotations[1], 'u1')).toBe(true)
+  })
+
+  it("lists a person's month: dated ones by date, then any-time ones", () => {
+    expect(myRotationsThisMonth('u2', '2026-11-20', rotations)).toEqual([
+      { rotation: rotations[2], date: '2026-11-15' },
+      { rotation: rotations[1] },
+    ])
+    expect(myRotationsThisMonth('u1', '2026-11-20', rotations).map((r) => r.rotation.title)).toEqual(['Fifth Sunday talk', 'PPI: YW President'])
+    expect(myRotationsThisMonth('u1', '2026-01-20', rotations)).toEqual([])
   })
 })
 
