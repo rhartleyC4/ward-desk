@@ -177,7 +177,7 @@ The deploy job refuses any `production` commit that isn't already on `main`. Eac
 1. **Supabase:** create `ward-desk-staging` and `ward-desk-prod` in the same region. Leave Data API and "Automatically expose new tables" on, since the migrations rely on the default grants, and turn on automatic RLS. For each project, note the project ref and anon (publishable) key. Also copy the **Session pooler** connection string (Connect, in the top bar) with the database password filled in. Percent-encode any symbols in the password, or use a password that's letters and digits only. Don't use the direct connection, because on the free plan it's IPv6-only and GitHub's runners can't reach it. No Supabase access token is needed: it would grant access to every project you own.
 2. **Supabase Auth**, in each project:
    - Under URL Configuration, set the site URL to that environment's URL and add it to the redirect URLs.
-   - Under Emails → SMTP Settings, connect Resend. The built-in sender only reaches project team members. In Resend, add the domain `gp7.warddesk.app` and let it auto-configure the Cloudflare DNS records. Then either use Integrations → Supabase, or enter host `smtp.resend.com`, port `465`, username `resend`, and a sending-only API key (one key per project) with sender `noreply@warddesk.app`.
+   - Under Emails → SMTP Settings, connect Resend. The built-in sender only reaches project team members. In Resend, add the domain `warddesk.app` and let it auto-configure the Cloudflare DNS records. Then either use Integrations → Supabase, or enter host `smtp.resend.com`, port `465`, username `resend`, and a sending-only API key (one key per project) with sender `noreply@warddesk.app`.
    - Under Emails → Templates, keep the email wording generic, with no names.
    - Google sign-in is optional and can wait. See "Google sign-in" below.
 3. **Cloudflare Pages:** create two Direct Upload projects:
@@ -210,8 +210,8 @@ Optional. Email links work without it, but Google sign-in means most people neve
 1. **Google Cloud project:** at console.cloud.google.com, create a project named `Ward Desk` while signed in with a personal `@gmail.com` account, so the project has "No organization". Don't use a Workspace account (such as one on warddesk.app), because the project would land inside that domain's organization, which can block adding outside owners. No billing account is needed. Add a second Owner early (IAM → Grant access → role Owner) so access doesn't depend on one person.
 2. **Branding and audience** (Google Auth Platform, formerly "OAuth consent screen"):
    - App name `Ward Desk`, with your support and developer contact email.
-   - Audience **External**, since ward members use their own Google accounts, not warddesk.app ones.
-   - Authorized domains: `warddesk.app` and `supabase.co`.
+   - Audience **External**, since ward members use their own Google accounts, not ones from a Workspace domain.
+   - Authorized domains: `warddesk.app` and `supabase.co`. Google may ask you to verify `warddesk.app` in Google Search Console; add the TXT record it gives you in Cloudflare DNS.
    - Data access: only `openid`, `.../auth/userinfo.email` and `.../auth/userinfo.profile`. These basic scopes don't need Google's app verification.
    - **Publish the app** (Audience → Publish app). While it is in "Testing", only listed test users can sign in, and their sign-ins expire after 7 days.
 3. **OAuth client** (Clients → Create client → Web application):
@@ -273,7 +273,7 @@ Do these in order when passing the app to a successor:
 3. Add them as Owner on the **Google Cloud** project (IAM → Grant access) and have them accept. Change the consent screen's support and developer contact email to theirs, then remove yourself. Or have them create new OAuth credentials and update Supabase Auth
 4. Transfer the **Cloudflare** Pages projects and the **GitHub** repo
 5. Invite them to the **Resend** team (Settings → Team) and make them owner
-6. Move the **domain**. `gp7.warddesk.app` and `gp7-training.warddesk.app` live on a personal domain, so either keep those DNS records in place for them or point the Pages projects and Resend at a domain they control. Then update each Supabase project's site URL and redirect URLs, the SMTP sender, and the Google OAuth origins
+6. Transfer the **domain** `warddesk.app` to the successor's Cloudflare account (Domain Registration → Transfer, or move the zone with the Pages projects). Its DNS records for the Pages sites and Resend move with it, so nothing else needs updating
 7. Hand over secrets securely (password manager, not email or chat)
 8. Confirm the successor can sign in, see the right data, and receive a test notification and sign-in email
 9. Remove your own admin access once they confirm
