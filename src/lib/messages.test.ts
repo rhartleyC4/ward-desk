@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { audienceFor, emailLink, emailSubject, fillTemplate, firstName, lengthWords, smsLink, templatesFor, unknownVariables, type MessageTemplate } from './messages'
+import { addressName, addressOptions, audienceFor, emailLink, emailSubject, fillTemplate, firstName, insertAt, usesVariable, lengthWords, smsLink, templatesFor, unknownVariables, type MessageTemplate } from './messages'
 
 const OFFER = 'Hi {first_name}, {leader} would like to meet with you for about {length}. Would one of these times work?\n{times}\nThanks, {my_name}'
 
@@ -10,6 +10,44 @@ describe('firstName', () => {
     expect(firstName('Sister Nash')).toBe('Sister Nash')
     expect(firstName('bro. Vale')).toBe('bro. Vale')
     expect(firstName('')).toBe('')
+  })
+})
+
+describe('addressName', () => {
+  it('uses the first name, or Sister or Brother with the last name', () => {
+    expect(addressName('Mary Reyes')).toBe('Mary')
+    expect(addressName('Mary Reyes', 'sister')).toBe('Sister Reyes')
+    expect(addressName(' Jordan  Lee  Pike ', 'brother')).toBe('Brother Pike')
+  })
+
+  it('keeps a title that was entered with the name', () => {
+    expect(addressName('Sister Nash', 'brother')).toBe('Sister Nash')
+    expect(addressName('', 'sister')).toBe('')
+  })
+})
+
+describe('addressOptions', () => {
+  it('offers each way to address someone, labelled with how it reads', () => {
+    expect(addressOptions('Mary Reyes').map((o) => o.label)).toEqual(['Mary', 'Sister Reyes', 'Brother Reyes'])
+  })
+
+  it('offers nothing when the title is already entered or there is no name', () => {
+    expect(addressOptions('Brother Hale')).toEqual([])
+    expect(addressOptions('  ')).toEqual([])
+  })
+})
+
+describe('usesVariable', () => {
+  it('finds a variable in a template', () => {
+    expect(usesVariable('Hi {first_name}', 'first_name')).toBe(true)
+    expect(usesVariable('Hi {name}', 'first_name')).toBe(false)
+  })
+})
+
+describe('insertAt', () => {
+  it('puts a variable at the cursor or over the selection', () => {
+    expect(insertAt('Hi ,', 3, 3, '{first_name}')).toEqual({ body: 'Hi {first_name},', cursor: 15 })
+    expect(insertAt('Hi you,', 3, 6, '{name}')).toEqual({ body: 'Hi {name},', cursor: 9 })
   })
 })
 
@@ -34,6 +72,10 @@ describe('fillTemplate', () => {
     expect(text).toBe(
       'Hi Jordan, Bishop Avery would like to meet with you for about 10 minutes. Would one of these times work?\n• Sun, November 8th at 9:10 AM\n• Wed, November 11th at 7 PM\nThanks, Brother Quinn',
     )
+  })
+
+  it('addresses the person as picked', () => {
+    expect(fillTemplate('Hi {first_name}', { name: 'Mary Reyes', leader: '', minutes: 5, myName: '', address: 'sister' })).toBe('Hi Sister Reyes')
   })
 
   it('fills a confirmation with the time booked', () => {

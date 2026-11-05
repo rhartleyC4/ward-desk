@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import { agendaData, profiles } from '../test/fixtures'
-import { TemplatesEditor } from './Messages'
+import { MessagePanel, TemplatesEditor } from './Messages'
 import { SecretaryHome, UsualLengths, type SecretaryHomeActions, type SecretaryHomeData } from './SecretaryHome'
 
 const TZ = 'America/Denver'
@@ -219,6 +219,38 @@ describe('SecretaryHome', () => {
     expect(within(form).getByText(/Not a variable: \{frist_name\}/)).toBeInTheDocument()
     await userEvent.click(within(form).getByRole('button', { name: 'Save' }))
     expect(onSave).toHaveBeenCalledWith({ name: 'Short', kind: 'offer', audience: 'member', body: 'Hi {frist_name}' })
+  })
+
+  it('lets the secretary address someone entered as "First Last" by first name, Sister or Brother', async () => {
+    const templates = [{ id: 't', name: 'Confirm', kind: 'confirm' as const, audience: 'member' as const, body: 'Hi {first_name}, see you {time}.' }]
+    render(<MessagePanel kind="confirm" audience="member" templates={templates} values={{ name: 'Mary Reyes', leader: 'Bishop Avery', minutes: 10, myName: 'Q', time: 'Sunday' }} />)
+    expect(screen.getByLabelText('Message')).toHaveValue('Hi Mary, see you Sunday.')
+    await userEvent.click(screen.getByRole('button', { name: 'Sister Reyes' }))
+    expect(screen.getByLabelText('Message')).toHaveValue('Hi Sister Reyes, see you Sunday.')
+    await userEvent.click(screen.getByRole('button', { name: 'Brother Reyes' }))
+    expect(screen.getByLabelText('Message')).toHaveValue('Hi Brother Reyes, see you Sunday.')
+  })
+
+  it('skips the address choice when the name was entered with a title', () => {
+    const templates = [{ id: 't', name: 'Confirm', kind: 'confirm' as const, audience: 'member' as const, body: 'Hi {first_name}' }]
+    render(<MessagePanel kind="confirm" audience="member" templates={templates} values={{ name: 'Brother Hale', leader: '', minutes: 10, myName: '' }} />)
+    expect(screen.queryByText('Address as')).not.toBeInTheDocument()
+  })
+
+  it('puts a tapped variable where the cursor is and previews the message', async () => {
+    const onSave = vi.fn().mockResolvedValue(true)
+    render(<TemplatesEditor templates={[]} onSave={onSave} onDelete={vi.fn()} busy={false} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Add a template' }))
+    const form = screen.getByRole('form', { name: 'New template' })
+    const text = within(form).getByLabelText('Text')
+    await userEvent.type(text, 'Hi , thanks')
+    ;(text as HTMLTextAreaElement).setSelectionRange(3, 3)
+    await userEvent.click(within(form).getByRole('button', { name: 'Add {first_name}' }))
+    expect(text).toHaveValue('Hi {first_name}, thanks')
+    const preview = within(form).getByRole('region', { name: 'Preview' })
+    expect(within(preview).getByTestId('template-preview')).toHaveTextContent('Hi Mary, thanks')
+    await userEvent.click(within(preview).getByRole('button', { name: 'Sister Reyes' }))
+    expect(within(preview).getByTestId('template-preview')).toHaveTextContent('Hi Sister Reyes, thanks')
   })
 
   it('keeps a temple recommend interview at 10 minutes or more', async () => {

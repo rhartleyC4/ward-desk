@@ -4,15 +4,66 @@ import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined'
 import SmsOutlinedIcon from '@mui/icons-material/SmsOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import Typography from '@mui/material/Typography'
-import { useRef, useState, type FormEvent } from 'react'
-import { AUDIENCE_LABELS, CHOICE_HELP, emailLink, emailSubject, fillTemplate, KIND_LABELS, smsLink, templatesFor, unknownVariables, VARIABLES, type MessageAudience, type MessageKind, type MessageTemplate, type MessageValues } from '../lib/messages'
+import { useId, useLayoutEffect, useRef, useState, type FormEvent } from 'react'
+import {
+  addressOptions,
+  AUDIENCE_LABELS,
+  CHOICE_HELP,
+  emailLink,
+  emailSubject,
+  fillTemplate,
+  insertAt,
+  KIND_LABELS,
+  SAMPLE_VALUES,
+  smsLink,
+  templatesFor,
+  unknownVariables,
+  usesVariable,
+  VARIABLES,
+  type Address,
+  type MessageAudience,
+  type MessageKind,
+  type MessageTemplate,
+  type MessageValues,
+} from '../lib/messages'
 import { nativeSelect } from '../theme'
 import { Muted } from './Layout'
+
+/** "Mary · Sister Reyes · Brother Reyes": how {first_name} addresses the person. */
+function AddressPicker({ name, value, onChange }: { name: string; value: Address; onChange: (a: Address) => void }) {
+  const options = addressOptions(name)
+  const labelId = useId()
+  if (!options.length) return null
+  return (
+    <Box sx={{ mb: 1.5 }}>
+      <Typography variant="body2" color="text.secondary" id={labelId} sx={{ mb: 0.5 }}>
+        Address as
+      </Typography>
+      <ToggleButtonGroup
+        size="small"
+        exclusive
+        aria-labelledby={labelId}
+        value={value}
+        onChange={(_, a: Address | null) => a && onChange(a)}
+        sx={{ flexWrap: 'wrap' }}
+      >
+        {options.map((o) => (
+          <ToggleButton key={o.value} value={o.value} sx={{ textTransform: 'none' }}>
+            {o.label}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+    </Box>
+  )
+}
 
 /**
  * A message filled in from a template, ready to copy or open in the phone's messaging or mail app. The
@@ -38,6 +89,7 @@ export function MessagePanel({
   const [draft, setDraft] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
+  const [address, setAddress] = useState<Address>('first')
   const field = useRef<HTMLTextAreaElement>(null)
   const template = options.find((t) => t.id === templateId) ?? options[0]
 
@@ -48,7 +100,7 @@ export function MessagePanel({
       </Muted>
     )
 
-  const text = draft ?? fillTemplate(template.body, values)
+  const text = draft ?? fillTemplate(template.body, { ...values, address })
 
   const copy = async () => {
     try {
@@ -87,6 +139,17 @@ export function MessagePanel({
           ))}
         </TextField>
       )}
+      {usesVariable(template.body, 'first_name') && (
+        <AddressPicker
+          name={values.name}
+          value={address}
+          onChange={(a) => {
+            setAddress(a)
+            setDraft(null)
+            setCopied(false)
+          }}
+        />
+      )}
       <TextField
         label="Message"
         multiline
@@ -123,8 +186,31 @@ type TemplateDraft = { id?: string; name: string; kind: MessageKind; audience: M
 function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDraft; onSave: (t: TemplateDraft) => Promise<boolean>; onCancel: () => void; busy: boolean }) {
   const [form, setForm] = useState(initial)
   const [error, setError] = useState<string | null>(null)
+  const [previewAddress, setPreviewAddress] = useState<Address>('first')
+  const body = useRef<HTMLTextAreaElement>(null)
+  // Until the text has been clicked into, variables go at the end rather than the browser's default spot.
+  const touched = useRef(false)
+  // Where the cursor goes after a variable is put in, set once React has rendered the new text.
+  const cursor = useRef<number | null>(null)
   const unknown = unknownVariables(form.body)
   const usable = VARIABLES.filter((v) => v.kinds.includes(form.kind) && (!v.parentOnly || form.audience === 'parent'))
+  const sample = { ...SAMPLE_VALUES, address: previewAddress, ...(form.kind === 'offer' ? { time: undefined } : { times: undefined }) }
+
+  useLayoutEffect(() => {
+    if (cursor.current === null || !body.current) return
+    body.current.focus()
+    body.current.setSelectionRange(cursor.current, cursor.current)
+    cursor.current = null
+  })
+
+  /** Puts a variable where the cursor is in the text, or at the end if the text hasn't been clicked yet. */
+  const insert = (text: string) => {
+    const el = body.current
+    const [start, end] = el && touched.current ? [el.selectionStart, el.selectionEnd] : [form.body.length, form.body.length]
+    const next = insertAt(form.body, start, end, text)
+    cursor.current = next.cursor
+    setForm({ ...form, body: next.body })
+  }
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -146,24 +232,73 @@ function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDr
           <option value="parent">{AUDIENCE_LABELS.parent}</option>
         </TextField>
       </Stack>
-      <TextField label="Text" multiline minRows={4} value={form.body} onChange={(e) => setForm({ ...form, body: e.target.value })} sx={{ mt: 1.5 }} />
-      <Box sx={{ mt: 1 }}>
+      <TextField
+        label="Text"
+        multiline
+        minRows={4}
+        value={form.body}
+        inputRef={body}
+        onChange={(e) => setForm({ ...form, body: e.target.value })}
+        onFocus={() => (touched.current = true)}
+        sx={{ mt: 1.5 }}
+      />
+
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5, mb: 0.5 }}>
+        Tap to add where the cursor is:
+      </Typography>
+      <Stack spacing={0.75} role="list" aria-label="Variables">
         {usable.map((v) => (
-          <Typography key={v.name} variant="body2" color="text.secondary">
-            <Box component="code" sx={{ color: 'text.primary' }}>{`{${v.name}}`}</Box> {v.meaning}
-          </Typography>
+          <Stack key={v.name} direction="row" role="listitem" sx={{ alignItems: 'baseline', gap: 1 }}>
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`{${v.name}}`}
+              aria-label={`Add {${v.name}}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => insert(`{${v.name}}`)}
+              sx={{ fontFamily: 'monospace', flexShrink: 0 }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              {v.meaning}
+            </Typography>
+          </Stack>
         ))}
-      </Box>
-      {form.kind === 'offer' && (
-        <Typography variant="body2" color="text.secondary">
-          <Box component="code" sx={{ color: 'text.primary' }}>{CHOICE_HELP.example}</Box> {CHOICE_HELP.meaning}
-        </Typography>
-      )}
+        {form.kind === 'offer' && (
+          <Stack direction="row" role="listitem" sx={{ alignItems: 'baseline', gap: 1 }}>
+            <Chip
+              size="small"
+              variant="outlined"
+              label={CHOICE_HELP.example}
+              aria-label={`Add ${CHOICE_HELP.example}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => insert(CHOICE_HELP.example)}
+              sx={{ fontFamily: 'monospace', flexShrink: 0 }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              {CHOICE_HELP.meaning}
+            </Typography>
+          </Stack>
+        )}
+      </Stack>
+
       {unknown.length > 0 && (
         <Typography variant="body2" color="warning.main" sx={{ mt: 1 }}>
           Not a variable: {unknown.map((u) => `{${u}}`).join(', ')}. It will be sent as typed.
         </Typography>
       )}
+
+      {form.body.trim() && (
+        <Box component="section" aria-label="Preview" sx={{ mt: 2, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Preview, for a made-up {form.audience === 'parent' ? 'youth' : 'person'} entered as "{SAMPLE_VALUES.name}"
+          </Typography>
+          {usesVariable(form.body, 'first_name') && <AddressPicker name={SAMPLE_VALUES.name} value={previewAddress} onChange={setPreviewAddress} />}
+          <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }} data-testid="template-preview">
+            {fillTemplate(form.body, sample)}
+          </Typography>
+        </Box>
+      )}
+
       {error && (
         <Typography variant="body2" color="error" sx={{ mt: 1 }}>
           {error}

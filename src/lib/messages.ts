@@ -12,7 +12,7 @@ export const AUDIENCE_LABELS: Record<MessageAudience, string> = { member: 'To th
 
 /** The variables a template can use, with what each becomes. */
 export const VARIABLES: { name: string; meaning: string; kinds: MessageKind[]; parentOnly?: boolean }[] = [
-  { name: 'first_name', meaning: 'First name, or "Sister Nash" when that is how the name was entered (the youth\'s, in a message to a parent)', kinds: ['offer', 'confirm'] },
+  { name: 'first_name', meaning: 'What to call them: "Mary", or "Sister Reyes" or "Brother Reyes" when you pick that before sending (the youth\'s name, in a message to a parent)', kinds: ['offer', 'confirm'] },
   { name: 'parent_name', meaning: 'The parent\'s name, like "Sister Quinn"', kinds: ['offer', 'confirm'], parentOnly: true },
   { name: 'name', meaning: 'Full name as entered', kinds: ['offer', 'confirm'] },
   { name: 'leader', meaning: 'Who they meet with, like "Bishop Avery"', kinds: ['offer', 'confirm'] },
@@ -22,16 +22,43 @@ export const VARIABLES: { name: string; meaning: string; kinds: MessageKind[]; p
   { name: 'my_name', meaning: 'Your name', kinds: ['offer', 'confirm'] },
 ]
 
-export type MessageValues = { name: string; leader: string; minutes: number; myName: string; times?: string[]; time?: string; parentName?: string | null }
+/** How {first_name} addresses someone: by first name, or as Sister or Brother with the last name. */
+export type Address = 'first' | 'sister' | 'brother'
+
+export type MessageValues = { name: string; leader: string; minutes: number; myName: string; times?: string[]; time?: string; parentName?: string | null; address?: Address }
 
 /** Names entered with a title ("Sister Nash") keep it, since a bare "Sister" would read oddly. */
 const TITLES = ['brother', 'sister', 'bro', 'bro.', 'sis', 'sis.', 'elder', 'bishop', 'president']
 
+const words = (name: string) => name.trim().split(/\s+/).filter(Boolean)
+
+/** True when the name was entered with a title, like "Sister Nash", so it is used as typed. */
+export const hasTitle = (name: string) => TITLES.includes(words(name)[0]?.toLowerCase() ?? '')
+
 export function firstName(name: string): string {
-  const words = name.trim().split(/\s+/)
-  if (!words[0]) return ''
-  return TITLES.includes(words[0].toLowerCase()) ? words.join(' ') : words[0]
+  const w = words(name)
+  if (!w[0]) return ''
+  return hasTitle(name) ? w.join(' ') : w[0]
 }
+
+/**
+ * The name a message addresses someone by. "Mary Reyes" becomes "Mary", "Sister Reyes" or "Brother
+ * Reyes". A name entered with a title keeps it whatever is picked, since the title is already chosen.
+ */
+export function addressName(name: string, address: Address = 'first'): string {
+  const w = words(name)
+  if (!w.length || hasTitle(name) || address === 'first') return firstName(name)
+  return `${address === 'sister' ? 'Sister' : 'Brother'} ${w[w.length - 1]}`
+}
+
+/** The ways to address someone, for the choice shown before sending. Empty when there's no choice to make. */
+export function addressOptions(name: string): { value: Address; label: string }[] {
+  if (!words(name).length || hasTitle(name)) return []
+  return (['first', 'sister', 'brother'] as const).map((value) => ({ value, label: addressName(name, value) }))
+}
+
+/** Whether a template uses a variable, so a choice that only affects it can be hidden otherwise. */
+export const usesVariable = (body: string, name: string) => body.includes(`{${name}}`)
 
 /** "10 minutes", "1 hour", "1 hour 15 minutes" for message text. */
 export function lengthWords(minutes: number): string {
@@ -60,7 +87,7 @@ const timeCount = (values: MessageValues) => (values.times ? values.times.length
 export function fillTemplate(body: string, values: MessageValues): string {
   const one = timeCount(values) === 1
   const vars: Record<string, string> = {
-    first_name: firstName(values.name),
+    first_name: addressName(values.name, values.address),
     name: values.name.trim(),
     leader: values.leader,
     length: lengthWords(values.minutes),
@@ -74,6 +101,22 @@ export function fillTemplate(body: string, values: MessageValues): string {
   return body
     .replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (_, single: string, plural: string) => (one ? single : plural))
     .replace(/\{(\w+)\}/g, (whole, key: string) => (key in vars ? vars[key] : whole))
+}
+
+/** Made-up details for previewing a template while writing it. */
+export const SAMPLE_VALUES: MessageValues = {
+  name: 'Mary Reyes',
+  leader: 'Bishop Avery',
+  minutes: 15,
+  myName: 'Brother Quinn',
+  times: ['Sun, November 8th at 9:10 AM', 'Wed, November 11th at 7 PM'],
+  time: 'Sun, November 8th at 9:10 AM',
+  parentName: 'Sister Reyes',
+}
+
+/** Puts text into a template where the cursor is (or over the selection), returning the new text and cursor. */
+export function insertAt(body: string, start: number, end: number, text: string): { body: string; cursor: number } {
+  return { body: body.slice(0, start) + text + body.slice(end), cursor: start + text.length }
 }
 
 /**
