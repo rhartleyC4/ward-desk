@@ -91,6 +91,7 @@ jobs:
       - run: npm run lint
       - run: npm run build # runs tsc -b, then vite build
       - run: npm test # unit tests (vitest, jsdom)
+      - run: npm run functions:build # the notify Edge Function's bundle of scripts/notify
 
   database:
     name: Database and integration tests

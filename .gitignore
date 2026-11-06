@@ -31,3 +31,6 @@ dist-ssr
 # Supabase local
 supabase/.branches
 supabase/.temp
+
+# Built from scripts/notify by npm run functions:build
+supabase/functions/notify/tick.bundle.js

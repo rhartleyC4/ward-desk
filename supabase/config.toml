@@ -389,6 +389,10 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# pg_cron calls this with a shared secret (x-notify-secret), not a user's sign-in.
+[functions.notify]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

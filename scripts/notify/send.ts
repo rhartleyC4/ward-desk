@@ -1,8 +1,12 @@
-// Sends tomorrow's day-ahead summaries. Run by .github/workflows/notify.yml each evening, or by hand:
+// Sends notifications by hand. On staging and production the notify Edge Function does this every
+// 10 minutes (see tick.ts); this is for trying it locally and for "Day-ahead summaries" runs from
+// the Actions tab (.github/workflows/notify.yml).
 //
 //   npm run notify -- --dry-run                 # show what each person would get tomorrow
 //   npm run notify -- --date 2026-11-08 --dry-run
 //   npm run notify -- --only you@example.com --force   # send to one person, even if already sent
+//   npm run notify -- --tick --dry-run          # everything due now, as the Edge Function would send it
+//   npm run notify -- --tick --now 2026-11-08T11:00:00-07:00 --dry-run
 //
 // Reads SUPABASE_DB_URL, WARD_TIME_ZONE, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT from
 // the environment, or locally from .env (npm run db:env writes them).
@@ -13,11 +17,9 @@ import postgres from 'postgres'
 import webpush from 'web-push'
 import { addDays } from '../../src/lib/dates'
 import { wardParts } from '../../src/lib/slots'
-import { sendDaySummaries, type Sender } from './daySummaries'
-
-/** On a scheduled run, send only in this stretch of the ward's evening (24-hour, inclusive start). */
-const SEND_FROM_HOUR = 18
-const SEND_UNTIL_HOUR = 22
+import { sendDaySummaries } from './daySummaries'
+import type { Sender } from './deliver'
+import { describeTick, tick } from './tick'
 
 const envFile = new URL('../../.env', import.meta.url)
 if (existsSync(envFile)) process.loadEnvFile(envFile)
@@ -28,7 +30,8 @@ const { values: args } = parseArgs({
     'dry-run': { type: 'boolean', default: false },
     force: { type: 'boolean', default: false },
     only: { type: 'string', multiple: true },
-    scheduled: { type: 'boolean', default: false },
+    tick: { type: 'boolean', default: false },
+    now: { type: 'string' },
   },
 })
 
@@ -39,15 +42,9 @@ function need(name: string, fallback?: string): string {
 }
 
 const timeZone = need('WARD_TIME_ZONE', process.env.VITE_WARD_TIME_ZONE || 'America/Denver')
-const now = wardParts(new Date().toISOString(), timeZone)
-const hour = Number(now.time.slice(0, 2))
-
-if (args.scheduled && (hour < SEND_FROM_HOUR || hour >= SEND_UNTIL_HOUR)) {
-  console.log(`It's ${now.time} in ${timeZone}; summaries go out between ${SEND_FROM_HOUR}:00 and ${SEND_UNTIL_HOUR}:00. Nothing to do.`)
-  process.exit(0)
-}
-
-const date = args.date ?? addDays(now.date, 1)
+const now = args.now ? new Date(args.now) : new Date()
+if (Number.isNaN(now.getTime())) throw new Error(`--now must be a date and time, like 2026-11-08T11:00:00-07:00, not ${args.now}`)
+const date = args.date ?? addDays(wardParts(now.toISOString(), timeZone).date, 1)
 if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error(`--date must look like 2026-11-08, not ${date}`)
 const dryRun = args['dry-run']
 
@@ -66,7 +63,7 @@ const send: Sender = dryRun
           await webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, JSON.stringify(message), {
             TTL: 12 * 60 * 60, // a phone that's off overnight still gets it in the morning
             urgency: 'normal',
-            topic: message.tag, // a newer summary for the same day replaces an undelivered one
+            topic: message.tag, // a newer one for the same day replaces an undelivered one
           })
           return 'sent'
         } catch (e) {
@@ -86,14 +83,23 @@ try {
     only = rows.map((r) => r.id)
   }
 
-  const reports = await sendDaySummaries({ sql, date, timeZone, send, dryRun, force: args.force, only })
-  console.log(`Day-ahead summaries for ${date}${dryRun ? ' (dry run, nothing sent)' : ''}:`)
-  // Logs show offices, not names, and the lines themselves never name anyone.
-  for (const r of reports) {
-    console.log(`- ${r.office ?? 'bishopric'}: ${r.outcome}, ${r.devices} device${r.devices === 1 ? '' : 's'}`)
-    for (const l of r.lines) console.log(`    ${l.text}`)
+  if (args.tick) {
+    const report = await tick({ sql, now, timeZone, send, dryRun, only })
+    const lines = describeTick(report)
+    console.log(`Due at ${wardParts(now.toISOString(), timeZone).time} in ${timeZone}${dryRun ? ' (dry run, nothing sent)' : ''}: ${lines.length ? '' : 'nothing'}`)
+    for (const l of lines) console.log(`- ${l}`)
+    for (const r of report.followUps) console.log(`    ${r.body.replace(/\n/g, '\n    ')}`)
+    if ([...report.summaries, ...report.followUps].some((r) => r.outcome === 'failed')) process.exitCode = 1
+  } else {
+    const reports = await sendDaySummaries({ sql, date, timeZone, send, dryRun, force: args.force, only })
+    console.log(`Day-ahead summaries for ${date}${dryRun ? ' (dry run, nothing sent)' : ''}:`)
+    // Logs show offices, not names, and the lines themselves never name anyone.
+    for (const r of reports) {
+      console.log(`- ${r.office ?? 'bishopric'}: ${r.outcome}, ${r.devices} device${r.devices === 1 ? '' : 's'}`)
+      for (const l of r.lines) console.log(`    ${l.text}`)
+    }
+    if (reports.some((r) => r.outcome === 'failed')) process.exitCode = 1
   }
-  if (reports.some((r) => r.outcome === 'failed')) process.exitCode = 1
 } finally {
   await sql.end()
 }

@@ -1,18 +1,15 @@
 // Loads one day from the database and sends each bishopric member their day-ahead summary on
 // every device they turned it on for. Connects as the database owner, so it reads past RLS; keep
-// what it writes to notification_log and stale push_subscriptions. Run by send.ts.
+// what it writes to notification_log and stale push_subscriptions. Run by tick.ts and send.ts.
 
 import type { Sql } from 'postgres'
 import { withDefaultSecretary } from '../../src/lib/appointments'
 import { keepsHours } from '../../src/lib/availability'
-import { daySummary, pushMessage, type DaySummaryInput, type PushMessage, type SummaryLine, type SummaryPerson } from '../../src/lib/daySummary'
+import { daySummary, pushMessage, type DaySummaryInput, type SummaryLine, type SummaryPerson } from '../../src/lib/daySummary'
 import type { IsoDate } from '../../src/lib/dates'
+import { deliver, type Device, type Sender } from './deliver'
 
-export type Device = { id: string; user_id: string; endpoint: string; p256dh: string; auth: string }
-
-/** What sending to one device did. 'gone' means the push service no longer knows it, so it's removed. */
-export type SendResult = 'sent' | 'gone' | 'failed'
-export type Sender = (device: Device, message: PushMessage) => Promise<SendResult>
+export type { Device, SendResult, Sender } from './deliver'
 
 type DayData = Omit<DaySummaryInput, 'person' | 'date' | 'timeZone'> & { people: SummaryPerson[]; devices: Device[]; alreadySent: Set<string> }
 
@@ -89,18 +86,7 @@ export async function sendDaySummaries({ sql, date, timeZone, send, dryRun = fal
     else if (!devices.length) report('no-devices')
     else if (day.alreadySent.has(person.id) && !force) report('already-sent')
     else if (dryRun) report('dry-run')
-    else {
-      const message = pushMessage(date, lines)
-      const results = await Promise.all(devices.map(async (d) => [d, await send(d, message)] as const))
-      const gone = results.filter(([, r]) => r === 'gone').map(([d]) => d.id)
-      if (gone.length) await sql`delete from public.push_subscriptions where id in ${sql(gone)}`
-      if (results.some(([, r]) => r === 'sent')) {
-        await sql`
-          insert into public.notification_log (user_id, kind, for_date) values (${person.id}, 'day_summary', ${date})
-          on conflict (user_id, kind, for_date) do update set sent_at = now()`
-        report('sent')
-      } else report('failed')
-    }
+    else report(await deliver(sql, send, devices, person.id, 'day_summary', date, pushMessage(date, lines)))
   }
   return reports
 }

@@ -58,7 +58,11 @@ The bishopric keeps the standing schedule in **Settings › Standing schedule**:
 
 New appointments start at the usual length for their kind (`appointment_lengths`, one row per purpose, all 10 minutes to begin with), which the bishopric sets under **Usual lengths** on Home.
 
-The executive and assistant executive secretaries land on **Home**, "Your week": who needs an appointment with the leaders they schedule for, with open times by day at the chosen length and a button to book one; what's booked, with the length adjustable and a warning when one runs into the next; and each leader's hours for the next seven days. A secretary not yet assigned to any leader sees everyone.
+The executive and assistant executive secretaries land on **Home**, "Your week": tomorrow's reminders to send; who needs an appointment with the leaders they schedule for, with open times by day at the chosen length and a button to book one; booked times still **To confirm**, with the length adjustable and a warning when one runs into the next; and each leader's hours for the next seven days. A secretary not yet assigned to any leader sees everyone.
+
+Once a booked time is confirmed (`interviews.confirmed_at`, set by sending the confirmation message or by **They already know**), it leaves the secretary's Home and belongs to the leader: it shows on their Home, and when it's over, under **How did these go?**. The leader marks it **Done** or **Didn't come**. For a missed one they either send it back to the secretary to **find a new time** (it returns to "Needs an appointment" marked with the date it was missed and the leader's note) or say **I'll take care of it** with a note, which closes it (`status = 'cancelled'`, `missed_at`, `report_note`). Moving a booked time clears its confirmation and reminder (a trigger), so the new time is confirmed and reminded too.
+
+The day before, the secretary sends each person a reminder from a **Reminder the day before** template (`reminded_at`), and reminds everyone who attends a standing meeting they've been given in **Settings › Standing schedule** ("Who reminds people the day before", `recurring_events.reminder_by`) from a **Meeting reminder** template, which can use `{meeting}` and `{when}`. A meeting linked to its agenda ("Its agenda" in the same editor, `recurring_events.agenda_template_id`, filled in for meetings named like an agenda) can also name who is down on that day's agenda: `{opening_prayer}`, `{spiritual_thought}` and `{closing_prayer}` one at a time (to write to that person), or `{assignments}` for all of them, one per line (a line holding only `{assignments}` is dropped when no one is down yet). An assignment no one has shows as "(not assigned yet)", and the Reminders page warns about it with a link to fill it in on the agenda. Sent meeting reminders are kept in `meeting_reminders`. The **Reminders** page (`/reminders?date=…`) lists them with each message ready to copy, text or email.
 
 To reach someone, the secretary picks a few open times and writes a message from a template (`message_templates`, shared by the bishopric and edited on Home). Templates use variables such as `{first_name}`, `{leader}`, `{length}`, `{times}` and `{time}`, and should stay general rather than say what the appointment is for. Wording in braces with a bar, like `{this time|one of these times}`, uses the first part when one time is offered and the second when there are more; a single time is written without a bullet. **Copy** puts the text on the clipboard; **Open Messages** opens the phone's messaging app with the text filled in and no recipient, so no phone numbers are stored. Sending records `offered_at` and `offered_times`, so the list shows when times went out and the picker marks them when the reply comes in. Offered times are held for three days: no one else's picker offers them until that person is booked, the secretary presses **Release**, or the three days pass. Booked appointments have a confirmation message too.
 
@@ -68,7 +72,15 @@ Adjust these as the real needs become clear.
 
 ## Notifications
 
-Bishopric members can turn on a **day-ahead summary** for each device on the Account page (Settings, then their name at the top). The evening before, it lists that person's next day:
+Bishopric members turn on notifications for each device on the Account page (Settings, then their name at the top). Besides the instant ones for requests (below), three are sent on a schedule:
+
+- **How did your appointments go?** to a bishop or counselor, half an hour after their last appointment of the day ends, if any are still unreported. Opens Home.
+- **Reminders for tomorrow** to a secretary, from 10 AM the day before, when appointments they schedule (or meetings they remind people about) still need a reminder. Opens the Reminders page. A leader no secretary covers counts for every secretary.
+- The **day-ahead summary**, in the evening (6 to 10 PM ward time), described below.
+
+Each goes once per person and day (`notification_log`), and only when there's something to do. The timing and text are in `src/lib/followUp.ts` and `scripts/notify/`.
+
+The **day-ahead summary** lists that person's next day:
 
 - The standing meetings on the **Schedule** page (`recurring_events`) that fall on that day, with their times
 - Their rotations: one with a set day on that day, and on the 1st of the month "This month: …" for each one due any time that month. Only the title is sent, never the label naming who it's with, so keep titles general
@@ -80,7 +92,9 @@ Bishopric members can turn on a **day-ahead summary** for each device on the Acc
 
 Notifications show on lock screens, so the text says when and how many, never who or what an appointment is for. Nothing is sent for a day with nothing on it. The lines are built by `src/lib/daySummary.ts`.
 
-Each device's push subscription lives in `push_subscriptions` (saved through `save_push_subscription`, so whoever turns it on last on a shared device owns it). `notification_log` records each person and day sent, so a rerun never sends twice. The workflow `.github/workflows/notify.yml` runs every evening, hourly from 00:07 to 04:07 UTC. `npm run notify -- --scheduled` sends only between 6 and 10 PM ward time, so the first run in that window sends and the rest find it already sent. Push services that report a device gone (404 or 410) get it removed.
+Each device's push subscription lives in `push_subscriptions` (saved through `save_push_subscription`, so whoever turns it on last on a shared device owns it). `notification_log` records each person, kind and day sent, so a rerun never sends twice. Push services that report a device gone (404 or 410) get it removed.
+
+**How the schedule runs:** every 10 minutes, `pg_cron` in the database runs `public.call_notify()`, which posts to the `notify` Edge Function with a shared secret. The function runs `scripts/notify/tick.ts` (bundled into the function by `npm run functions:build`), which sends whatever is due at that moment in the ward's time zone. Until the Vault secrets below are set, `call_notify()` does nothing, so local databases stay quiet.
 
 On iPhone, notifications only work from the Home Screen app (see "iPhone users"). The service worker that shows them is only in a built app, so locally use `npm run build && npm run preview`, not `npm run dev`.
 
@@ -96,7 +110,13 @@ npm run notify -- --date 2026-11-08 --only bishop@ward.test --force
 
 The first shows what everyone would get; the second sends it to one account. **Show a test** on the Account page checks that the device can display a notification without sending anything.
 
-**Trying it on staging or production:** Actions → "Day-ahead summaries" → Run workflow, on `main` for staging or `production` for production. It's a dry run unless you untick that box; set a date and your own email to send yourself one.
+To see what the scheduled run would send at a given moment:
+
+```bash
+npm run notify -- --tick --now 2026-11-08T11:00:00-07:00 --dry-run
+```
+
+**Trying it on staging or production:** Actions → "Day-ahead summaries" → Run workflow, on `main` for staging or `production` for production. It's a dry run unless you untick that box; set a date and your own email to send yourself one, or tick "tick" to see everything due right now.
 
 ### Instant notifications for requests
 
@@ -231,9 +251,29 @@ The allowlist still applies. A Google account whose email isn't on the allowlist
    ```
 2. In each GitHub environment, set the variable `VAPID_PUBLIC_KEY` to the public key and the secret `VAPID_PRIVATE_KEY` to the private one. Optionally set `VAPID_SUBJECT` (defaults to `mailto:noreply@warddesk.app`); push services use it to reach you about problems.
 3. Re-run the latest deploy for each environment. The app reads the public key at build time, so the Account page only offers notifications after a fresh build.
-4. Set the repository variable `NOTIFY_ENABLED` to `true`. Until then the nightly job does nothing. Production's nightly run starts only once `notify.yml` is on the `production` branch.
+4. Set the repository variable `NOTIFY_ENABLED` to `true` to allow hand runs of the "Day-ahead summaries" workflow. Scheduled sending is set up separately, below.
 
 Changing a key pair later signs every device out of notifications; each person turns them on again.
+
+**The scheduled notifications** (the `notify` Edge Function, called by `pg_cron`). Once per environment, after its migrations have run:
+
+1. Make a secret for the job: `openssl rand -hex 24`
+2. Give the function its secrets (the same VAPID pair as that environment's GitHub settings):
+   ```bash
+   npx supabase secrets set --project-ref <ref> NOTIFY_SECRET=<secret> WARD_TIME_ZONE=America/Denver
+   ```
+3. Deploy it (this builds the bundle first; `verify_jwt` is off for it in `config.toml`, since the secret guards it):
+   ```bash
+   npm run functions:deploy -- --project-ref <ref>
+   ```
+4. In that project's SQL editor, tell the database where to call and with what secret:
+   ```sql
+   select vault.create_secret('https://<ref>.supabase.co/functions/v1/notify', 'notify_url');
+   select vault.create_secret('<secret>', 'notify_secret');
+   ```
+5. Check it: `select status_code, content from net._http_response order by created desc limit 5;` should show `200` within 10 minutes.
+
+Redeploy (step 3) whenever `scripts/notify/` or `src/lib/` code it uses changes. Resetting the training site may clear the Vault secrets; if `net._http_response` goes quiet afterwards, repeat step 4.
 
 **The push Edge Function** is deployed by hand, not by CI, because deploying functions needs a Supabase access token, which reaches every project you own. Do this once per environment, and again whenever `supabase/functions/` changes:
 

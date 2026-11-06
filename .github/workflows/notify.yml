@@ -1,17 +1,11 @@
 name: Day-ahead summaries
 
-# Each evening, sends bishopric members tomorrow's summary as a push notification (scripts/notify).
-# Scheduled runs happen on main: they send for staging, then start this workflow on the production
-# branch, so each site is served by the code deployed to it and the production environment stays
-# limited to the production branch. Runs fire hourly through the evening (UTC) and the script only
-# sends between 6 and 10 PM ward time, once per person per day, so GitHub's late starts and daylight
-# saving don't matter. Off until the NOTIFY_ENABLED repo variable is 'true'.
-#
-# Test by hand: Actions → Day-ahead summaries → Run workflow, on main (staging) or production.
+# Sends notifications by hand (scripts/notify). The scheduled sending happens in Supabase: pg_cron
+# calls the notify Edge Function every 10 minutes (see "Notifications" in README.md). Use this to
+# try a summary or see what's due without waiting: run it on main for staging or on production.
+# Off until the NOTIFY_ENABLED repo variable is 'true'.
 
 on:
-  schedule:
-    - cron: '7 0-4 * * *'
   workflow_dispatch:
     inputs:
       date:
@@ -28,8 +22,8 @@ on:
         description: Send even if already sent for that day
         type: boolean
         default: false
-      scheduled:
-        description: Only send in the evening window (how the nightly production run is started)
+      tick:
+        description: Instead of one day's summaries, send everything due right now, as the Edge Function would
         type: boolean
         default: false
 
@@ -60,14 +54,14 @@ jobs:
       - name: Send summaries
         run: |
           set --
-          [ "$SCHEDULED" = "true" ] && set -- --scheduled
+          [ "$TICK" = "true" ] && set -- --tick
           [ -n "$DATE" ] && set -- "$@" --date "$DATE"
           [ -n "$ONLY" ] && set -- "$@" --only "$ONLY"
           [ "$DRY_RUN" = "true" ] && set -- "$@" --dry-run
           [ "$FORCE" = "true" ] && set -- "$@" --force
           npm run notify -- "$@"
         env:
-          SCHEDULED: ${{ github.event_name == 'schedule' || inputs.scheduled }}
+          TICK: ${{ inputs.tick }}
           DATE: ${{ inputs.date }}
           ONLY: ${{ inputs.only }}
           DRY_RUN: ${{ inputs.dry_run }}
@@ -77,22 +71,3 @@ jobs:
           VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ vars.VAPID_SUBJECT }}
-
-  production:
-    name: Start the production run
-    if: vars.NOTIFY_ENABLED == 'true' && github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    permissions:
-      actions: write
-      contents: read
-    steps:
-      # The production branch only has this workflow once it has been promoted there.
-      - run: |
-          if gh api "repos/$GITHUB_REPOSITORY/contents/.github/workflows/notify.yml?ref=production" --silent 2>/dev/null; then
-            gh workflow run notify.yml --repo "$GITHUB_REPOSITORY" --ref production -f dry_run=false -f scheduled=true
-          else
-            echo "Not on the production branch yet; nothing to start."
-          fi
-        env:
-          GH_TOKEN: ${{ github.token }}
