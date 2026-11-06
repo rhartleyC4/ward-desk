@@ -4,8 +4,12 @@
 //
 // Notifications show on lock screens, so they never name the person meeting or say what an
 // appointment is for. They say which leader, when, and how many.
+//
+// Away dates that leave a Sunday with only one of the bishop and counselors, or none, also tell the
+// rest of the bishopric (short_sunday), by office and date only.
 
 import { withDefaultSecretary } from './appointments'
+import { shortSundays, type ShortLevel } from './coverage'
 import { addDays, isBetween, type IsoDate } from './dates'
 import type { Enums } from './database.types'
 import { isSecretaryOffice, LEADER_OFFICES } from './access'
@@ -36,7 +40,10 @@ export type NoticeContext = {
   assignments: { leader_id: string; secretary_id: string }[]
   /** The appointments the rows are about, as they are now, plus every booked one (for away dates). */
   appointments: { id: string; interviewer_id: string | null; scheduled_at: string | null; status: Enums<'interview_status'> }[]
-  /** The away dates the rows are about, as they are now. Deleted ones are missing. */
+  /**
+   * The away dates the rows are about, as they are now (deleted ones are missing), plus every one
+   * that hasn't ended when there are away rows, to see who else is gone those Sundays.
+   */
   absences: { id: string; user_id: string; starts_on: IsoDate; ends_on: IsoDate }[]
   /** Leaders already sent a summary for a day, as `${userId}:${date}`. */
   summarized: Set<string>
@@ -97,7 +104,12 @@ export function bookersFor(leaderId: string, people: NoticeContext['people'], as
 }
 
 /** One thing to say to one person; several of the same kind become one notification. */
-type Item = { to: string; kind: NotificationKind; text: string; rowId: number }
+type Item = { to: string; kind: NotificationKind; text: string; rowId: number; title?: [one: string, many: string] }
+
+const SHORT_TITLES: Record<ShortLevel, [string, string]> = {
+  none: ['No bishopric on Sunday', 'No bishopric on Sundays'],
+  one: ['Short-handed Sunday', 'Short-handed Sundays'],
+}
 
 export function planNotices(rows: OutboxRow[], ctx: NoticeContext): Notice[] {
   const { now, timeZone } = ctx
@@ -111,9 +123,13 @@ export function planNotices(rows: OutboxRow[], ctx: NoticeContext): Notice[] {
   const today = wardParts(now.toISOString(), timeZone).date
   const items: Item[] = []
 
-  const tell = (to: string[], row: OutboxRow, kind: NotificationKind, text: string) => {
-    for (const id of new Set(to)) if (id !== row.actor_id) items.push({ to: id, kind, text, rowId: row.id })
+  const tell = (to: string[], row: OutboxRow, kind: NotificationKind, text: string, title?: Item['title']) => {
+    for (const id of new Set(to)) if (id !== row.actor_id) items.push({ to: id, kind, text, rowId: row.id, title })
   }
+  const leaderIds = ctx.people.filter((p) => p.office && LEADER_OFFICES.includes(p.office)).map((p) => p.id)
+  // Each Sunday once, however many of these away dates cover it. They're all read as they are
+  // now, so every row sees the same level for a Sunday.
+  const sundaysTold = new Set<IsoDate>()
 
   for (const row of rows) {
     if (!row.leader_id || !isLeader(row.leader_id)) continue
@@ -174,6 +190,17 @@ export function planNotices(rows: OutboxRow[], ctx: NoticeContext): Notice[] {
       case 'away': {
         const away = ctx.absences.find((a) => a.id === row.absence_id)
         if (!away) break
+        const from = away.starts_on > today ? away.starts_on : today
+        for (const s of shortSundays(from, away.ends_on, leaderIds, ctx.absences)) {
+          if (sundaysTold.has(s.date)) continue
+          sundaysTold.add(s.date)
+          const here = leaderIds.filter((id) => !s.awayIds.includes(id))
+          const text =
+            s.level === 'none'
+              ? `No one in the bishopric will be at church ${dayLabel(s.date)}. Someone will need to preside.`
+              : `Only ${officeName(office(here[0]))} will be at church ${dayLabel(s.date)}.`
+          tell(ctx.people.map((p) => p.id), row, 'short_sunday', text, SHORT_TITLES[s.level])
+        }
         const covered = ctx.appointments.filter(
           (a) =>
             a.status === 'scheduled' &&
@@ -223,9 +250,11 @@ function group(items: Item[]): Notice[] {
   return [...byKey.values()].map((list) => {
     const { to, kind } = list[0]
     const texts = [...new Set(list.map((i) => i.text))]
-    const [one, many] = TITLES[kind] ?? ['Ward Desk', 'Ward Desk']
+    // Short-handed Sundays are titled by the worst of them.
+    const titled = list.find((i) => i.title === SHORT_TITLES.none) ?? list.find((i) => i.title)
+    const [one, many] = titled?.title ?? TITLES[kind] ?? ['Ward Desk', 'Ward Desk']
     const body = texts.length <= 3 || !MANY[kind] ? texts.join('\n') : MANY[kind]!(texts.length)
-    return { to, kind, message: { title: texts.length === 1 ? one : many, body, url: '/home', tag: tagFor(`${kind.replace('appointment_', 'appt-')}-${list[0].rowId}`) } }
+    return { to, kind, message: { title: texts.length === 1 ? one : many, body, url: kind === 'short_sunday' ? '/away' : '/home', tag: tagFor(`${kind.replace('appointment_', 'appt-')}-${list[0].rowId}`) } }
   })
 }
 

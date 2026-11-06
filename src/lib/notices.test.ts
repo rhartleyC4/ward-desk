@@ -158,6 +158,55 @@ describe('planNotices', () => {
     expect(planNotices([row('away', { leader_id: 'exec', absence_id: 'away1' })], ctx({ absences }))).toEqual([])
   })
 
+  describe('short-handed Sundays', () => {
+    const bishopric = [...people, { id: 'second', office: 'second_counselor' as const }]
+    const away = (id: string, user_id: string, starts_on: string, ends_on = starts_on) => ({ id, user_id, starts_on, ends_on })
+    const short = (notices: ReturnType<typeof planNotices>) => notices.filter((n) => n.kind === 'short_sunday')
+
+    it('warns the rest of the bishopric when no one will be there', () => {
+      // Sunday the 15th: the bishop's new dates join both counselors'.
+      const absences = [away('b', 'bishop', '2026-11-13', '2026-11-16'), away('f', 'first', '2026-11-15'), away('s', 'second', '2026-11-14', '2026-11-15')]
+      const notices = short(planNotices([row('away', { interview_id: null, absence_id: 'b' })], ctx({ people: bishopric, absences })))
+      expect(notices.map((n) => n.to).sort()).toEqual(['asst', 'clerk', 'exec', 'first', 'second'])
+      expect(notices[0].message).toMatchObject({
+        title: 'No bishopric on Sunday',
+        body: 'No one in the bishopric will be at church Sun, Nov 15. Someone will need to preside.',
+        url: '/away',
+      })
+    })
+
+    it('warns more mildly when only one will be there, naming them by office', () => {
+      const absences = [away('f', 'first', '2026-11-15'), away('s', 'second', '2026-11-15')]
+      const [n] = short(planNotices([row('away', { interview_id: null, leader_id: 'second', actor_id: 'second', absence_id: 's' })], ctx({ people: bishopric, absences })))
+      expect(n.message).toMatchObject({ title: 'Short-handed Sunday', body: 'Only the bishop will be at church Sun, Nov 15.' })
+    })
+
+    it('says each Sunday once, titled by the worst', () => {
+      const absences = [
+        away('b', 'bishop', '2026-11-08', '2026-11-22'),
+        away('f', 'first', '2026-11-08', '2026-11-22'),
+        away('s', 'second', '2026-11-15'),
+      ]
+      const rows = [row('away', { interview_id: null, absence_id: 'b' }), row('away', { interview_id: null, leader_id: 'first', actor_id: 'first', absence_id: 'f' })]
+      const mine = short(planNotices(rows, ctx({ people: bishopric, absences }))).filter((n) => n.to === 'exec')
+      expect(mine).toHaveLength(1)
+      expect(mine[0].message.title).toBe('No bishopric on Sundays')
+      expect(mine[0].message.body.split('\n')).toEqual([
+        'Only the second counselor will be at church Sun, Nov 8.',
+        'No one in the bishopric will be at church Sun, Nov 15. Someone will need to preside.',
+        'Only the second counselor will be at church Sun, Nov 22.',
+      ])
+    })
+
+    it('says nothing when two are there, the Sunday has passed, or it isn’t a leader’s away dates', () => {
+      expect(short(planNotices([row('away', { interview_id: null, absence_id: 'b' })], ctx({ people: bishopric, absences: [away('b', 'bishop', '2026-11-15')] })))).toEqual([])
+      const past = [away('b', 'bishop', '2026-11-01'), away('f', 'first', '2026-11-01'), away('s', 'second', '2026-11-01')]
+      expect(short(planNotices([row('away', { interview_id: null, absence_id: 'b' })], ctx({ people: bishopric, absences: past })))).toEqual([])
+      const clerkAway = [away('c', 'clerk', '2026-11-15'), away('f', 'first', '2026-11-15'), away('s', 'second', '2026-11-15')]
+      expect(short(planNotices([row('away', { interview_id: null, leader_id: 'clerk', actor_id: 'clerk', absence_id: 'c' })], ctx({ people: bishopric, absences: clerkAway })))).toEqual([])
+    })
+  })
+
   it('makes one notification per person and kind, counting past three', () => {
     const rows = [1, 2, 3, 4].map((i) => row('added', { interview_id: `a${i}` }))
     const appointments = [1, 2, 3, 4].map((i) => appt({ id: `a${i}` }))

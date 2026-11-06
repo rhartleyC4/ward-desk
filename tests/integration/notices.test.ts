@@ -135,6 +135,22 @@ describe('appointment changes', () => {
     expect(push.to('secretary')).toEqual(['The bishop will be away Feb 9–11, when 1 appointment is booked.'])
   })
 
+  it('tells the rest of the bishopric when no one will be there on a Sunday', async () => {
+    await sql`delete from public.absences where starts_on = '2027-02-09'`
+    // Sunday, February 14th 2027.
+    await q.addAbsence(await signIn('first'), { starts_on: '2027-02-09', ends_on: '2027-02-14', location: null })
+    await q.addAbsence(await signIn('second'), { starts_on: '2027-02-09', ends_on: '2027-02-14', location: null })
+    await drain()
+    await q.addAbsence(await signIn('bishop'), { starts_on: '2027-02-09', ends_on: '2027-02-14', location: null })
+    const push = fakePush()
+    await notices(push.send)
+    const warning = 'No one in the bishopric will be at church Sun, Feb 14. Someone will need to preside.'
+    expect(push.to('secretary')).toContain(warning)
+    expect(push.to('clerk')).toEqual([warning])
+    // They entered it and saw the warning in the app.
+    expect(push.to('bishop')).toEqual([])
+  })
+
   it('runs one at a time', async () => {
     const other = await sql.reserve()
     try {

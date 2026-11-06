@@ -44,7 +44,8 @@ export async function sendNotices({ sql, now, timeZone, send, dryRun = false, on
       where id in ${sql(interviewIds.length ? interviewIds : none)}
         or (${absenceIds.length > 0} and status = 'scheduled' and scheduled_at > now())`,
     sql<NoticeContext['absences']>`
-      select id, user_id, starts_on::text, ends_on::text from public.absences where id in ${sql(absenceIds.length ? absenceIds : none)}`,
+      select id, user_id, starts_on::text, ends_on::text from public.absences
+      where id in ${sql(absenceIds.length ? absenceIds : none)} or (${absenceIds.length > 0} and ends_on >= ${today})`,
     sql<{ user_id: string; for_date: string }[]>`
       select user_id, for_date::text from public.notification_log where kind = 'day_summary' and for_date in (${today}, ${addDays(today, 1)})`,
     sql<Device[]>`select id, user_id, endpoint, p256dh, auth from public.push_subscriptions`,

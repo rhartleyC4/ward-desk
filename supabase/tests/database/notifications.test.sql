@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(23);
+select plan(24);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -75,6 +75,8 @@ select throws_ok($$ insert into public.notification_mutes (kind) values ('everyt
 
 select pg_temp.act_as('bishop@ward.test');
 select is((select count(*)::int from public.notification_mutes), 0, 'nobody else sees their choices');
+select lives_ok($$ insert into public.notification_mutes (kind) values ('short_sunday') $$, 'the bishop turns short-handed Sundays off');
+delete from public.notification_mutes where kind = 'short_sunday';
 select throws_ok(
   $$ insert into public.notification_mutes (user_id, kind) values ((select id from public.profiles where email = 'leader@ward.test'), 'request_due') $$,
   '42501', null,

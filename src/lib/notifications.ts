@@ -22,10 +22,11 @@ export type NotificationKind =
   | 'appointment_booked'
   | 'appointment_changed'
   | 'appointment_handed_over'
+  | 'short_sunday'
 
 type Office = Enums<'bishopric_office'> | null
 
-export type NotificationGroup = 'Your day' | 'Appointments' | 'Requests' | 'Callings'
+export type NotificationGroup = 'Your day' | 'Sundays' | 'Appointments' | 'Requests' | 'Callings'
 
 export type NotificationInfo = {
   kind: NotificationKind
@@ -46,6 +47,8 @@ export const NOTIFICATIONS: NotificationInfo[] = [
   { kind: 'report_due', group: 'Your day', label: 'How did today go?', hint: 'After your last appointment, to mark each done or missed', for: holdsInterviews },
   { kind: 'reminders', group: 'Your day', label: 'Reminders to send', hint: 'The day before, when appointment or meeting reminders are waiting', for: books },
 
+  { kind: 'short_sunday', group: 'Sundays', label: 'Short-handed Sundays', hint: 'When away dates leave only one of the bishopric, or none, at church on a Sunday', for: bishopric },
+
   { kind: 'appointment_to_book', group: 'Appointments', label: 'New appointments to book', hint: 'When a leader adds one, or one is handed to a leader you book for', for: books },
   { kind: 'appointment_sent_back', group: 'Appointments', label: 'Missed and sent back', hint: 'When a leader asks you to find a new time', for: books },
   { kind: 'away_conflict', group: 'Appointments', label: 'Away during booked times', hint: 'When a leader’s away dates cover appointments already booked', for: books },
@@ -63,7 +66,7 @@ export const NOTIFICATIONS: NotificationInfo[] = [
   { kind: 'calling_request_progress', group: 'Callings', label: 'Request progress', hint: 'When the bishopric starts on it, and when it’s finished', for: canAskForCallings },
 ]
 
-export const NOTIFICATION_GROUPS: NotificationGroup[] = ['Your day', 'Appointments', 'Requests', 'Callings']
+export const NOTIFICATION_GROUPS: NotificationGroup[] = ['Your day', 'Sundays', 'Appointments', 'Requests', 'Callings']
 
 /** The switches this person sees, in order, grouped. Groups with none are left out. */
 export function notificationsFor(roles: AppRole[], office: Office): { group: NotificationGroup; items: NotificationInfo[] }[] {

@@ -85,6 +85,7 @@ Besides the instant ones for requests (below), these are sent:
 - **Appointment changes**, as they happen:
   - To the secretaries who book for that leader: a new appointment to book (added, or handed to that leader), a missed one sent back for a new time, and away dates that cover appointments already booked.
   - To the leader: one booked for today, or for tomorrow after tomorrow's summary went out, one moved or cancelled, and one handed to them.
+  - To the whole bishopric: away dates that leave a Sunday with none of the bishop and counselors at church ("No bishopric on Sunday"), or only one of them ("Short-handed Sunday", naming which one by office). The Away page and bishopric Home show the same warning in the app.
   - Nobody hears about their own change. Triggers on `interviews` and `absences` write each change to `notification_outbox` and ask the `notify` function to run straight away; the 10-minute run picks up anything that call missed. Who hears what is in `src/lib/notices.ts`. Changes made as the database owner (seed, imports) notify no one.
 
 The scheduled ones go once per person and day (`notification_log`), and only when there's something to do. The timing and text are in `src/lib/followUp.ts` and `scripts/notify/`.

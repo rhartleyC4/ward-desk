@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PUSH_EVENTS } from '../../supabase/functions/push/plan'
-import migration from '../../supabase/migrations/20261106210218_notification_choices.sql?raw'
+// The latest migration to set which kinds notification_mutes accepts.
+import migration from '../../supabase/migrations/20261106212106_short_sunday_notifications.sql?raw'
 import { NOTIFICATIONS, notificationsFor } from './notifications'
 
 const kinds = (roles: Parameters<typeof notificationsFor>[0], office: Parameters<typeof notificationsFor>[1]) =>
@@ -24,6 +25,12 @@ describe('notificationsFor', () => {
     expect(mine).not.toContain('appointment_to_book')
   })
 
+  it('tells the whole bishopric about short-handed Sundays, and no one else', () => {
+    expect(kinds(['bishopric'], 'bishop')).toContain('short_sunday')
+    expect(kinds(['bishopric'], 'executive_secretary')).toContain('short_sunday')
+    expect(kinds(['leader'], null)).not.toContain('short_sunday')
+  })
+
   it('gives only the ward clerk the callings to record', () => {
     expect(kinds(['bishopric'], 'ward_clerk')).toContain('callings_to_record')
     expect(kinds(['bishopric'], 'bishop')).not.toContain('callings_to_record')
@@ -41,7 +48,7 @@ describe('the kinds', () => {
   })
 
   it('match what the database accepts', () => {
-    const check = migration.slice(migration.indexOf('create table public.notification_mutes'), migration.indexOf('created_at timestamptz', migration.indexOf('create table public.notification_mutes')))
+    const check = migration.slice(migration.indexOf('add constraint notification_mutes_kind_check'))
     const accepted = [...check.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort()
     expect(accepted).toEqual(NOTIFICATIONS.map((n) => n.kind).sort())
   })
