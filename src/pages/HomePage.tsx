@@ -4,6 +4,7 @@ import { BishopricHome, type BishopricHomeActions } from '../components/Bishopri
 import { ErrorNote, Loading } from '../components/Layout'
 import { RequestsOnHome } from '../components/RequestsOnHome'
 import { SetupCard } from '../components/Setup'
+import { useRefreshWaiting } from '../components/WaitingCount'
 import { DAYS_AHEAD, SecretaryHome, type SecretaryHomeActions } from '../components/SecretaryHome'
 import { hasSecretaryHome } from '../lib/access'
 import { WEEK_AHEAD } from '../lib/bishopricHome'
@@ -35,13 +36,18 @@ function BishopricHomePage() {
     return { ...appointments, templates, agendaItems, sacrament, rotations, absences }
   }, [today, templates])
   const save = useAction()
+  // What's done here changes the tab badges and the app icon, so recount them too.
+  const refreshBadge = useRefreshWaiting()
 
   if (error) return <ErrorNote error={error} />
   if (!data) return <Loading />
 
   const run = (fn: () => Promise<void>) =>
     save.act(fn).then((ok) => {
-      if (ok) reload()
+      if (ok) {
+        reload()
+        refreshBadge()
+      }
       return ok
     })
 
@@ -76,6 +82,8 @@ function SecretaryHomePage() {
     return { ...appointments, ...hours, templates, lengths, rotations: schedule.rotations, stewardships: schedule.stewardships, events: reminders.events, meetingsSent: reminders.sent }
   }, [today])
   const save = useAction()
+  // What's done here changes the tab badges and the app icon, so recount them too.
+  const refreshBadge = useRefreshWaiting()
   // Times before this are past. Fixed for the visit; reopening the page moves it on.
   const [now] = useState(() => new Date())
 
@@ -84,7 +92,10 @@ function SecretaryHomePage() {
 
   const run = (fn: () => Promise<void>) =>
     save.act(fn).then((ok) => {
-      if (ok) reload()
+      if (ok) {
+        reload()
+        refreshBadge()
+      }
       return ok
     })
 
