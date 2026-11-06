@@ -105,14 +105,19 @@ export function gh(args) {
   }
 }
 
-/** Runs `gh` without blocking: `{ ok, stdout, stderr }`. */
+/** Runs `gh` without blocking, retrying once (GitHub reads now and then fail): `{ ok, stdout, stderr }`. */
 export async function ghTry(args) {
-  try {
-    const { stdout } = await execFileAsync('gh', args, { encoding: 'utf8' })
-    return { ok: true, stdout: stdout.trim(), stderr: '' }
-  } catch (error) {
-    return { ok: false, stdout: '', stderr: error.stderr || error.message }
+  let stderr = ''
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const { stdout } = await execFileAsync('gh', args, { encoding: 'utf8' })
+      return { ok: true, stdout: stdout.trim(), stderr: '' }
+    } catch (error) {
+      stderr = error.stderr || error.message
+      if (/HTTP 404/.test(stderr)) break
+    }
   }
+  return { ok: false, stdout: '', stderr }
 }
 
 /** A GitHub variable from an environment (or the repository, with no `env`), or '' if unset. */

@@ -24,6 +24,7 @@
     "notify:setup": "node scripts/setup-notify.mjs",
     "setup": "node scripts/setup.mjs",
     "env:check": "node scripts/env-check.mjs",
+    "env:github": "node scripts/env-github.mjs",
     "import-sheets": "tsx scripts/import-sheets/import.ts",
     "export-sheets": "tsx scripts/export-sheets/export.ts"
   },

@@ -104,16 +104,18 @@ async function checkHosted() {
   }
   const repoVars = Object.fromEntries(json(repoVarsOut.stdout, []).map((v) => [v.name, v.value]))
   const repoSecrets = new Set(json(repoSecretsOut.stdout, []).map((s) => s.name))
-  github.check(!!repoVars.CLOUDFLARE_ACCOUNT_ID, 'variable CLOUDFLARE_ACCOUNT_ID', { fix: 'gh variable set CLOUDFLARE_ACCOUNT_ID --body <account id from the Cloudflare dashboard>' })
+  github.check(!!repoVars.CLOUDFLARE_ACCOUNT_ID, 'variable CLOUDFLARE_ACCOUNT_ID', { fix: fixGithub })
   github.check(repoVars.DEPLOY_ENABLED === 'true', 'variable DEPLOY_ENABLED is true', { detail: repoVars.DEPLOY_ENABLED === 'true' ? undefined : repoVars.DEPLOY_ENABLED ? `it is "${repoVars.DEPLOY_ENABLED}"` : 'not set', fix: 'gh variable set DEPLOY_ENABLED --body true' })
-  github.check(repoVars.NOTIFY_ENABLED === 'true', 'variable NOTIFY_ENABLED is true', { detail: repoVars.NOTIFY_ENABLED === 'true' ? undefined : repoVars.NOTIFY_ENABLED ? `it is "${repoVars.NOTIFY_ENABLED}"` : 'not set', fix: 'gh variable set NOTIFY_ENABLED --body true' })
-  github.check(repoSecrets.has('CLOUDFLARE_API_TOKEN'), 'secret CLOUDFLARE_API_TOKEN', { fix: 'gh secret set CLOUDFLARE_API_TOKEN' })
+  github.check(repoVars.NOTIFY_ENABLED === 'true', 'variable NOTIFY_ENABLED is true', { detail: repoVars.NOTIFY_ENABLED === 'true' ? undefined : repoVars.NOTIFY_ENABLED ? `it is "${repoVars.NOTIFY_ENABLED}"` : 'not set', fix: fixGithub })
+  github.check(repoSecrets.has('CLOUDFLARE_API_TOKEN'), 'secret CLOUDFLARE_API_TOKEN', { fix: fixGithub })
 
   const ghEnv = section(`GitHub environment "${env}"`)
   if (!envOut.ok) {
     ghEnv.check(false, 'the environment exists', { fix: fixGithub })
     return
   }
+  const unread = [[repoSecretsOut, 'repository secrets'], [envVarsOut, `${env} variables`], [envSecretsOut, `${env} secrets`]].filter(([out]) => !out.ok)
+  for (const [out, what] of unread) ghEnv.check(false, `GitHub CLI can read the ${what}`, { detail: firstLine(out.stderr), fix: 'run it again, or gh auth login' })
   const vars = Object.fromEntries(json(envVarsOut.stdout, []).map((v) => [v.name, v.value]))
   const secrets = new Set(json(envSecretsOut.stdout, []).map((s) => s.name))
   const ref = vars.SUPABASE_PROJECT_REF
