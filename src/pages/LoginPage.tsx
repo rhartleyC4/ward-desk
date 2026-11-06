@@ -25,6 +25,13 @@ const PRACTICE_ACCOUNTS = [
   { email: 'second@ward.test', role: '2nd counselor' },
   { email: 'secretary@ward.test', role: 'Executive secretary' },
   { email: 'clerk@ward.test', role: 'Ward clerk' },
+  { email: 'eqpres@ward.test', role: 'Elders Quorum president' },
+  { email: 'rspres@ward.test', role: 'Relief Society president' },
+  { email: 'ywpres@ward.test', role: 'Young Women president' },
+  { email: 'primarypres@ward.test', role: 'Primary president' },
+  { email: 'mission@ward.test', role: 'Ward mission leader' },
+  { email: 'temple@ward.test', role: 'Temple and family history leader' },
+  { email: 'activities@ward.test', role: 'Activities committee chair' },
   { email: 'leader@ward.test', role: 'Other called leader' },
 ]
 

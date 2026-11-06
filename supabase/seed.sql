@@ -11,7 +11,13 @@ insert into public.allowlist (email, initial_roles, initial_office) values
   ('assistant@ward.test', '{bishopric}', 'assistant_executive_secretary'),
   ('clerk@ward.test', '{bishopric}', 'ward_clerk'),
   ('leader@ward.test', '{leader}', null),
-  ('rspres@ward.test', '{leader}', null);
+  ('eqpres@ward.test', '{leader}', null),
+  ('rspres@ward.test', '{leader}', null),
+  ('ywpres@ward.test', '{leader}', null),
+  ('primarypres@ward.test', '{leader}', null),
+  ('mission@ward.test', '{leader}', null),
+  ('temple@ward.test', '{leader}', null),
+  ('activities@ward.test', '{leader}', null);
 
 -- Create the auth users up front so seed rows can reference them.
 -- The on_auth_user_created trigger fills in profiles, roles and positions from the allowlist.
@@ -26,7 +32,13 @@ from (values
   ('00000000-0000-0000-0000-000000000010'::uuid, 'assistant@ward.test', 'Brother Tate'),
   ('00000000-0000-0000-0000-00000000000e'::uuid, 'clerk@ward.test', 'Brother Pike'),
   ('00000000-0000-0000-0000-00000000000d'::uuid, 'leader@ward.test', 'Sister Reyes'),
-  ('00000000-0000-0000-0000-00000000000f'::uuid, 'rspres@ward.test', 'Sister Young')
+  ('00000000-0000-0000-0000-000000000011'::uuid, 'eqpres@ward.test', 'Brother Hollis'),
+  ('00000000-0000-0000-0000-00000000000f'::uuid, 'rspres@ward.test', 'Sister Young'),
+  ('00000000-0000-0000-0000-000000000012'::uuid, 'ywpres@ward.test', 'Sister Vance'),
+  ('00000000-0000-0000-0000-000000000013'::uuid, 'primarypres@ward.test', 'Sister Ellis'),
+  ('00000000-0000-0000-0000-000000000014'::uuid, 'mission@ward.test', 'Brother Navarro'),
+  ('00000000-0000-0000-0000-000000000015'::uuid, 'temple@ward.test', 'Sister Whitfield'),
+  ('00000000-0000-0000-0000-000000000016'::uuid, 'activities@ward.test', 'Sister Okafor')
 ) as u (id, email, full_name);
 
 insert into auth.identities (id, user_id, provider_id, provider, identity_data, last_sign_in_at, created_at, updated_at)
@@ -178,9 +190,21 @@ from (values
 join public.agenda_templates t on t.slug = i.slug
 join public.agenda_sections s on s.template_id = t.id and s.title = i.section;
 
--- Sister Young attends ward council, so she sees that agenda and the prayer roll but nothing else.
+-- The organization presidents (Elders Quorum, Relief Society, Young Women, Primary), the ward
+-- mission leader, the temple and family history leader and the activities committee chair attend
+-- ward council, so they see that agenda and the prayer roll but nothing else.
 insert into public.agenda_attendees (template_id, user_id)
-select id, '00000000-0000-0000-0000-00000000000f' from public.agenda_templates where slug = 'ward-council';
+select t.id, u.id from public.agenda_templates t
+cross join (values
+  ('00000000-0000-0000-0000-000000000011'::uuid),
+  ('00000000-0000-0000-0000-00000000000f'::uuid),
+  ('00000000-0000-0000-0000-000000000012'::uuid),
+  ('00000000-0000-0000-0000-000000000013'::uuid),
+  ('00000000-0000-0000-0000-000000000014'::uuid),
+  ('00000000-0000-0000-0000-000000000015'::uuid),
+  ('00000000-0000-0000-0000-000000000016'::uuid)
+) as u (id)
+where t.slug = 'ward-council';
 
 insert into public.agendas (template_id, meeting_date, opening_prayer, spiritual_thought)
 select id, '2026-11-08', 'Sister Young', 'Brother Lane: handbook chapter 29' from public.agenda_templates where slug = 'ward-council';

@@ -126,7 +126,8 @@ select is((pg_temp.request('Call the Lees')).id is not null, true, 'but can''t d
 
 select pg_temp.act_as('bishop@ward.test');
 select is((select count(*)::int from public.request_recipients() where id = auth.uid()), 0, 'the picker leaves out the sender');
-select is((select display_name from public.request_recipients() where not in_bishopric order by display_name limit 1), 'Sister Reyes', 'and lists ward leaders after the bishopric');
+select is((select array_agg(display_name order by display_name) from public.request_recipients() where not in_bishopric),
+  array['Brother Hollis', 'Brother Navarro', 'Sister Ellis', 'Sister Okafor', 'Sister Reyes', 'Sister Vance', 'Sister Whitfield', 'Sister Young'], 'and lists ward leaders after the bishopric');
 select pg_temp.act_as('leader@ward.test');
 select is((select count(*)::int from public.request_recipients()), 0, 'a leader gets no picker');
 
