@@ -13,7 +13,7 @@
     "test:integration": "vitest run --project integration",
     "test:db": "supabase test db",
     "test:all": "npm run test && npm run test:db && npm run test:integration",
-    "db:start": "supabase start",
+    "db:start": "npm run functions:build && supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > src/lib/database.types.ts",
