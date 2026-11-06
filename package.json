@@ -20,7 +20,8 @@
     "db:env": "node scripts/write-local-env.mjs",
     "notify": "tsx scripts/notify/send.ts",
     "functions:build": "esbuild scripts/notify/tick.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=supabase/functions/notify/tick.bundle.js --log-level=warning",
-    "functions:deploy": "npm run functions:build && supabase functions deploy notify"
+    "functions:deploy": "npm run functions:build && supabase functions deploy notify",
+    "notify:setup": "node scripts/setup-notify.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",

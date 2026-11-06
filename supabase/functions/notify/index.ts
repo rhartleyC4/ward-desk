@@ -5,7 +5,8 @@
 //   POST /functions/v1/notify   with header x-notify-secret: <NOTIFY_SECRET>
 //
 // What's due is decided by scripts/notify/tick.ts, bundled into tick.bundle.js by
-// `npm run functions:build` (deploy with `npm run functions:deploy`, which builds first).
+// `npm run functions:build`. `npm run notify:setup -- <staging|production>` builds, deploys and
+// sets up an environment in one go.
 // notification_log keeps each notification from going twice, so a repeated call sends nothing.
 //
 // Secrets: NOTIFY_SECRET, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT and WARD_TIME_ZONE

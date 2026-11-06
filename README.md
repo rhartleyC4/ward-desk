@@ -255,39 +255,29 @@ The allowlist still applies. A Google account whose email isn't on the allowlist
 
 Changing a key pair later signs every device out of notifications; each person turns them on again.
 
-**The scheduled notifications** (the `notify` Edge Function, called by `pg_cron`). Once per environment, after its migrations have run:
+**The Edge Functions and the schedule.** One command sets up an environment's notifications: the `push` function (instant notifications for requests) and the `notify` function the database calls every 10 minutes (scheduled ones). Functions are deployed from your machine, not by CI, because deploying needs a Supabase access token, which reaches every project you own.
 
-1. Make a secret for the job: `openssl rand -hex 24`
-2. Give the function its secrets (the same VAPID pair as that environment's GitHub settings):
-   ```bash
-   npx supabase secrets set --remote=<ref> NOTIFY_SECRET=<secret> WARD_TIME_ZONE=America/Denver
-   ```
-3. Deploy it (this builds the bundle first; `verify_jwt` is off for it in `config.toml`, since the secret guards it):
-   ```bash
-   npm run functions:deploy -- --remote=<ref>
-   ```
-4. In that project's SQL editor, tell the database where to call and with what secret:
-   ```sql
-   select vault.create_secret('https://<ref>.supabase.co/functions/v1/notify', 'notify_url');
-   select vault.create_secret('<secret>', 'notify_secret');
-   ```
-5. Check it: `select status_code, content from net._http_response order by created desc limit 5;` should show `200` within 10 minutes.
+Once on your machine, sign in to both CLIs: `gh auth login` and `npx supabase login`. Then, after that environment's migrations have run (a deploy does that):
 
-Redeploy (step 3) whenever `scripts/notify/` or `src/lib/` code it uses changes. Resetting the training site may clear the Vault secrets; if `net._http_response` goes quiet afterwards, repeat step 4.
+```bash
+npm run notify:setup -- staging
+```
 
-**The push Edge Function** is deployed by hand, not by CI, because deploying functions needs a Supabase access token, which reaches every project you own. Do this once per environment, and again whenever `supabase/functions/` changes:
+```bash
+npm run notify:setup -- production
+```
 
-1. Sign in to the Supabase CLI on your own machine: `npx supabase login`
-2. Give the function the same key pair as that environment's GitHub settings:
-   ```bash
-   npx supabase secrets set --remote=<ref> VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:noreply@warddesk.app
-   ```
-3. Deploy it:
-   ```bash
-   npx supabase functions deploy push --remote=<ref>
-   ```
+It reads the project ref (`SUPABASE_PROJECT_REF`), the VAPID public key and `WARD_TIME_ZONE` from that GitHub environment, asks you to confirm, and then:
 
-Deploy to staging first and try it there before production.
+1. Makes a new `NOTIFY_SECRET` and sets it and `WARD_TIME_ZONE` on the functions. If the project has no VAPID private key yet, it asks for it (GitHub can't hand a secret back), or reads `VAPID_PRIVATE_KEY` from your shell.
+2. Builds the `notify` bundle and deploys both functions (`--skip-deploy` leaves them as they are).
+3. Saves the function's address and the secret in the database's Vault (`notify_url`, `notify_secret`), where `public.call_notify()` reads them.
+4. Starts one run of the scheduled job and shows the function's answer, so you know it works without waiting 10 minutes. That run sends whatever happens to be due at that moment, as the schedule would.
+5. Prints the new secret once, to keep in your password manager.
+
+Running it again is safe: it replaces the secret in both places and redeploys. Run it again after changing `supabase/functions/`, `scripts/notify/` or the `src/lib/` code they use, and after resetting the training site (a reset can clear the Vault). Do staging first. `npm run notify:setup -- local` does the Vault and test-run steps against the local stack, once `npx supabase functions serve --env-file supabase/functions/.env` is running.
+
+If the job stops working later, `npx supabase db query --remote=<ref> --read-only "select status_code, content from net._http_response order by created desc limit 5"` shows its last answers: `401` means the Vault secret and `NOTIFY_SECRET` differ (run the setup again).
 
 ### Face ID and fingerprint sign-in (passkeys)
 
