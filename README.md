@@ -150,23 +150,21 @@ Both are commands run by hand against a database (`SUPABASE_DB_URL` from `.env`,
 
 ## Setup
 
-Requirements: Node 24+ (`nvm use` reads `.nvmrc`) and Docker (OrbStack or Docker Desktop) for local Supabase.
+Requirements: Docker (OrbStack or Docker Desktop) for local Supabase, and [nvm](https://github.com/nvm-sh/nvm). Run `nvm use` first, since it reads the Node version from `.nvmrc`. Then:
 
-1. `npm install`
-2. `npm run db:start` starts local Supabase and applies `supabase/migrations` and `supabase/seed.sql`
-3. `npm run db:env` writes `.env` pointing at local Supabase
-4. `npm run dev` and open http://localhost:5173
+```bash
+npm run setup
+```
+
+It checks Node and Docker, runs `npm install`, starts local Supabase (which applies `supabase/migrations` and `supabase/seed.sql`), writes `.env` and `supabase/functions/.env`, and ends with `npm run env:check -- local`. Running it again is safe. Local Supabase is shared by every checkout and worktree on this machine, so if it's already running, `setup` leaves it as it is. Apply a new branch's migrations to it with `npx supabase migration up`.
+
+Then run `npm run dev` and open http://localhost:5173.
 
 Sign in locally with a seeded fake account (`bishop@`, `first@`, `second@`, `secretary@`, `clerk@`, or `leader@ward.test`). Either open the magic link in Mailpit at http://127.0.0.1:54324, or enter the practice password from `supabase/seed.sql`. Supabase Studio is at http://127.0.0.1:54323.
 
 After changing the schema, add a new migration (`npx supabase migration new <name>`), then run `npm run db:reset` and `npm run db:types`.
 
-Never commit `.env`. See `.env.example`. Secrets needed for a hosted deployment:
-
-- `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (safe for the frontend)
-- `SUPABASE_SERVICE_ROLE_KEY` (server only, never in the frontend)
-- `VITE_VAPID_PUBLIC_KEY` (frontend) and `VAPID_PRIVATE_KEY` (the notification job only). `npm run db:env` makes a local pair
-- Google OAuth client ID and secret (stored in Supabase Auth settings; set `VITE_ENABLE_GOOGLE=true` once configured)
+Never commit `.env`. `.env.example` lists what goes in it. The hosted environments keep their settings in GitHub and Supabase instead, set by the commands under "Deploying".
 
 ## Tests
 
@@ -202,13 +200,14 @@ The deploy job refuses any `production` commit that isn't already on `main`. Eac
 
 ### One-time setup
 
-1. **Supabase:** create `ward-desk-staging` and `ward-desk-prod` in the same region. Leave Data API and "Automatically expose new tables" on, since the migrations rely on the default grants, and turn on automatic RLS. For each project, note the project ref and anon (publishable) key. Also copy the **Session pooler** connection string (Connect, in the top bar) with the database password filled in. Percent-encode any symbols in the password, or use a password that's letters and digits only. Don't use the direct connection, because on the free plan it's IPv6-only and GitHub's runners can't reach it. No Supabase access token is needed: it would grant access to every project you own.
-2. **Supabase Auth**, in each project:
-   - Under URL Configuration, set the site URL to that environment's URL and add it to the redirect URLs.
-   - Under Emails → SMTP Settings, connect Resend. The built-in sender only reaches project team members. In Resend, add the domain `warddesk.app` and let it auto-configure the Cloudflare DNS records. Then either use Integrations → Supabase, or enter host `smtp.resend.com`, port `465`, username `resend`, and a sending-only API key (one key per project) with sender `noreply@warddesk.app`.
+A few steps need a person in a dashboard. Do these first:
+
+1. **Supabase:** create `ward-desk-staging` and `ward-desk-prod` in the same region. Leave Data API and "Automatically expose new tables" on, since the migrations rely on the default grants, and turn on automatic RLS. Use a database password of letters and digits only, since it goes into a connection URL.
+2. **Resend:** add the domain `warddesk.app` and let it auto-configure the Cloudflare DNS records. Make one sending-only API key per project and keep both in your password manager. The built-in Supabase sender only reaches project team members.
+3. **Supabase Auth, in each project's dashboard:**
+   - Turn on passkeys with that site's relying party. See "Face ID and fingerprint sign-in (passkeys)" below. `supabase config push` can't set these.
    - Under Emails → Templates, keep the email wording generic, with no names.
-   - Google sign-in is optional and can wait. See "Google sign-in" below.
-3. **Cloudflare Pages:** create two Direct Upload projects:
+4. **Cloudflare Pages:** create two Direct Upload projects:
    ```bash
    npx wrangler pages project create ward-desk-staging --production-branch main
    ```
@@ -216,20 +215,24 @@ The deploy job refuses any `production` commit that isn't already on `main`. Eac
    npx wrangler pages project create ward-desk --production-branch production
    ```
    Under Custom domains, add `gp7-training.warddesk.app` to the staging project and `gp7.warddesk.app` to the other. Create a custom API token (or an account-owned token under Manage Account → Account API Tokens, which survives a handoff). Give it only **Account → Cloudflare Pages → Edit** on your account, with no zone permissions and no IP filtering.
-4. **GitHub** (Settings → Secrets and variables → Actions, and Settings → Environments):
+5. **Google Cloud** (optional, can wait): see "Google sign-in" below.
 
-   | Where | Secrets | Variables |
-   |---|---|---|
-   | Repository | `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_ACCOUNT_ID`, `DEPLOY_ENABLED` = `true` (set this last) |
-   | Environment `staging` | `SUPABASE_DB_URL` (session pooler string), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY` |
-   | Environment `production` | `SUPABASE_DB_URL`, `VAPID_PRIVATE_KEY` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk` |
+Then sign in to both CLIs once on your machine: `gh auth login` and `npx supabase login`. No Supabase access token goes to CI: it would reach every project you own. Run each command for staging first, then production:
 
-   Limit the `production` environment to the `production` branch under Deployment branches.
-5. Push to `main`, then run "Reset training site". Then promote to production.
-6. Add yourself to production **before** your first sign-in, since sign-in is refused for any email not on the allowlist. Run this in the production project's SQL editor, then sign in. For staging, add your address to `STAGING_ADMIN_EMAILS` instead, so it survives resets:
-   ```sql
-   insert into public.allowlist (email, initial_roles) values ('you@example.com', '{admin,bishopric}');
-   ```
+1. **`npm run env:github -- staging`** fills the GitHub environment, and any repository settings that are missing. It asks which Supabase project to use, reads the anon key from it, asks for the database password to build the session pooler URL (and tests it), sets the Pages project, time zone and Google flag, and makes a VAPID key pair if there isn't one. For production it also limits deploys to the `production` branch. It shows the changes and asks first, and prints a new VAPID private key once, for your password manager. `--dry-run` only shows what it would change.
+2. **`npm run env:auth -- staging`** applies the Auth settings in `[remotes.staging]` of `supabase/config.toml`: site URL, redirect URLs, Resend SMTP and Google. It asks for the project's Resend key and the Google client secret (leave one blank to keep what's set), shows `supabase config diff`, and asks before `supabase config push`. `--diff` only shows the differences. `config push` sends every setting the file declares, so the remotes blocks restate the live values. Edit them there, never in the dashboard.
+3. **Deploy.** The first time, once both environments are filled, turn deploys on with `gh variable set DEPLOY_ENABLED --body true`. Then push to `main` for staging and run "Reset training site" once, since `db push` doesn't load the seed. For production, promote with `git push origin main:production`.
+4. **`npm run notify:setup -- staging`** deploys the notification functions and starts the schedule, once that environment's migrations have run. See "Notifications" below.
+5. **`npm run admin:add -- staging you@example.com`**, before your first sign-in, since sign-in is refused for any email not on the allowlist. On production it adds you to the allowlist as admin and bishopric. On staging it also saves you in the `STAGING_ADMIN_EMAILS` variable, so training-site resets keep you.
+6. **`npm run env:check -- staging`** checks all of it without changing anything: the GitHub variables and secrets, the branch rule, the functions and their secrets, the Vault entries and the notify job's last answer, the Auth settings and the allowlist. Each ✗ shows the command that fixes it.
+
+Where the settings live, for reference (`env:github` fills them):
+
+| Where | Secrets | Variables |
+|---|---|---|
+| Repository | `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_ACCOUNT_ID`, `NOTIFY_ENABLED`, `DEPLOY_ENABLED` |
+| Environment `staging` | `SUPABASE_DB_URL` (session pooler), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY`, `STAGING_ADMIN_EMAILS` |
+| Environment `production` | `SUPABASE_DB_URL`, `VAPID_PRIVATE_KEY` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk` and no `STAGING_ADMIN_EMAILS` |
 
 ### Google sign-in
 
@@ -246,26 +249,16 @@ Optional. Email links work without it, but Google sign-in means most people neve
    - Authorized JavaScript origins: `https://gp7.warddesk.app` and `https://gp7-training.warddesk.app`.
    - Authorized redirect URIs: `https://<prod-ref>.supabase.co/auth/v1/callback` and `https://<staging-ref>.supabase.co/auth/v1/callback`.
    - Copy the client ID and client secret.
-4. **Supabase**, in each project: Authentication → Sign In / Providers → Google. Enable it and paste the client ID and secret.
-5. **GitHub:** set the `ENABLE_GOOGLE` variable to `true` in both environments, then re-run the latest deploy for each. The button only appears in a fresh build, because the setting is read at build time.
+4. **Supabase:** put the client ID in each `[remotes.*.auth.external.google]` block of `supabase/config.toml`, then run `npm run env:auth -- staging` (and production) and paste the client secret when it asks.
+5. **GitHub:** set `ENABLE_GOOGLE` to `true` in both environments (`gh variable set ENABLE_GOOGLE --env staging --body true`), then re-run the latest deploy for each. The button only appears in a fresh build, because the setting is read at build time.
 
 The allowlist still applies. A Google account whose email isn't on the allowlist is refused, and the same address can sign in with either Google or an email link. Google's sign-in screen says "continue to `<ref>.supabase.co`". Showing your own domain there needs Supabase's paid custom-domain add-on.
 
 ### Notifications
 
-1. Make a VAPID key pair for each environment. Keep the two separate, so a staging key can't send to production devices:
-   ```bash
-   npx web-push generate-vapid-keys
-   ```
-2. In each GitHub environment, set the variable `VAPID_PUBLIC_KEY` to the public key and the secret `VAPID_PRIVATE_KEY` to the private one. Optionally set `VAPID_SUBJECT` (defaults to `mailto:noreply@warddesk.app`); push services use it to reach you about problems.
-3. Re-run the latest deploy for each environment. The app reads the public key at build time, so the Account page only offers notifications after a fresh build.
-4. Set the repository variable `NOTIFY_ENABLED` to `true` to allow hand runs of the "Day-ahead summaries" workflow. Scheduled sending is set up separately, below.
+`npm run env:github` makes each environment's VAPID key pair: the public key is the `VAPID_PUBLIC_KEY` variable and the private key the `VAPID_PRIVATE_KEY` secret. The two environments get separate pairs, so a staging key can't send to production devices. It never replaces a pair, because changing one signs every device out of notifications and each person has to turn them on again. The app reads the public key at build time, so the Account page only offers notifications after a fresh build.
 
-Changing a key pair later signs every device out of notifications; each person turns them on again.
-
-**The Edge Functions and the schedule.** One command sets up an environment's notifications: the `push` function (instant notifications for requests) and the `notify` function the database calls every 10 minutes (scheduled ones). Functions are deployed from your machine, not by CI, because deploying needs a Supabase access token, which reaches every project you own.
-
-Once on your machine, sign in to both CLIs: `gh auth login` and `npx supabase login`. Then, after that environment's migrations have run (a deploy does that):
+**The Edge Functions and the schedule.** One command sets up an environment's notifications: the `push` function (instant notifications for requests) and the `notify` function the database calls every 10 minutes (scheduled ones). Functions are deployed from your machine, not by CI, because deploying needs a Supabase access token, which reaches every project you own. After that environment's migrations have run (a deploy does that):
 
 ```bash
 npm run notify:setup -- staging
@@ -275,23 +268,17 @@ npm run notify:setup -- staging
 npm run notify:setup -- production
 ```
 
-It reads the project ref (`SUPABASE_PROJECT_REF`), the VAPID public key and `WARD_TIME_ZONE` from that GitHub environment, asks you to confirm, and then:
-
-1. Makes a new `NOTIFY_SECRET` and sets it and `WARD_TIME_ZONE` on the functions. If the project has no VAPID private key yet, it asks for it (GitHub can't hand a secret back), or reads `VAPID_PRIVATE_KEY` from your shell.
-2. Builds the `notify` bundle and deploys both functions (`--skip-deploy` leaves them as they are).
-3. Saves the function's address and the secret in the database's Vault (`notify_url`, `notify_secret`), where `public.call_notify()` reads them.
-4. Starts one run of the scheduled job and shows the function's answer, so you know it works without waiting 10 minutes. That run sends whatever happens to be due at that moment, as the schedule would.
-5. Prints the new secret once, to keep in your password manager.
+It reads the project ref, VAPID public key and time zone from that GitHub environment and asks you to confirm. Then it makes a new `NOTIFY_SECRET`, sets the functions' secrets (asking for the VAPID private key if the project has none, since GitHub can't hand a secret back), builds and deploys both functions (`--skip-deploy` leaves them as they are), saves the function's address and the secret in the database's Vault (`notify_url`, `notify_secret`), and starts one run of the scheduled job to show it works. That run sends whatever happens to be due at that moment, as the schedule would. It prints the new secret once, for your password manager.
 
 Running it again is safe: it replaces the secret in both places and redeploys. Run it again after changing `supabase/functions/`, `scripts/notify/` or the `src/lib/` code they use, and after resetting the training site (a reset can clear the Vault). Do staging first. `npm run notify:setup -- local` does the Vault and test-run steps against the local stack, once `npx supabase functions serve --env-file supabase/functions/.env` is running.
 
-If the job stops working later, `npx supabase db query --remote=<ref> --read-only "select status_code, content from net._http_response order by created desc limit 5"` shows its last answers: `401` means the Vault secret and `NOTIFY_SECRET` differ (run the setup again).
+If the job stops working later, `npm run env:check -- staging` shows the last answer. A `401` means the Vault secret and `NOTIFY_SECRET` differ, so run the setup again.
 
 ### Face ID and fingerprint sign-in (passkeys)
 
 After someone signs in once with an email link or Google, the app offers to "Turn on" Face ID or fingerprint sign-in for that device. After that, they tap **Face ID or fingerprint** on the sign-in screen and skip the email. This matters most on iPhone: an email link opens in Safari, not in the Home Screen app, so a link sign-in never reaches the installed app, but a passkey sign-in happens inside it. Each person can see and remove their devices on the Account page (Settings, then their name at the top). Passkeys sync through iCloud Keychain or Google Password Manager, so a new phone usually has them already.
 
-Turn passkeys on in each Supabase project's Auth settings, with that site's own domain. A passkey only works on the domain it was made for, so staging and production passkeys are separate:
+Turn passkeys on in each Supabase project's Auth settings in the dashboard, with that site's own domain. `supabase config push` doesn't manage these, so the `[remotes.*.auth.passkey]` and `[remotes.*.auth.webauthn]` blocks in `supabase/config.toml` are only the record, and `npm run env:check` reads the relying party back. A passkey only works on the domain it was made for, so staging and production passkeys are separate:
 
 | Setting | Staging | Production |
 |---|---|---|
@@ -306,14 +293,14 @@ Locally, `supabase/config.toml` already turns them on for `localhost`. Open the 
 
 Do these in order when passing the app to a successor:
 
-1. Add the successor to the `roles` table as **admin**
+1. Add the successor as **admin**: `npm run admin:add -- production <their email>`
 2. Transfer or share the **Supabase** organization/project ownership
 3. Add them as Owner on the **Google Cloud** project (IAM → Grant access) and have them accept. Change the consent screen's support and developer contact email to theirs, then remove yourself. Or have them create new OAuth credentials and update Supabase Auth
 4. Transfer the **Cloudflare** Pages projects and the **GitHub** repo
 5. Invite them to the **Resend** team (Settings → Team) and make them owner
 6. Transfer the **domain** `warddesk.app` to the successor's Cloudflare account (Domain Registration → Transfer, or move the zone with the Pages projects). Its DNS records for the Pages sites and Resend move with it, so nothing else needs updating
 7. Hand over secrets securely (password manager, not email or chat)
-8. Confirm the successor can sign in, see the right data, and receive a test notification and sign-in email
+8. Confirm the successor can sign in, see the right data, and receive a test notification and sign-in email. `npm run env:check -- production` should be all ✓
 9. Remove your own admin access once they confirm
 
 ## Agenda templates
