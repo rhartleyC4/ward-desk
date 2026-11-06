@@ -290,7 +290,7 @@ If the job stops working later, `npm run env:check -- staging` shows the last an
 Nobody has to watch the Supabase or Cloudflare dashboards. The database tells you when something breaks:
 
 - **Errors in the app.** Each page sits inside an error boundary that shows "Something went wrong" with a Reload button. The app reports that error, any uncaught error or rejected promise, and any failed page load (`useAsync`) to `client_errors` through `report_client_error`. It works before sign-in too. A report holds the page path without the query string, the message and stack, the build's commit (`__APP_VERSION__`) and the browser, but no page contents. Each different error goes once per page load, at most 10, and offline errors are skipped. The database keeps at most 200 an hour and deletes them after 90 days. Admins can read them: `select created_at, route, message, app_version from client_errors order by id desc limit 20;` The pure logic is in `src/lib/errorReport.ts`.
-- **The hourly check.** At 7 minutes past each hour, `pg_cron` runs `public.health_check()`. It looks at the hour since the last check for calls to the `notify` function that failed or got no answer (`notify_calls` records each call so its answer in `net._http_response` can be found), pushes a push service refused, failed `pg_cron` runs, and app errors. It also notices when `notify` hasn't answered for 30 minutes, and says so at most every 12 hours. If it finds anything, `send_alert()` emails the alert address through Resend with counts and where to look. The email never includes names or error text. No email means nothing went wrong.
+- **The hourly check.** At 7 minutes past each hour, `pg_cron` runs `public.health_check()`. It looks at the hour since the last check for calls to the `notify` function that failed or got no answer (`notify_calls` records each call so its answer in `net._http_response` can be found), pushes a push service refused, failed `pg_cron` runs, and app errors. It also notices when `notify` hasn't answered for 30 minutes, and, on production, when no off-site backup has finished in 26 hours (see "Backups and restore"). It says each of those at most every 12 hours. If it finds anything, `send_alert()` emails the alert address through Resend with counts and where to look. The email never includes names or error text. No email means nothing went wrong.
 
 The check runs inside the database, not in an Edge Function, so it still works when the functions are what broke. It can't report on `pg_cron` itself stopping. `npm run env:check` shows when it last ran.
 
@@ -304,7 +304,7 @@ npm run alerts:setup -- staging
 npm run alerts:setup -- production
 ```
 
-It asks for the address (default: your git email; separate several with commas) and that project's Resend API key, saves them in Vault (`alert_email`, `resend_api_key`, and `alert_label`, which goes at the start of the subject), and sends a test email. Until it has run, `health_check()` only returns what it found, so local databases and fresh environments stay quiet. Run it again after resetting the training site. To try the check by hand, run `select public.health_check();` as the database owner. It returns the problem lines and moves the window forward.
+It asks for the address (default: your git email; separate several with commas) and that project's Resend API key, saves them in Vault (`alert_email`, `resend_api_key`, and `alert_label`, which goes at the start of the subject), and sends a test email. On production it also turns the missing-backup alert on (`health_state.expects_backups`) once the `BACKUP_ENABLED` repository variable is true, so run it again after turning backups on. Staging never expects backups, since it only gets them when you run one by hand. Until it has run, `health_check()` only returns what it found, so local databases and fresh environments stay quiet. Run it again after resetting the training site. To try the check by hand, run `select public.health_check();` as the database owner. It returns the problem lines and moves the window forward.
 
 ### Face ID and fingerprint sign-in (passkeys)
 
@@ -335,7 +335,7 @@ Every night `.github/workflows/backup.yml` dumps the production database, encryp
 
 **Where:** `<bucket>/production/daily/<UTC time>.dump.age`, plus the month's first backup again as `production/monthly/<YYYY-MM>.dump.age`. R2 lifecycle rules delete dailies after 31 days and monthlies after 366, so there are about 30 dailies and 12 monthlies. A manual run can back up staging the same way (`gh workflow run backup.yml -f environment=staging`).
 
-**Last-success marker:** after each upload the workflow adds a row to `public.backup_runs` (time, R2 key, size). The app's roles can't read it. The health check alerts when the newest `finished_at` is over 26 hours old, and `npm run env:check -- production` shows it too.
+**Last-success marker:** after each upload the workflow adds a row to `public.backup_runs` (time, R2 key, size). The app's roles can't read it. The health check alerts when the newest `finished_at` is over 26 hours old (once `npm run alerts:setup -- production` has run with `BACKUP_ENABLED` on), and `npm run env:check -- production` shows it too.
 
 ### One-time setup
 

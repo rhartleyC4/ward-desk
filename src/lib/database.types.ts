@@ -345,14 +345,14 @@ isOneToOne: false
                   ]
                 },"health_state": {
                   Row: {
-                    "checked_at": string | null,"checked_until": string,"id": boolean,"last_email_at": string | null,"last_email_request": number | null,"stalled_alerted_at": string | null
+                    "backup_alerted_at": string | null,"checked_at": string | null,"checked_until": string,"expects_backups": boolean,"id": boolean,"last_email_at": string | null,"last_email_request": number | null,"stalled_alerted_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "checked_at"?: string | null,"checked_until"?: string,"id"?: boolean,"last_email_at"?: string | null,"last_email_request"?: number | null,"stalled_alerted_at"?: string | null
+                    "backup_alerted_at"?: string | null,"checked_at"?: string | null,"checked_until"?: string,"expects_backups"?: boolean,"id"?: boolean,"last_email_at"?: string | null,"last_email_request"?: number | null,"stalled_alerted_at"?: string | null
                   }
                   Update: {
-                    "checked_at"?: string | null,"checked_until"?: string,"id"?: boolean,"last_email_at"?: string | null,"last_email_request"?: number | null,"stalled_alerted_at"?: string | null
+                    "backup_alerted_at"?: string | null,"checked_at"?: string | null,"checked_until"?: string,"expects_backups"?: boolean,"id"?: boolean,"last_email_at"?: string | null,"last_email_request"?: number | null,"stalled_alerted_at"?: string | null
                   }
                   Relationships: [
                     

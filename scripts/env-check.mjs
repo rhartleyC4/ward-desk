@@ -252,6 +252,7 @@ async function checkHosted() {
       for (const name of ['alert_email', 'resend_api_key']) db.check(vault.includes(name), `Vault has ${name}, so the health check can email`, { fix: fixAlerts })
       const health = await querySql(
         `select s.checked_at, s.last_email_at, r.status_code as email_status, r.error_msg as email_error,
+          (to_jsonb(s) ->> 'expects_backups')::boolean as expects_backups,
           (select count(*)::int from public.client_errors where created_at > now() - interval '7 days') as errors_week
         from public.health_state s left join net._http_response r on r.id = s.last_email_request`,
         remote,
@@ -266,6 +267,9 @@ async function checkHosted() {
         // pg_net keeps answers 6 hours, so an older email may have no answer left to show.
         const ok = h.email_status === 200 || (h.email_status == null && !h.email_error)
         db.check(ok, 'the last alert email was accepted by Resend', { detail: `${h.email_status ?? h.email_error ?? 'answer no longer kept'}, sent ${new Date(h.last_email_at).toLocaleString()}`, fix: fixAlerts })
+      }
+      if (env === 'production' && h && h.expects_backups === false && repoVars.BACKUP_ENABLED === 'true') {
+        db.check(false, 'the health check alerts on a missing backup', { detail: 'off', fix: fixAlerts })
       }
       if (h) db.note(`${h.errors_week} app error${h.errors_week === 1 ? '' : 's'} reported in the last 7 days`)
     }

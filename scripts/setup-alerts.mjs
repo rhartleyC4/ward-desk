@@ -7,7 +7,9 @@
 // supabase/migrations/*_health_checks.sql) looks for failed notification runs, pushes that
 // couldn't be delivered, failed scheduled jobs and errors in the app. When it finds any, it emails
 // the alert address through Resend. This saves the address and a Resend API key in the database's
-// Vault, then sends a test email and shows whether Resend accepted it.
+// Vault, then sends a test email and shows whether Resend accepted it. On production, once the
+// BACKUP_ENABLED repository variable is true, it also turns on the alert for a missing nightly
+// backup, so run it again after turning backups on.
 //
 // Use the project's own sending-only Resend key (the one Auth's SMTP uses). Running it again is
 // safe: it replaces what's there.
@@ -39,8 +41,13 @@ if (!ref) fail(`No SUPABASE_PROJECT_REF variable on the ${env} GitHub environmen
 const remote = [`--remote=${ref}`]
 console.log(`  Project ${ref}`)
 
-const hasHealthCheck = runSql(`select to_regprocedure('public.send_alert(text, text)') is not null as ready`, remote, { readOnly: true })[0]?.ready
-if (!hasHealthCheck) fail(`The health check migration isn't on ${env} yet. Deploy it first (${env === 'production' ? 'git push origin main:production' : 'push to main'}).`)
+const ready = runSql(
+  `select to_regprocedure('public.send_alert(text, text)') is not null as ready,
+    exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'health_state' and column_name = 'expects_backups') as has_backup_check`,
+  remote,
+  { readOnly: true },
+)[0]
+if (!ready?.ready) fail(`The health check migration isn't on ${env} yet. Deploy it first (${env === 'production' ? 'git push origin main:production' : 'push to main'}).`)
 
 let gitEmail = ''
 try {
@@ -60,6 +67,14 @@ await confirmOrStop(`Send ${env.toUpperCase()} (${ref}) alerts to ${email}?`, { 
 step('Saving the alert address and Resend key in the database’s Vault')
 const label = env === 'production' ? 'Ward Desk' : 'Ward Desk training site'
 runSql(`do $$ begin ${upsertVault('alert_email', email)} ${upsertVault('resend_api_key', key)} ${upsertVault('alert_label', label)} end $$;`, remote)
+
+// Nightly backups run for production only, once BACKUP_ENABLED is on (.github/workflows/backup.yml).
+const expectsBackups = env === 'production' && ghVar('BACKUP_ENABLED') === 'true'
+if (ready.has_backup_check) {
+  step(expectsBackups ? 'Turning on the missing-backup alert' : 'Leaving the missing-backup alert off')
+  runSql(`update public.health_state set expects_backups = ${expectsBackups} where id`, remote)
+  console.log(expectsBackups ? '  The check emails when no backup has finished in 26 hours.' : `  ${env === 'production' ? 'BACKUP_ENABLED isn’t true yet. Run this again once backups are on.' : 'Only production has nightly backups.'}`)
+}
 
 step('Sending a test email')
 const id = runSql(

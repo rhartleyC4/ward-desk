@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(25);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -144,6 +144,32 @@ select ok(
   (select convert_from(q.body, 'utf8')::jsonb ->> 'text' like '- 1 error in the app (1 different).%' from net.http_request_queue q where q.id = (select last_email_request from public.health_state)),
   'the email lists the problems'
 );
+
+-- ---------------------------------------------------------------------------
+-- Missing backups
+-- ---------------------------------------------------------------------------
+
+delete from public.client_errors;
+update public.health_state set checked_until = now() - interval '5 minutes';
+select is(public.health_check(), '{}'::text[], 'with backups not expected here, none is fine');
+
+update public.health_state set expects_backups = true, checked_until = now() - interval '5 minutes';
+select is(
+  public.health_check(),
+  array['No off-site backup has been recorded yet (public.backup_runs). Check the "Database backup" workflow.'],
+  'where backups are expected, having none is a problem'
+);
+
+insert into public.backup_runs (object_key, bytes, finished_at) values ('production/daily/old.dump.age', 1234, now() - interval '30 hours');
+update public.health_state set checked_until = now() - interval '5 minutes';
+select is(public.health_check(), '{}'::text[], 'it''s said at most every 12 hours');
+
+update public.health_state set backup_alerted_at = now() - interval '13 hours', checked_until = now() - interval '5 minutes';
+select ok((public.health_check())[1] like 'The last off-site backup finished % UTC, over 26 hours ago.%', 'a backup over 26 hours old is a problem');
+
+insert into public.backup_runs (object_key, bytes, finished_at) values ('production/daily/new.dump.age', 1234, now() - interval '2 hours');
+update public.health_state set backup_alerted_at = null, checked_until = now() - interval '5 minutes';
+select is(public.health_check(), '{}'::text[], 'a backup in the last 26 hours is fine');
 
 select * from finish();
 rollback;
