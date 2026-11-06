@@ -91,7 +91,7 @@ function rangeLabel(start: IsoDate, end: IsoDate): string {
   return sm === em ? `${MONTHS[sm - 1]} ${sd}–${ed}` : `${MONTHS[sm - 1]} ${sd}–${MONTHS[em - 1]} ${ed}`
 }
 
-/** Push topics allow 32 URL-safe characters; tags double as topics. */
+/** Short, plain tags: a notification with the same tag replaces the earlier one on the device. */
 const tagFor = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32)
 
 /** Who books for each leader: the assigned secretaries, the one executive secretary, or else every secretary. */

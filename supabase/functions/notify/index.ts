@@ -46,24 +46,14 @@ Deno.serve(async (req) => {
   if (!publicKey || !privateKey) return reply(200, { skipped: 'notifications are not set up here' })
   webpush.setVapidDetails(env('VAPID_SUBJECT') || 'mailto:noreply@warddesk.app', publicKey, privateKey)
 
-  const push = (device: Device, message: PushMessage, topic: boolean) =>
-    webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, JSON.stringify(message), {
-      TTL: 12 * 60 * 60, // a phone that's off overnight still gets it in the morning
-      urgency: 'normal',
-      // A newer one with the same topic replaces an undelivered one. Some push services refuse a
-      // topic they don't like with a 400, so that one is sent again without it.
-      ...(topic ? { topic: message.tag } : {}),
-    })
-
   const send = async (device: Device, message: PushMessage) => {
     try {
-      try {
-        await push(device, message, true)
-      } catch (e) {
-        if ((e as { statusCode?: number }).statusCode !== 400) throw e
-        console.error(`push refused with a topic (400): ${reason(e)}; sending without one`)
-        await push(device, message, false)
-      }
+      await webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, JSON.stringify(message), {
+        TTL: 12 * 60 * 60, // a phone that's off overnight still gets it in the morning
+        urgency: 'normal',
+        // No Topic header: Apple's push service refuses it (400 BadWebPushTopic). The tag still
+        // replaces an earlier notification about the same thing on the device.
+      })
       return 'sent' as const
     } catch (e) {
       const status = (e as { statusCode?: number }).statusCode

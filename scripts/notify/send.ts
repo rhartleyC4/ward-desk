@@ -63,7 +63,7 @@ const send: Sender = dryRun
           await webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, JSON.stringify(message), {
             TTL: 12 * 60 * 60, // a phone that's off overnight still gets it in the morning
             urgency: 'normal',
-            topic: message.tag, // a newer one for the same day replaces an undelivered one
+            // No Topic header: Apple's push service refuses it (400 BadWebPushTopic).
           })
           return 'sent'
         } catch (e) {
