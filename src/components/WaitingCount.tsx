@@ -1,52 +1,59 @@
-// How many requests are waiting on the signed-in person, for the badge on the Requests tab.
+// How many things on each main tab are waiting on the signed-in person, for the badges on the tab bar.
 // Rechecked on every page change and when the app comes back to the front.
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
-import { canSendRequests } from '../lib/access'
+import { canPlanMeetings, canSeeCallings, canSendRequests, hasBishopricHome, hasSecretaryHome } from '../lib/access'
 import { showOnAppIcon } from '../lib/appBadge'
-import { countWaiting } from '../lib/queries'
+import { todayIso } from '../lib/dates'
+import { loadTabCounts } from '../lib/queries'
 import { supabase } from '../lib/supabase'
+import { totalCount, type TabCounts } from '../lib/tabCounts'
 
-const WaitingContext = createContext<{ count: number; refresh: () => void }>({ count: 0, refresh: () => {} })
+const WaitingContext = createContext<{ counts: TabCounts; refresh: () => void }>({ counts: {}, refresh: () => {} })
 
 export function WaitingProvider({ children }: { children: ReactNode }) {
-  const { profile, roles } = useAuth()
+  const { profile, roles, office, templates } = useAuth()
   const { pathname } = useLocation()
-  const [count, setCount] = useState(0)
+  const [counts, setCounts] = useState<TabCounts>({})
   const [tick, setTick] = useState(0)
   const refresh = useCallback(() => setTick((t) => t + 1), [])
   const userId = profile?.id
   const bishopric = canSendRequests(roles)
+  const home = hasSecretaryHome(roles, office) ? 'secretary' : hasBishopricHome(roles, office) ? 'leader' : null
+  // Suggestions are sorted in the callings section, so only someone whose agenda has one gets the badge.
+  const callings = canSeeCallings(roles) && templates.some((t) => t.sections.some((s) => s.kind === 'callings'))
+  const sacrament = canPlanMeetings(roles)
 
   useEffect(() => {
     if (!userId || !roles.length) return
     let live = true
-    // The badge is a nudge; if it can't load, the page itself still shows everything.
-    countWaiting(supabase, userId, bishopric).then(
-      (n) => live && setCount(n),
+    // The badges are a nudge; if they can't load, the pages themselves still show everything.
+    loadTabCounts(supabase, { userId, bishopric, home, callings, sacrament, today: todayIso(), now: new Date() }).then(
+      (c) => live && setCounts(c),
       () => {},
     )
     return () => {
       live = false
     }
-  }, [userId, bishopric, roles.length, pathname, tick])
+  }, [userId, bishopric, home, callings, sacrament, roles.length, pathname, tick])
 
-  // Mirror the count on the installed app's icon, and clear it on sign-out.
-  useEffect(() => showOnAppIcon(count), [count])
+  // Mirror the total on the installed app's icon, and clear it on sign-out.
+  const total = totalCount(counts)
+  useEffect(() => showOnAppIcon(total), [total])
   useEffect(() => () => showOnAppIcon(0), [])
 
   useEffect(() => {
-    const onShow =() => document.visibilityState === 'visible' && refresh()
+    const onShow = () => document.visibilityState === 'visible' && refresh()
     document.addEventListener('visibilitychange', onShow)
     return () => document.removeEventListener('visibilitychange', onShow)
   }, [refresh])
 
-  return <WaitingContext.Provider value={{ count, refresh }}>{children}</WaitingContext.Provider>
+  return <WaitingContext.Provider value={{ counts, refresh }}>{children}</WaitingContext.Provider>
 }
 
 // oxlint-disable-next-line react/only-export-components
-export const useWaitingCount = () => useContext(WaitingContext).count
+export const useTabCounts = () => useContext(WaitingContext).counts
 // oxlint-disable-next-line react/only-export-components
 export const useRefreshWaiting = () => useContext(WaitingContext).refresh

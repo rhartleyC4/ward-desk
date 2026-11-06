@@ -35,7 +35,7 @@ import { InstallPrompt } from './InstallPrompt'
 import { PasskeyOffer } from './PasskeyOffer'
 import { SetupProvider, useSetupSteps } from './Setup'
 import { glass } from '../theme'
-import { useWaitingCount, WaitingProvider } from './WaitingCount'
+import { useTabCounts, WaitingProvider } from './WaitingCount'
 
 const TAB_ICONS: Record<string, ReactNode> = {
   '/home': <HomeOutlinedIcon />,
@@ -86,17 +86,19 @@ function Shell() {
   const landing = pathname === links[0]?.to
   const pending = !!nextStep(steps)
   const settingsLabel = pending ? 'Settings (setup not finished)' : 'Settings'
-  const waiting = useWaitingCount()
-  /** The tab's label, with how many requests are waiting for this person. */
-  const tabLabel = (l: { to: string; label: string }) => (l.to === '/requests' && waiting ? `${l.label} (${waiting} new)` : l.label)
-  const tabIcon = (to: string) =>
-    to === '/requests' ? (
-      <Badge color="error" badgeContent={waiting} invisible={!waiting}>
-        {TAB_ICONS[to]}
-      </Badge>
-    ) : (
-      TAB_ICONS[to]
-    )
+  const counts = useTabCounts()
+  const countFor = (to: string) => counts[to as keyof typeof counts] ?? 0
+  /** The tab's label, with how many things there are waiting for this person. */
+  const tabLabel = (l: { to: string; label: string }) => {
+    const n = countFor(l.to)
+    if (!n) return l.label
+    return l.to === '/requests' ? `${l.label} (${n} new)` : `${l.label} (${n} to look at)`
+  }
+  const tabIcon = (to: string) => (
+    <Badge color="error" badgeContent={countFor(to)} invisible={!countFor(to)} max={99}>
+      {TAB_ICONS[to]}
+    </Badge>
+  )
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -116,8 +118,8 @@ function Shell() {
                   key={l.to}
                   value={l.to}
                   label={
-                    l.to === '/requests' && waiting ? (
-                      <Badge color="error" badgeContent={waiting} sx={{ '& .MuiBadge-badge': { right: -10 } }}>
+                    countFor(l.to) ? (
+                      <Badge color="error" badgeContent={countFor(l.to)} max={99} sx={{ '& .MuiBadge-badge': { right: -10 } }}>
                         {l.label}
                       </Badge>
                     ) : (

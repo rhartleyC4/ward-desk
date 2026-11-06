@@ -4,11 +4,12 @@
 import type { Block, DayChange, UsualHours } from './availability'
 import { tidyTitle, type ListedCalling } from './callings'
 import type { MessageTemplate } from './messages'
-import { addDays, type IsoDate } from './dates'
+import { addDays, upcomingSunday, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
 import type { CallingRequest, CallingRequestKind, MyCallingRequest, Recipient, Request, RequestStatus } from './requests'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
+import { leaderHomeCount, meetingsCount, sacramentCount, secretaryHomeCount, type TabCounts } from './tabCounts'
 
 type Result<T> = { data: T; error: { message: string } | null }
 
@@ -430,6 +431,58 @@ export async function countWaiting(client: Client, userId: string, bishopric: bo
   check(requests)
   if (calling) check(calling)
   return (requests.count ?? 0) + (calling?.count ?? 0)
+}
+
+/** What to count on the tab bar, from who this person is. Each part is loaded only when they have that tab. */
+export type TabCountsFor = {
+  userId: string
+  /** The bishopric: calling requests routed to them count on Requests. */
+  bishopric: boolean
+  home: 'leader' | 'secretary' | null
+  /** Sorts calling suggestions on the bishopric agenda. */
+  callings: boolean
+  /** Plans sacrament meeting. */
+  sacrament: boolean
+  today: IsoDate
+  now: Date
+}
+
+/** The count for each main tab's badge. Tabs with nothing to count are left out. */
+export async function loadTabCounts(client: Client, who: TabCountsFor): Promise<TabCounts> {
+  const sunday = upcomingSunday(who.today)
+  const [requests, home, meetings, sacrament] = await Promise.all([
+    countWaiting(client, who.userId, who.bishopric),
+    who.home === 'leader'
+      ? client
+          .from('interviews')
+          .select('id, interviewer_id, scheduled_at, duration_minutes, status, confirmed_at, reminded_at')
+          .eq('interviewer_id', who.userId)
+          .eq('status', 'scheduled')
+          .not('scheduled_at', 'is', null)
+          .then((r) => leaderHomeCount(who.userId, must(r), who.now))
+      : who.home === 'secretary'
+        ? Promise.all([client.from('interviews').select('*').eq('status', 'scheduled'), client.from('secretary_assignments').select('*'), loadBishopric(client), loadSecretaries(client)]).then(
+            ([appointments, assignments, bishopric, secretaries]) =>
+              secretaryHomeCount(who.userId, { appointments: must(appointments), assignments: must(assignments), bishopric, secretaries }, who.now),
+          )
+        : null,
+    who.callings
+      ? Promise.all([
+          client.from('calling_candidates').select('need_id, status, request_id').is('need_id', null).eq('status', 'suggested'),
+          client.from('calling_requests').select('id').is('received_at', null),
+        ]).then(([candidates, unreceived]) => meetingsCount(must(candidates), must(unreceived).map((r) => r.id)))
+      : null,
+    who.sacrament
+      ? Promise.all([loadSundays(client, sunday, sunday), client.from('absences').select('*').lte('starts_on', sunday).gte('ends_on', sunday)]).then(([meetings, absences]) =>
+          sacramentCount(sunday, meetings[0], must(absences)),
+        )
+      : null,
+  ])
+  const counts: TabCounts = { '/requests': requests }
+  if (home !== null) counts['/home'] = home
+  if (meetings !== null) counts['/agenda'] = meetings
+  if (sacrament !== null) counts['/sacrament'] = sacrament
+  return counts
 }
 
 export type PushEvent = 'request_sent' | 'request_answered' | 'calling_request_sent' | 'calling_request_received'
