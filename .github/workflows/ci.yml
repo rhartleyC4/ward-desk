@@ -171,7 +171,7 @@ jobs:
       # Schema first, so the new frontend never expects a column that isn't there yet.
       # Migrations must therefore keep working with the frontend that is still live.
       - name: Apply database migrations
-        run: npx supabase db push --db-url "$SUPABASE_DB_URL" --yes
+        run: npx supabase db push --remote="$SUPABASE_DB_URL" --yes
 
       - name: Build
         run: npm run build

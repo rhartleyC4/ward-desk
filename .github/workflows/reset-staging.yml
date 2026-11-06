@@ -40,7 +40,7 @@ jobs:
       - run: npm ci
 
       - name: Reset database and reload seed data
-        run: npx supabase db reset --db-url "$SUPABASE_DB_URL" --yes
+        run: npx supabase db reset --remote="$SUPABASE_DB_URL" --yes
 
       # Real people's emails stay out of the repo (seed.sql is invented data only). List staging
       # admins, comma-separated, in the staging environment variable STAGING_ADMIN_EMAILS.

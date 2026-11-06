@@ -260,11 +260,11 @@ Changing a key pair later signs every device out of notifications; each person t
 1. Make a secret for the job: `openssl rand -hex 24`
 2. Give the function its secrets (the same VAPID pair as that environment's GitHub settings):
    ```bash
-   npx supabase secrets set --project-ref <ref> NOTIFY_SECRET=<secret> WARD_TIME_ZONE=America/Denver
+   npx supabase secrets set --remote=<ref> NOTIFY_SECRET=<secret> WARD_TIME_ZONE=America/Denver
    ```
 3. Deploy it (this builds the bundle first; `verify_jwt` is off for it in `config.toml`, since the secret guards it):
    ```bash
-   npm run functions:deploy -- --project-ref <ref>
+   npm run functions:deploy -- --remote=<ref>
    ```
 4. In that project's SQL editor, tell the database where to call and with what secret:
    ```sql
@@ -280,11 +280,11 @@ Redeploy (step 3) whenever `scripts/notify/` or `src/lib/` code it uses changes.
 1. Sign in to the Supabase CLI on your own machine: `npx supabase login`
 2. Give the function the same key pair as that environment's GitHub settings:
    ```bash
-   npx supabase secrets set --project-ref <ref> VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:noreply@warddesk.app
+   npx supabase secrets set --remote=<ref> VAPID_PUBLIC_KEY=<public> VAPID_PRIVATE_KEY=<private> VAPID_SUBJECT=mailto:noreply@warddesk.app
    ```
 3. Deploy it:
    ```bash
-   npx supabase functions deploy push --project-ref <ref>
+   npx supabase functions deploy push --remote=<ref>
    ```
 
 Deploy to staging first and try it there before production.
