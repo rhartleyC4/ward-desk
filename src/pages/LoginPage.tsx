@@ -24,6 +24,7 @@ const PRACTICE_ACCOUNTS = [
   { email: 'first@ward.test', role: '1st counselor' },
   { email: 'second@ward.test', role: '2nd counselor' },
   { email: 'secretary@ward.test', role: 'Executive secretary' },
+  { email: 'assistant@ward.test', role: 'Assistant executive secretary' },
   { email: 'clerk@ward.test', role: 'Ward clerk' },
   { email: 'eqpres@ward.test', role: 'Elders Quorum president' },
   { email: 'rspres@ward.test', role: 'Relief Society president' },
