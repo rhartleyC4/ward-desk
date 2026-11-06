@@ -30,7 +30,7 @@ export default defineConfig({
         // same list, so pick pages most people can open; the route guards send anyone else home.
         shortcuts: [
           { name: 'Requests', url: '/requests', icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }] },
-          { name: 'Agenda', url: '/agenda', icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Meetings', url: '/agenda', icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }] },
           { name: 'Sacrament meeting', short_name: 'Sacrament', url: '/sacrament', icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }] },
         ],
       },
