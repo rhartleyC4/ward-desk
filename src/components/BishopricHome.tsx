@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import type { AgendaItem } from '../lib/agenda'
 import { WEEK_AHEAD, isEmptyDay, meetingChoices, planDays, schedulersFor, waitingForTime, writableSections, type DayPlan, type HomeSacrament } from '../lib/bishopricHome'
-import { longDate, shortDate, weekday, type IsoDate } from '../lib/dates'
+import { addDays, longDate, shortDate, weekday, type IsoDate } from '../lib/dates'
 import type { Enums } from '../lib/database.types'
 import { timeLabel, WEEKDAYS } from '../lib/availability'
 import type { AgendaSection, AgendaTemplate, Appointment, AppointmentsData } from '../lib/queries'
@@ -24,7 +24,9 @@ import { ReportCard, type ReportAction } from './ReportCard'
 import { ActionButton, Choices, StepFrame } from './Steps'
 import { toReport } from '../lib/followUp'
 import { ThisMonth } from './ThisMonth'
-import type { Rotation } from '../lib/schedule'
+import type { Absence, Rotation } from '../lib/schedule'
+import { shortSundays } from '../lib/coverage'
+import { ShortSundaysNote } from './ShortSundays'
 
 export type BishopricHomeData = Pick<AppointmentsData, 'appointments' | 'assignments' | 'secretaries' | 'bishopric'> & {
   /** The meetings this leader can open. */
@@ -32,6 +34,8 @@ export type BishopricHomeData = Pick<AppointmentsData, 'appointments' | 'assignm
   agendaItems: AgendaItem[]
   sacrament: HomeSacrament[]
   rotations: Rotation[]
+  /** Away dates that haven't ended, to warn about Sundays the bishopric is short-handed. */
+  absences: Absence[]
 }
 
 export type InterviewRequest = { person_name: string; purpose: Enums<'interview_purpose'>; interviewer_id: string; is_youth: boolean; parent_name: string | null }
@@ -356,6 +360,9 @@ function QuickActions(props: Props) {
 
 // ---------------------------------------------------------------------------
 
+/** How far ahead Home warns about Sundays the bishopric will be short-handed. */
+const SHORT_SUNDAY_DAYS = 8 * 7
+
 /** The bishop's and counselors' home: today, quick actions, the week ahead, and open requests. */
 export function BishopricHome(props: Props) {
   const { data, userId, today, now, timeZone, actions, busy } = props
@@ -363,12 +370,14 @@ export function BishopricHome(props: Props) {
     const names = schedulersFor(a.interviewer_id ?? userId, data.assignments, data.secretaries).map((s) => s.display_name ?? s.email)
     return names.length ? names.join(' or ') : 'the secretary'
   }
+  const leaderIds = data.bishopric.map((p) => p.id)
   const [todayPlan, ...week] = planDays({ userId, from: today, days: WEEK_AHEAD + 1, appointments: data.appointments, templates: data.templates, agendaItems: data.agendaItems, sacrament: data.sacrament, rotations: data.rotations, timeZone })
   return (
     <>
       <Typography variant="h1" sx={{ mb: 1.5 }}>
         {fullDay(today)}
       </Typography>
+      <ShortSundaysNote sundays={shortSundays(today, addDays(today, SHORT_SUNDAY_DAYS), leaderIds, data.absences)} leaderIds={leaderIds} people={data.bishopric} linkToAway />
       <ReportCard appointments={toReport(userId, data.appointments, now)} timeZone={timeZone} secretaryFor={secretaryFor} onReport={actions.report} busy={busy} />
       <Split>
         <Today today={todayPlan} week={week} timeZone={timeZone} />

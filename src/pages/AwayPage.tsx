@@ -1,4 +1,5 @@
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Grid from '@mui/material/Grid'
 import IconButton from '@mui/material/IconButton'
@@ -11,9 +12,11 @@ import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { ShortSundaysNote } from '../components/ShortSundays'
 import { personLabel } from '../lib/agenda'
+import { shortSundays, shortSundaysWith } from '../lib/coverage'
 import { longDate, todayIso } from '../lib/dates'
-import { addAbsence, deleteAbsence, loadAbsences, loadProfiles } from '../lib/queries'
+import { addAbsence, deleteAbsence, loadAbsences, loadBishopric, loadProfiles } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 
@@ -23,14 +26,21 @@ export function AwayPage() {
   const { session } = useAuth()
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
-    const [absences, profiles] = await Promise.all([loadAbsences(supabase, today), loadProfiles(supabase)])
-    return { absences, profiles }
+    const [absences, profiles, bishopric] = await Promise.all([loadAbsences(supabase, today), loadProfiles(supabase), loadBishopric(supabase)])
+    return { absences, profiles, leaderIds: bishopric.map((p) => p.id) }
   }, [today])
   const save = useAction()
   const [form, setForm] = useState({ starts_on: '', ends_on: '', location: '' })
 
   if (error) return <ErrorNote error={error} />
   if (!data) return <Loading />
+
+  // Warn before adding dates that leave a Sunday with one or none of the bishopric, and keep
+  // showing every such Sunday ahead so the others see it too.
+  const draft = { user_id: session?.user.id ?? '', starts_on: form.starts_on, ends_on: form.ends_on || form.starts_on, location: null }
+  const draftShort = shortSundaysWith(draft, data.leaderIds, data.absences)
+  const lastDay = data.absences.reduce((max, a) => (a.ends_on > max ? a.ends_on : max), today)
+  const upcomingShort = shortSundays(today, lastDay, data.leaderIds, data.absences)
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -72,7 +82,14 @@ export function AwayPage() {
           </Grid>
         </Grid>
         <ErrorNote error={save.error} />
+        {draftShort.length > 0 && (
+          <Box sx={{ mt: 1.5 }}>
+            <ShortSundaysNote sundays={draftShort} leaderIds={data.leaderIds} people={data.profiles} intro="With these dates" />
+          </Box>
+        )}
       </SectionCard>
+
+      <ShortSundaysNote sundays={upcomingShort} leaderIds={data.leaderIds} people={data.profiles} />
 
       <SectionCard title="Upcoming">
         {data.absences.length ? (

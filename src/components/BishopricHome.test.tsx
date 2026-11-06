@@ -34,6 +34,7 @@ function data(extra: Partial<BishopricHomeData> = {}): BishopricHomeData {
     agendaItems: [{ id: 'i1', section_id: 'bishopric-s1', body: 'Budget', event_date: null, resolved_on: null, created_at: ts }],
     sacrament: [{ meeting_date: TODAY, meeting_type: 'regular', title: null, conducting_id: 'b' }],
     rotations: [],
+    absences: [],
     ...extra,
   }
 }
@@ -215,5 +216,18 @@ describe('BishopricHome', () => {
   it("can't add to a meeting when none are set up", () => {
     setup(data({ templates: [] }))
     expect(screen.getByRole('button', { name: /Add something to a meeting/ })).toBeDisabled()
+  })
+
+  it('warns when the whole bishopric is away on a Sunday, and more mildly when only one is there', () => {
+    const away = (user_id: string, date: string) => ({ user_id, starts_on: date, ends_on: date, location: null })
+    setup(data({ absences: [away('b', '2026-11-15'), away('l', '2026-11-15'), away('o', '2026-11-15'), away('b', '2026-11-22'), away('o', '2026-11-22')] }))
+    expect(screen.getByText('The whole bishopric is away')).toBeInTheDocument()
+    expect(screen.getByText('Sunday, November 15th: no one in the bishopric will be there.')).toBeInTheDocument()
+    expect(screen.getByText('Sunday, November 22nd: only Lane will be there.')).toBeInTheDocument()
+  })
+
+  it('says nothing when every Sunday has two or more there', () => {
+    setup(data({ absences: [{ user_id: 'b', starts_on: '2026-11-15', ends_on: '2026-11-15', location: null }] }))
+    expect(screen.queryByText(/bishopric will be there|will be there\./)).not.toBeInTheDocument()
   })
 })

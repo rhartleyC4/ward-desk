@@ -25,13 +25,14 @@ function BishopricHomePage() {
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
     // The bishopric attends every meeting in the database's eyes, so these are all of them.
-    const [appointments, sacrament, agendaItems, rotations] = await Promise.all([
+    const [appointments, sacrament, agendaItems, rotations, absences] = await Promise.all([
       q.loadAppointments(supabase),
       q.loadSundays(supabase, today, addDays(today, WEEK_AHEAD)),
       q.loadOpenAgendaItems(supabase, templates.flatMap((t) => t.sections.map((s) => s.id))),
       q.loadRotations(supabase),
+      q.loadAbsences(supabase, today),
     ])
-    return { ...appointments, templates, agendaItems, sacrament, rotations }
+    return { ...appointments, templates, agendaItems, sacrament, rotations, absences }
   }, [today, templates])
   const save = useAction()
 
