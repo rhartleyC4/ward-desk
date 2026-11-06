@@ -321,6 +321,70 @@ Turn passkeys on in each Supabase project's Auth settings in the dashboard, with
 
 Locally, `supabase/config.toml` already turns them on for `localhost`. Open the app at `http://localhost:5173` (not `127.0.0.1`) to try them. Passkeys only work on HTTPS or localhost, so a phone on your local network can't test them; use staging. The allowlist still applies, since only someone already signed in can add a passkey.
 
+## Backups and restore
+
+Every night `.github/workflows/backup.yml` dumps the production database, encrypts it, and stores it in Cloudflare R2, away from Supabase's own account and backups. The dump is piped straight into [age](https://age-encryption.org), so nothing unencrypted is written to disk or uploaded anywhere, Actions artifacts included. Only the public key is on GitHub. The private key lives only in your password manager.
+
+**What's backed up:** the `public` schema (tables, data, functions, policies, grants), the rows in `auth` (users, identities, passkeys, sessions), and `supabase_migrations` (so you can see which migrations a backup has). It's `pg_dump --format=custom` at the server's own Postgres major version.
+
+**What isn't, and why that's fine:**
+
+- The code, the Cloudflare Pages sites and their settings, and the GitHub variables can be rebuilt from this repo and `npm run env:github`.
+- Vault secrets (`notify_url`, `notify_secret`) and the functions' secrets: `npm run notify:setup -- production` creates fresh ones.
+- Supabase's own schemas (`storage`, `realtime`, `cron`, `vault`, `extensions`): the platform or the migrations create them. The app stores no files.
+
+**Where:** `<bucket>/production/daily/<UTC time>.dump.age`, plus the month's first backup again as `production/monthly/<YYYY-MM>.dump.age`. R2 lifecycle rules delete dailies after 31 days and monthlies after 366, so there are about 30 dailies and 12 monthlies. A manual run can back up staging the same way (`gh workflow run backup.yml -f environment=staging`).
+
+**Last-success marker:** after each upload the workflow adds a row to `public.backup_runs` (time, R2 key, size). The app's roles can't read it. The health check alerts when the newest `finished_at` is over 26 hours old, and `npm run env:check -- production` shows it too.
+
+### One-time setup
+
+1. **age key.** Install age (`brew install age`) and make a key pair. Put the whole output (including the `AGE-SECRET-KEY-…` line) in your password manager as "Ward Desk backup key", then delete the file:
+
+   ```bash
+   age-keygen -o ward-desk-backup.key
+   ```
+
+   It prints the public key (`age1…`). That's the only part that goes to GitHub. Without the private key the backups can't be read, so the password manager entry is the one thing you must not lose. The successor gets it in the handoff (step 7).
+2. **R2 bucket.** In Cloudflare, go to R2 → Create bucket `ward-desk-backups` (no public access). Add two lifecycle rules (bucket → Settings → Object lifecycle rules): prefix `production/daily/` (and `staging/daily/`) deletes after 31 days; prefix `production/monthly/` (and `staging/monthly/`) deletes after 366 days.
+3. **R2 tokens.** R2 → Manage API tokens → Create: **Object Read & Write**, limited to that bucket, for GitHub. Make a second one with **Object Read** only for restores, and keep it in your password manager.
+4. **GitHub.** `npm run env:github -- production` asks for the age public key, the bucket, and the read/write token. It builds the R2 endpoint from `CLOUDFLARE_ACCOUNT_ID`, and asks for the database password to set `BACKUP_DB_URL_PRODUCTION`. That is a repository secret holding the same URL as the environment's `SUPABASE_DB_URL`, because the production environment only lets the `production` branch use its secrets, and scheduled runs start from `main`. Do the same for staging if you want staging backups.
+5. **Turn it on and try it:**
+
+   ```bash
+   gh variable set BACKUP_ENABLED --body true
+   ```
+
+   ```bash
+   gh workflow run backup.yml
+   ```
+
+   Then `npm run env:check -- production` should show the backup ✓.
+
+### Restoring
+
+`npm run backup:restore` downloads a backup, decrypts it in memory, and loads it into **local** Supabase. It refuses any database that isn't local Supabase on this machine. It replaces `public` and the `auth` rows in the local database, which other worktrees share, and asks before it does.
+
+```bash
+npm run backup:restore -- --identity /path/to/ward-desk-backup.key
+```
+
+Options: `--list` shows what's in R2. `--key production/monthly/2026-11.dump.age` picks one (the default is the latest daily). `--file <path>` uses a downloaded file. `--env staging` uses staging's backups. It asks for the read-only R2 token (or set `BACKUP_R2_ACCESS_KEY_ID` and `BACKUP_R2_SECRET_ACCESS_KEY`). The identity path is used once and never stored. Save the key from your password manager to a temporary file and delete it afterwards.
+
+Afterwards your local database holds **real member data**. Don't seed, test or screenshot it, and run `npm run db:reset` when you're done to get back to the invented data.
+
+**Restoring production itself** (after data loss) is the same dump with `pg_restore` pointed at production. Do it deliberately, by hand, after a drill. The script won't do it.
+
+### Restore drill (quarterly)
+
+Once a quarter, and after any change to the schema's shape or to Supabase's Postgres version:
+
+1. Get the key from the password manager into a temporary file.
+2. `npm run backup:restore -- --identity <file> --list` and check last night's backup and this month's monthly are there.
+3. `npm run backup:restore -- --identity <file>` and check the summary: the auth user count and the newest migration should match production.
+4. Run `npm run dev` and sign in locally. Spot-check a recent agenda and the callings list.
+5. `npm run db:reset`, and delete the key file.
+
 ## Handoff checklist
 
 Do these in order when passing the app to a successor:
@@ -331,7 +395,7 @@ Do these in order when passing the app to a successor:
 4. Transfer the **Cloudflare** Pages projects and the **GitHub** repo
 5. Invite them to the **Resend** team (Settings → Team) and make them owner
 6. Transfer the **domain** `warddesk.app` to the successor's Cloudflare account (Domain Registration → Transfer, or move the zone with the Pages projects). Its DNS records for the Pages sites and Resend move with it, so nothing else needs updating
-7. Hand over secrets securely (password manager, not email or chat)
+7. Hand over secrets securely (password manager, not email or chat), including the backup age key and the R2 read-only token
 8. Send alert emails to them: `npm run alerts:setup -- production --email <their email>` (and the same for staging)
 9. Confirm the successor can sign in, see the right data, and receive a test notification and sign-in email. `npm run env:check -- production` should be all ✓
 10. Remove your own admin access once they confirm

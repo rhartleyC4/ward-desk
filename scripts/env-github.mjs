@@ -13,6 +13,10 @@
 //   - VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY: makes a pair only when neither exists. Replacing a pair
 //     signs every device out of notifications, so it never does that.
 //   - Repository: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN (asked for if missing), NOTIFY_ENABLED.
+//   - Backups (repository, asked for if missing): BACKUP_AGE_RECIPIENT, BACKUP_R2_BUCKET,
+//     BACKUP_R2_ENDPOINT, BACKUP_R2_ACCESS_KEY_ID, BACKUP_R2_SECRET_ACCESS_KEY, and
+//     BACKUP_DB_URL_<ENV>, a copy of SUPABASE_DB_URL that the nightly backup on main can read.
+//     BACKUP_ENABLED is left for you to turn on.
 //   - production only: deploys limited to the production branch.
 // It shows the list of changes and asks before making them, then offers to re-run the latest
 // deploy, since the app reads the variables at build time. A new VAPID private key is printed once
@@ -77,6 +81,34 @@ if (!repoSecrets.CLOUDFLARE_API_TOKEN) {
 }
 if (repoVars.NOTIFY_ENABLED !== 'true') setVar('NOTIFY_ENABLED', 'true', repoVars.NOTIFY_ENABLED ? `was "${repoVars.NOTIFY_ENABLED}"` : 'missing', 'repo')
 console.log(changes.length ? `  ${changes.length} to set` : '  Nothing to change')
+
+// --- Backups (see "Backups and restore" in README.md) ----------------------------
+step('Backups')
+const backupUrlName = `BACKUP_DB_URL_${env.toUpperCase()}`
+const before = changes.length
+if (!/^age1[0-9a-z]{58}$/.test(repoVars.BACKUP_AGE_RECIPIENT ?? '')) {
+  const recipient = await askFor('age public key for backups, age1… (from age-keygen; Enter to skip): ')
+  if (recipient && !/^age1[0-9a-z]{58}$/.test(recipient)) fail('That isn’t an age public key (age1 and 58 more characters). Nothing was changed.')
+  if (recipient) setVar('BACKUP_AGE_RECIPIENT', recipient, repoVars.BACKUP_AGE_RECIPIENT ? 'not an age public key' : 'missing', 'repo')
+}
+if (!repoVars.BACKUP_R2_BUCKET) {
+  const name = (await askFor('R2 bucket for backups [ward-desk-backups]: ')) || (dryRun ? '' : 'ward-desk-backups')
+  if (name) setVar('BACKUP_R2_BUCKET', name, 'missing', 'repo')
+}
+const accountId = repoVars.CLOUDFLARE_ACCOUNT_ID ?? changes.find((c) => c.name === 'CLOUDFLARE_ACCOUNT_ID')?.value
+if (!/^https:\/\/[0-9a-f]{32}\.(eu\.)?r2\.cloudflarestorage\.com$/.test(repoVars.BACKUP_R2_ENDPOINT ?? '') && accountId) {
+  setVar('BACKUP_R2_ENDPOINT', `https://${accountId}.r2.cloudflarestorage.com`, repoVars.BACKUP_R2_ENDPOINT ? 'not an R2 endpoint' : 'missing', 'repo')
+}
+if (!repoSecrets.BACKUP_R2_ACCESS_KEY_ID || !repoSecrets.BACKUP_R2_SECRET_ACCESS_KEY) {
+  console.log('  Make an R2 API token with Object Read & Write on the backup bucket only (R2 → Manage API tokens).')
+  const id = await askFor('Its access key ID (Enter to skip): ')
+  const secret = id ? await askFor('Its secret access key (won’t show): ', { hidden: true }) : ''
+  if (id && secret) {
+    setSecret('BACKUP_R2_ACCESS_KEY_ID', id, 'missing', 'repo')
+    setSecret('BACKUP_R2_SECRET_ACCESS_KEY', secret, 'missing', 'repo')
+  }
+}
+console.log(changes.length > before ? `  ${changes.length - before} to set` : '  Nothing to change')
 
 // --- The Supabase project ------------------------------------------------------
 
@@ -146,11 +178,15 @@ step('Database connection for deploys (SUPABASE_DB_URL)')
 let replaceDb = !secrets.SUPABASE_DB_URL
 if (!replaceDb && !dryRun) replaceDb = /^y(es)?$/i.test(await ask('  It’s set (GitHub can’t show it). Replace it? [y/N] '))
 if (!replaceDb && secrets.SUPABASE_DB_URL) console.log('  Keeping it.')
-if (replaceDb) {
+// The backup's copy is set along with it, or on its own (which needs the password again).
+const needBackupUrl = replaceDb || !repoSecrets[backupUrlName]
+if (!replaceDb && needBackupUrl) console.log(`  The repository secret ${backupUrlName} (the same URL, for nightly backups) isn’t set.`)
+if (needBackupUrl) {
   const password = await askFor(`Database password for ${project.name} (won’t show): `, { hidden: true })
   if (password) {
     const url = await sessionPoolerUrl(ref, project.region, password)
-    setSecret('SUPABASE_DB_URL', url, secrets.SUPABASE_DB_URL ? 'replaced' : 'missing')
+    if (replaceDb) setSecret('SUPABASE_DB_URL', url, secrets.SUPABASE_DB_URL ? 'replaced' : 'missing')
+    setSecret(backupUrlName, url, repoSecrets[backupUrlName] ? 'replaced with SUPABASE_DB_URL' : 'missing', 'repo')
   } else if (!dryRun) {
     console.log('  No password given; skipping it.')
   }
@@ -223,6 +259,7 @@ if (changes.some((c) => buildVars.includes(c.name))) {
   }
 }
 
+if (repoVars.BACKUP_ENABLED !== 'true') console.log('\n  Nightly backups are off. Once R2 and the age key are set up, turn them on: gh variable set BACKUP_ENABLED --body true')
 if (repoVars.DEPLOY_ENABLED !== 'true') console.log('\n  Deploys are off. Once both environments are set up, turn them on: gh variable set DEPLOY_ENABLED --body true')
 console.log(`\n✓ GitHub is set up for ${env}. Check everything with: npm run env:check -- ${env}`)
 if (toPrint.length) {

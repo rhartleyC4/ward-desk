@@ -110,6 +110,15 @@ async function checkHosted() {
   github.check(repoVars.NOTIFY_ENABLED === 'true', 'variable NOTIFY_ENABLED is true', { detail: repoVars.NOTIFY_ENABLED === 'true' ? undefined : repoVars.NOTIFY_ENABLED ? `it is "${repoVars.NOTIFY_ENABLED}"` : 'not set', fix: fixGithub })
   github.check(repoSecrets.has('CLOUDFLARE_API_TOKEN'), 'secret CLOUDFLARE_API_TOKEN', { fix: fixGithub })
 
+  // Nightly backups (.github/workflows/backup.yml). Secrets: presence only.
+  const backups = section('Backups (repository settings)')
+  const backupUrlName = `BACKUP_DB_URL_${env.toUpperCase()}`
+  backups.check(/^age1[0-9a-z]{58}$/.test(repoVars.BACKUP_AGE_RECIPIENT ?? ''), 'variable BACKUP_AGE_RECIPIENT is an age public key', { detail: repoVars.BACKUP_AGE_RECIPIENT ? undefined : 'not set', fix: fixGithub })
+  backups.check(!!repoVars.BACKUP_R2_BUCKET, 'variable BACKUP_R2_BUCKET', { detail: repoVars.BACKUP_R2_BUCKET, fix: fixGithub })
+  backups.check(/^https:\/\/[0-9a-f]{32}\.(eu\.)?r2\.cloudflarestorage\.com$/.test(repoVars.BACKUP_R2_ENDPOINT ?? ''), 'variable BACKUP_R2_ENDPOINT is an R2 endpoint', { detail: repoVars.BACKUP_R2_ENDPOINT ?? 'not set', fix: fixGithub })
+  for (const name of ['BACKUP_R2_ACCESS_KEY_ID', 'BACKUP_R2_SECRET_ACCESS_KEY', backupUrlName]) backups.check(repoSecrets.has(name), `secret ${name}`, { fix: fixGithub })
+  if (env === 'production') backups.check(repoVars.BACKUP_ENABLED === 'true', 'variable BACKUP_ENABLED is true', { detail: repoVars.BACKUP_ENABLED ?? 'not set', fix: 'gh variable set BACKUP_ENABLED --body true (after the R2 and age setup in the README)' })
+
   const ghEnv = section(`GitHub environment "${env}"`)
   if (!envOut.ok) {
     ghEnv.check(false, 'the environment exists', { fix: fixGithub })
@@ -164,7 +173,9 @@ async function checkHosted() {
         (select coalesce(array_agg(name order by name), '{}') from vault.secrets where name in ('notify_url', 'notify_secret', 'alert_email', 'resend_api_key')) as vault,
         to_regclass('public.allowlist') is not null as has_schema,
         to_regclass('net._http_response') is not null as has_net,
-        to_regclass('public.health_state') is not null as has_health`,
+        to_regclass('public.health_state') is not null as has_health,
+        -- Through query_to_xml, so it still runs before the backup_runs migration is applied.
+        case when to_regclass('public.backup_runs') is not null then (xpath('/row/m/text()', query_to_xml('select max(finished_at) as m from public.backup_runs', false, true, '')))[1]::text end as last_backup`,
       remote,
     ),
     liveAuthConfig(remote),
@@ -212,6 +223,10 @@ async function checkHosted() {
     const row = dbOut.rows[0] ?? {}
     db.check(!!row.has_schema, 'migrations have been applied', { detail: row.has_schema ? undefined : 'no app tables yet', fix: env === 'production' ? 'git push origin main:production (the deploy applies them)' : 'push to main (the deploy applies them)' })
     const vault = parseArray(row.vault)
+    if (env === 'production' || row.last_backup) {
+      const hours = row.last_backup ? (Date.now() - new Date(row.last_backup).getTime()) / 3_600_000 : null
+      db.check(hours !== null && hours < 26, 'a backup finished in the last 26 hours', { detail: hours === null ? 'none recorded in public.backup_runs' : `last ${row.last_backup}`, fix: 'gh run list --workflow backup.yml, or start one: gh workflow run backup.yml' })
+    }
     for (const name of ['notify_url', 'notify_secret']) db.check(vault.includes(name), `Vault has ${name}`, { fix: fixNotify })
     // pg_net arrives with the notifications migration; before that there is nothing to call.
     // Since the health check migration, notify_calls says which answers were the notify function's

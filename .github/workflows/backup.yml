@@ -1,0 +1,128 @@
+name: Database backup
+
+# Nightly off-site backup of the Supabase database (see "Backups and restore" in README.md).
+#
+# pg_dump (custom format, the server's own major version) of the public, auth and
+# supabase_migrations schemas is piped straight into age, so only the encrypted file ever touches
+# the runner's disk, and that file is what goes to Cloudflare R2. No artifacts are uploaded.
+# On success it adds a row to public.backup_runs, which the health check reads.
+#
+# Repository settings (npm run env:github -- production):
+#   variables BACKUP_AGE_RECIPIENT (age public key), BACKUP_R2_BUCKET, BACKUP_R2_ENDPOINT
+#   secrets   BACKUP_R2_ACCESS_KEY_ID, BACKUP_R2_SECRET_ACCESS_KEY,
+#             BACKUP_DB_URL_PRODUCTION (and BACKUP_DB_URL_STAGING for staging backups)
+# These are repository secrets, not the environments' SUPABASE_DB_URL: the production environment
+# only allows the production branch, and scheduled runs start from main.
+#
+# Off until the BACKUP_ENABLED repo variable is 'true'. Retention is done by R2 lifecycle rules:
+# daily/ objects expire after 31 days, monthly/ after 366.
+
+on:
+  schedule:
+    - cron: '17 9 * * *' # 09:17 UTC, the small hours in the ward's time zone
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Which database to back up
+        type: choice
+        options: [production, staging]
+        default: production
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-${{ inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Back up ${{ inputs.environment || 'production' }}
+    if: vars.BACKUP_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TARGET: ${{ inputs.environment || 'production' }}
+      DB_URL_production: ${{ secrets.BACKUP_DB_URL_PRODUCTION }}
+      DB_URL_staging: ${{ secrets.BACKUP_DB_URL_STAGING }}
+      AGE_RECIPIENT: ${{ vars.BACKUP_AGE_RECIPIENT }}
+      R2_BUCKET: ${{ vars.BACKUP_R2_BUCKET }}
+      R2_ENDPOINT: ${{ vars.BACKUP_R2_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.BACKUP_R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      # R2 rejects the newer default integrity checksums of AWS CLI v2.23+ on some requests.
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    steps:
+      - name: Check settings
+        run: |
+          url_var="DB_URL_$TARGET"
+          [ -n "${!url_var}" ] && echo "DB_URL=${!url_var}" >> "$GITHUB_ENV"
+          missing=""
+          [ -n "${!url_var}" ] || missing=" BACKUP_DB_URL_${TARGET^^}"
+          for name in AGE_RECIPIENT R2_BUCKET R2_ENDPOINT AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing for $TARGET:$missing. Run npm run env:github -- $TARGET"
+            exit 1
+          fi
+          case "$AGE_RECIPIENT" in age1*) ;; *) echo "::error::BACKUP_AGE_RECIPIENT isn't an age public key (age1...)"; exit 1 ;; esac
+
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Match the server's Postgres version
+        id: pg
+        run: |
+          major=$(docker run --rm -e DB_URL postgres:17-alpine sh -c 'psql "$DB_URL" -Atc "show server_version_num"' | cut -c1-2)
+          case "$major" in 1[5-9]|2[0-9]) ;; *) echo "::error::Couldn't read the server version"; exit 1 ;; esac
+          echo "image=postgres:${major}-alpine" >> "$GITHUB_OUTPUT"
+          echo "Server is Postgres $major"
+
+      - name: Dump and encrypt
+        id: dump
+        run: |
+          set -o pipefail
+          umask 077
+          stamp=$(date -u +%Y-%m-%dT%H%MZ)
+          file="$RUNNER_TEMP/$TARGET-$stamp.dump.age"
+          # The plain dump only exists inside this pipe.
+          docker run --rm -e DB_URL "${{ steps.pg.outputs.image }}" sh -c \
+            'pg_dump "$DB_URL" --format=custom --compress=9 --no-owner --schema=public --schema=auth --schema=supabase_migrations' \
+            | age --encrypt --recipient "$AGE_RECIPIENT" --output "$file"
+          bytes=$(stat -c %s "$file")
+          [ "$bytes" -gt 1000 ] || { echo "::error::The encrypted dump is only $bytes bytes"; exit 1; }
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "stamp=$stamp" >> "$GITHUB_OUTPUT"
+          echo "bytes=$bytes" >> "$GITHUB_OUTPUT"
+          echo "Encrypted dump: $bytes bytes"
+
+      - name: Upload to R2
+        id: upload
+        run: |
+          daily="$TARGET/daily/${{ steps.dump.outputs.stamp }}.dump.age"
+          aws s3 cp --endpoint-url "$R2_ENDPOINT" --only-show-errors "${{ steps.dump.outputs.file }}" "s3://$R2_BUCKET/$daily"
+          # The first backup of each month is also kept as that month's.
+          month=$(date -u +%Y-%m)
+          if ! aws s3api head-object --endpoint-url "$R2_ENDPOINT" --bucket "$R2_BUCKET" --key "$TARGET/monthly/$month.dump.age" >/dev/null 2>&1; then
+            aws s3 cp --endpoint-url "$R2_ENDPOINT" --only-show-errors "${{ steps.dump.outputs.file }}" "s3://$R2_BUCKET/$TARGET/monthly/$month.dump.age"
+            echo "Also kept as $TARGET/monthly/$month.dump.age"
+          fi
+          echo "key=$daily" >> "$GITHUB_OUTPUT"
+          echo "Uploaded $daily"
+
+      - name: Record the backup
+        env:
+          KEY: ${{ steps.upload.outputs.key }}
+          BYTES: ${{ steps.dump.outputs.bytes }}
+        run: |
+          docker run --rm -i -e DB_URL -e KEY -e BYTES "${{ steps.pg.outputs.image }}" sh -c \
+            'psql "$DB_URL" -q -v ON_ERROR_STOP=1 -v key="$KEY" -v bytes="$BYTES"' <<'SQL'
+          insert into public.backup_runs (object_key, bytes) values (:'key', :bytes);
+          SQL
+
+      - name: Remove the local copy
+        if: always()
+        run: rm -f "$RUNNER_TEMP"/*.dump.age
