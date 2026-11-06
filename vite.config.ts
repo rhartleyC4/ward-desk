@@ -26,6 +26,13 @@ export default defineConfig({
           { src: '/pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           { src: '/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
+        // Long-press menu on the app icon (Android, desktop; iOS ignores these). Everyone gets the
+        // same list, so pick pages most people can open; the route guards send anyone else home.
+        shortcuts: [
+          { name: 'Requests', url: '/requests', icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Agenda', url: '/agenda', icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }] },
+          { name: 'Sacrament meeting', short_name: 'Sacrament', url: '/sacrament', icons: [{ src: '/pwa-192.png', sizes: '192x192', type: 'image/png' }] },
+        ],
       },
     }),
   ],
