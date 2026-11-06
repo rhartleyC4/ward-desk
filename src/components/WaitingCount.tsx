@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { canSendRequests } from '../lib/access'
+import { showOnAppIcon } from '../lib/appBadge'
 import { countWaiting } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 
@@ -32,8 +33,12 @@ export function WaitingProvider({ children }: { children: ReactNode }) {
     }
   }, [userId, bishopric, roles.length, pathname, tick])
 
+  // Mirror the count on the installed app's icon, and clear it on sign-out.
+  useEffect(() => showOnAppIcon(count), [count])
+  useEffect(() => () => showOnAppIcon(0), [])
+
   useEffect(() => {
-    const onShow = () => document.visibilityState === 'visible' && refresh()
+    const onShow =() => document.visibilityState === 'visible' && refresh()
     document.addEventListener('visibilitychange', onShow)
     return () => document.removeEventListener('visibilitychange', onShow)
   }, [refresh])
