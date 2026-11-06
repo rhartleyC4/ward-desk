@@ -44,7 +44,9 @@ const fail = (text) => {
 
 /** Runs the Supabase CLI. `--yes` is passed because you already confirmed below. */
 function supabase(args, { capture = false } = {}) {
-  const result = spawnSync('npx', ['supabase', ...args], { encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit' })
+  // --agent no: the CLI shapes its JSON differently when it thinks an AI agent is running it, so
+  // pin it to what a person at a terminal gets.
+  const result = spawnSync('npx', ['supabase', ...args, '--agent', 'no'], { encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit' })
   if (result.status !== 0) fail(`supabase ${args[0]} ${args[1] ?? ''} failed${capture ? `:\n${result.stderr || result.stdout}` : ''}`)
   return result.stdout
 }
@@ -76,12 +78,11 @@ function runSql(sql, remote, { readOnly = false } = {}) {
   try {
     writeFileSync(file, sql, { mode: 0o600 })
     const out = supabase(['db', 'query', ...remote, '--file', file, '--output-format', 'json', ...(readOnly ? ['--read-only'] : ['--yes'])], { capture: true })
-    // A statement with no rows (DO, a bare function call) prints its command tag, not JSON.
-    try {
-      return JSON.parse(out).rows ?? []
-    } catch {
-      return []
-    }
+    // A statement with no rows (DO) prints its command tag, not JSON.
+    if (!/^\s*[[{]/.test(out)) return []
+    const parsed = JSON.parse(out)
+    // A list of rows, or (for an agent) the rows wrapped in an object.
+    return Array.isArray(parsed) ? parsed : (parsed.rows ?? [])
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
@@ -175,7 +176,8 @@ runSql(`do $$ begin ${upsertVault('notify_url', url)} ${upsertVault('notify_secr
 
 step('Trying one run of the scheduled job')
 // Sends whatever is due right now, exactly as the 10-minute job would.
-const started = runSql('select now()::text as at', remote, { readOnly: true })[0].at
+const started = runSql('select now()::text as at', remote, { readOnly: true })[0]?.at
+if (!started) fail("Couldn't read the database's time back. Nothing after the Vault step ran; run this again.")
 runSql('select public.call_notify();', remote)
 let response
 for (let i = 0; i < 15 && !response; i++) {
