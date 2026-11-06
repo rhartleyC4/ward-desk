@@ -124,9 +124,10 @@ export async function ghTry(args) {
 export const ghVar = (name, env) => gh(['variable', 'get', name, ...(env ? ['--env', env] : [])])
 
 export function ask(question, { hidden = false } = {}) {
+  if (hidden && process.stdin.isTTY) return askHidden(question)
   return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true })
-    if (hidden) rl._writeToOutput = (s) => rl.output.write(s.startsWith(question) ? s : '')
+    // Piped input (not a terminal) is never echoed, as long as readline doesn't act as a terminal.
+    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: !hidden })
     // With no input (stdin closed or not a terminal) the answer is blank, instead of waiting forever.
     rl.on('close', () => resolve(''))
     rl.question(question, (answer) => {
@@ -134,6 +135,42 @@ export function ask(question, { hidden = false } = {}) {
       rl.close()
       if (hidden) process.stdout.write('\n')
     })
+  })
+}
+
+/**
+ * Reads a secret from the terminal with echo off. readline can't do this safely: when it redraws
+ * the line (a paste is enough), it writes the prompt and the typed text in one go.
+ */
+function askHidden(question) {
+  return new Promise((resolve) => {
+    const stdin = process.stdin
+    let value = ''
+    const finish = () => {
+      stdin.off('data', onData)
+      stdin.setRawMode(false)
+      stdin.pause()
+      process.stdout.write('\n')
+      resolve(value.trim())
+    }
+    const onData = (chunk) => {
+      // Bracketed-paste markers, in case the terminal sends them.
+      for (const ch of String(chunk).replaceAll('\x1b[200~', '').replaceAll('\x1b[201~', '')) {
+        if (ch === '\r' || ch === '\n' || ch === '\u0004') return finish()
+        if (ch === '\u0003') {
+          stdin.setRawMode(false)
+          process.stdout.write('\n')
+          process.exit(130)
+        }
+        if (ch === '\u007f' || ch === '\b') value = value.slice(0, -1)
+        else if (ch >= ' ') value += ch
+      }
+    }
+    process.stdout.write(question)
+    stdin.setRawMode(true)
+    stdin.setEncoding('utf8')
+    stdin.on('data', onData)
+    stdin.resume()
   })
 }
 
