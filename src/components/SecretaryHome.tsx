@@ -411,7 +411,7 @@ export function SecretaryHome({
       <RemindersSummary date={tomorrow} appointments={appointmentsOn(data.appointments, leaderIds, tomorrow, timeZone)} meetings={meetingsToRemind(userId, tomorrow, data.events)} sent={data.meetingsSent} />
 
       <Split>
-        <SectionCard title={`Needs an appointment (${toSchedule.length})`}>
+        <SectionCard title="Needs an appointment" waiting={toSchedule.length}>
           {toSchedule.length ? (
             <Stack divider={<Divider flexItem />} spacing={1.5}>
               {toSchedule.map((a) => (
@@ -423,7 +423,7 @@ export function SecretaryHome({
           )}
         </SectionCard>
 
-        <SectionCard title={`To confirm (${confirming.length})`}>
+        <SectionCard title="To confirm" waiting={confirming.length}>
           {confirming.length ? (
             <Stack divider={<Divider flexItem />} spacing={1.5}>
               {confirming.map((a) => (

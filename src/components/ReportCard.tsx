@@ -114,6 +114,7 @@ export function ReportCard({ appointments, timeZone, secretaryFor, onReport, bus
   return (
     <SectionCard
       title="How did these go?"
+      waiting={appointments.length}
       action={
         appointments.length > 1 && (
           <Button size="small" disabled={busy} onClick={() => void markAll()}>

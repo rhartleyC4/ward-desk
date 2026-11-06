@@ -88,7 +88,7 @@ describe('SecretaryHome', () => {
     expect(within(needs).getByText('Sister Nash')).toBeInTheDocument()
     expect(within(needs).getByText('Brother Ward')).toBeInTheDocument()
     expect(within(needs).queryByText('Sister Reed')).not.toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Needs an appointment (2)' })).toBeInTheDocument()
+    expect(within(needs).getByRole('status', { name: '2 waiting on you' })).toHaveTextContent('2')
     expect(within(needs).getAllByText(/waiting 3 days/)).toHaveLength(2)
   })
 
@@ -290,7 +290,9 @@ describe('SecretaryHome', () => {
     )
     expect(screen.queryByRole('article', { name: 'Brother Late' })).not.toBeInTheDocument()
     expect(screen.queryByRole('article', { name: 'Sister Told' })).not.toBeInTheDocument()
-    expect(section(/To confirm \(0\)/)).toHaveTextContent(/Every booked time has been confirmed/)
+    const confirm = section(/To confirm/)
+    expect(confirm).toHaveTextContent(/Every booked time has been confirmed/)
+    expect(within(confirm).queryByRole('status')).not.toBeInTheDocument()
   })
 
   it('puts a missed appointment back in the list with the leader\'s note', () => {

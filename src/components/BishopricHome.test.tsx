@@ -61,6 +61,8 @@ describe('BishopricHome', () => {
       expect(screen.queryByRole('heading', { name: 'How did these go?' })).not.toBeInTheDocument()
       setup(data(), 'b', AFTER)
       const report = within(card('How did these go?'))
+      // The same count as the Home tab badge, so the badge leads here.
+      expect(report.getByRole('status', { name: '1 waiting on you' })).toHaveTextContent('1')
       expect(report.getByRole('article', { name: 'Brother Hale' })).toHaveTextContent('Sunday, November 8th · 9–9:15 AM')
       expect(report.queryByText('Brother Ward')).not.toBeInTheDocument()
       expect(report.queryByText('Sister Moss')).not.toBeInTheDocument()

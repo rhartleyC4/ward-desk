@@ -256,7 +256,12 @@ export function Tiles({ children }: { children: ReactNode }) {
 }
 
 /** A card with an optional highlighted title bar, like the colored section rows in the sheet. */
-export function SectionCard({ title, action, children }: { title?: ReactNode; action?: ReactNode; children: ReactNode }) {
+/**
+ * A titled card. `waiting` is how many things in it count toward a tab badge: it shows the same red
+ * count beside the title and a red edge, so the number on the tab (and the app icon) leads here.
+ */
+export function SectionCard({ title, action, waiting = 0, children }: { title?: ReactNode; action?: ReactNode; waiting?: number; children: ReactNode }) {
+  const flagged = waiting > 0
   return (
     <Card component="section" sx={{ mb: 1.5 }}>
       {title && (
@@ -272,15 +277,49 @@ export function SectionCard({ title, action, children }: { title?: ReactNode; ac
             borderBottom: 1,
             borderColor: 'divider',
             borderLeft: 4,
-            borderLeftColor: 'primary.main',
+            borderLeftColor: flagged ? 'error.main' : 'primary.main',
           }}
         >
-          <Typography variant="h2">{title}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+            <Typography variant="h2">{title}</Typography>
+            {flagged && <WaitingCount count={waiting} />}
+          </Box>
           {action}
         </Box>
       )}
       <CardContent sx={{ '&:last-child': { pb: 2 } }}>{children}</CardContent>
     </Card>
+  )
+}
+
+/** The red count from the tab badges, sized to match, for a card that holds what it counts. */
+function WaitingCount({ count }: { count: number }) {
+  const label = `${count} waiting on you`
+  return (
+    <Tooltip title={label}>
+      <Box
+        component="span"
+        role="status"
+        aria-label={label}
+        sx={{
+          flexShrink: 0,
+          minWidth: 20,
+          height: 20,
+          px: 0.75,
+          borderRadius: 10,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'error.main',
+          color: 'error.contrastText',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          lineHeight: 1,
+        }}
+      >
+        {count > 99 ? '99+' : count}
+      </Box>
+    </Tooltip>
   )
 }
 
