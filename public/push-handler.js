@@ -13,7 +13,8 @@ self.addEventListener('push', (event) => {
       body: message.body || '',
       tag: message.tag,
       icon: '/pwa-192.png',
-      badge: '/pwa-192.png',
+      // Android draws the badge from its alpha channel only, so it needs a transparent silhouette.
+      badge: '/badge-96.png',
       data: { url: message.url || '/' },
     }),
   )

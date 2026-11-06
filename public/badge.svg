@@ -1,0 +1,11 @@
+<!-- Monochrome status-bar badge for Android notifications. Android keeps only the alpha channel,
+     so the shape is white on transparent and the details are cut out. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 100 100">
+  <mask id="cut">
+    <rect width="100" height="100" fill="#fff"/>
+    <rect x="33" y="10" width="5" height="80" fill="#000"/>
+    <path d="M46 44H66M46 58H62" stroke="#000" stroke-width="7" stroke-linecap="round"/>
+    <path d="M58 6V31L64 26L70 31V6Z" fill="#000"/>
+  </mask>
+  <rect x="20" y="10" width="60" height="80" rx="9" fill="#fff" mask="url(#cut)"/>
+</svg>
