@@ -420,3 +420,124 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# --- Hosted projects ---------------------------------------------------------------------------
+# Each block overrides the local settings above for one hosted project. `supabase config push`
+# sends every property this file declares, so these blocks restate the live values for anything
+# the local settings differ on (pulled from each project on 2026-11-06). Change them with
+# npm run env:auth -- staging|production, which shows the diff and asks before pushing.
+# Secrets are env(...) references only. Never put a key in this file.
+
+[remotes.staging]
+project_id = "mpzwseusjpgpotwgcobh"
+
+[remotes.staging.auth]
+site_url = "https://gp7-training.warddesk.app"
+additional_redirect_urls = ["https://gp7-training.warddesk.app"]
+
+[remotes.staging.auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+# Resend, with a sending-only API key for this project. npm run env:auth asks for it (or reads
+# RESEND_API_KEY from your shell); leave it blank there to keep the one already set.
+[remotes.staging.auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "noreply@warddesk.app"
+sender_name = "Ward Desk"
+
+[remotes.staging.auth.rate_limit]
+email_sent = 30
+
+[remotes.staging.auth.sms]
+enable_confirmations = true
+
+[remotes.staging.auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+# Not managed by config push (CLI v3): set these in the dashboard. They're here as the record,
+# and env:check reads the relying party back.
+[remotes.staging.auth.passkey]
+enabled = true
+
+[remotes.staging.auth.webauthn]
+rp_display_name = "Ward Desk"
+rp_id = "gp7-training.warddesk.app"
+rp_origins = ["https://gp7-training.warddesk.app"]
+
+# One Google OAuth client serves both environments. npm run env:auth asks for the secret (or reads
+# GOOGLE_CLIENT_SECRET); leave it blank there to keep the one already set.
+[remotes.staging.auth.external.google]
+enabled = true
+client_id = "441619881315-uq3nh5t4d7oo577vi9hovesd9bgbonq0.apps.googleusercontent.com"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+
+[remotes.staging.db.pooler]
+default_pool_size = 15
+max_client_conn = 200
+
+[remotes.staging.storage.vector]
+enabled = false
+
+[remotes.production]
+project_id = "aoekugdnweomncbsqozm"
+
+[remotes.production.auth]
+site_url = "https://gp7.warddesk.app"
+additional_redirect_urls = ["https://gp7.warddesk.app"]
+
+[remotes.production.auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8
+
+# Resend, with a sending-only API key for this project. npm run env:auth asks for it (or reads
+# RESEND_API_KEY from your shell); leave it blank there to keep the one already set.
+[remotes.production.auth.email.smtp]
+enabled = true
+host = "smtp.resend.com"
+port = 465
+user = "resend"
+pass = "env(RESEND_API_KEY)"
+admin_email = "noreply@warddesk.app"
+sender_name = "Ward Desk"
+
+[remotes.production.auth.rate_limit]
+email_sent = 30
+
+[remotes.production.auth.sms]
+enable_confirmations = true
+
+[remotes.production.auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+# Not managed by config push (CLI v3): set these in the dashboard. They're here as the record,
+# and env:check reads the relying party back.
+[remotes.production.auth.passkey]
+enabled = true
+
+[remotes.production.auth.webauthn]
+rp_display_name = "Ward Desk"
+rp_id = "gp7.warddesk.app"
+rp_origins = ["https://gp7.warddesk.app"]
+
+# One Google OAuth client serves both environments. npm run env:auth asks for the secret (or reads
+# GOOGLE_CLIENT_SECRET); leave it blank there to keep the one already set.
+[remotes.production.auth.external.google]
+enabled = true
+client_id = "441619881315-uq3nh5t4d7oo577vi9hovesd9bgbonq0.apps.googleusercontent.com"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+
+[remotes.production.db.pooler]
+default_pool_size = 15
+max_client_conn = 200
+
+[remotes.production.storage.vector]
+enabled = false

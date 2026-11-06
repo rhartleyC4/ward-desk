@@ -127,10 +127,12 @@ export function ask(question, { hidden = false } = {}) {
   return new Promise((resolve) => {
     const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true })
     if (hidden) rl._writeToOutput = (s) => rl.output.write(s.startsWith(question) ? s : '')
+    // With no input (stdin closed or not a terminal) the answer is blank, instead of waiting forever.
+    rl.on('close', () => resolve(''))
     rl.question(question, (answer) => {
+      resolve(answer.trim())
       rl.close()
       if (hidden) process.stdout.write('\n')
-      resolve(answer.trim())
     })
   })
 }
