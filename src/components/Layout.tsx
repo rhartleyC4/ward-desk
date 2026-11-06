@@ -28,6 +28,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { Children, isValidElement, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
+import { ErrorBoundary } from './ErrorBoundary'
 import { isSettingsPage, navFor } from '../lib/access'
 import { initials } from '../lib/names'
 import { nextStep } from '../lib/setup'
@@ -155,7 +156,10 @@ function Shell() {
             <PasskeyOffer />
           </>
         )}
-        <Outlet />
+        {/* Keyed by path, so a page that crashed comes back after moving to another one. */}
+        <ErrorBoundary key={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </Container>
       {showTabs && (
         // A floating glass pill, like the iOS tab bar, so the page shows through as it scrolls.

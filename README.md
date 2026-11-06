@@ -233,8 +233,9 @@ Then sign in to both CLIs once on your machine: `gh auth login` and `npx supabas
 2. **`npm run env:auth -- staging`** applies the Auth settings in `[remotes.staging]` of `supabase/config.toml`: site URL, redirect URLs, Resend SMTP and Google. It asks for the project's Resend key and the Google client secret (leave one blank to keep what's set), shows `supabase config diff`, and asks before `supabase config push`. `--diff` only shows the differences. `config push` sends every setting the file declares, so the remotes blocks restate the live values. Edit them there, never in the dashboard.
 3. **Deploy.** The first time, once both environments are filled, turn deploys on with `gh variable set DEPLOY_ENABLED --body true`. Then push to `main` for staging and run "Reset training site" once, since `db push` doesn't load the seed. For production, promote with `git push origin main:production`.
 4. **`npm run notify:setup -- staging`** deploys the notification functions and starts the schedule, once that environment's migrations have run. See "Notifications" below.
-5. **`npm run admin:add -- staging you@example.com`**, before your first sign-in, since sign-in is refused for any email not on the allowlist. On production it adds you to the allowlist as admin and bishopric. On staging it also saves you in the `STAGING_ADMIN_EMAILS` variable, so training-site resets keep you.
-6. **`npm run env:check -- staging`** checks all of it without changing anything: the GitHub variables and secrets, the branch rule, the functions and their secrets, the Vault entries and the notify job's last answer, the Auth settings and the allowlist. Each ✗ shows the command that fixes it.
+5. **`npm run alerts:setup -- staging`** turns on alert emails: it asks where to send them and for that project's Resend key, then sends a test email. See "Health checks and alerts" below.
+6. **`npm run admin:add -- staging you@example.com`**, before your first sign-in, since sign-in is refused for any email not on the allowlist. On production it adds you to the allowlist as admin and bishopric. On staging it also saves you in the `STAGING_ADMIN_EMAILS` variable, so training-site resets keep you.
+7. **`npm run env:check -- staging`** checks all of it without changing anything: the GitHub variables and secrets, the branch rule, the functions and their secrets, the Vault entries and the notify job's last answer, the health check and its last alert email, the Auth settings and the allowlist. Each ✗ shows the command that fixes it.
 
 Where the settings live, for reference (`env:github` fills them):
 
@@ -284,6 +285,27 @@ Running it again is safe: it replaces the secret in both places and redeploys. R
 
 If the job stops working later, `npm run env:check -- staging` shows the last answer. A `401` means the Vault secret and `NOTIFY_SECRET` differ, so run the setup again.
 
+### Health checks and alerts
+
+Nobody has to watch the Supabase or Cloudflare dashboards. The database tells you when something breaks:
+
+- **Errors in the app.** Each page sits inside an error boundary that shows "Something went wrong" with a Reload button. The app reports that error, any uncaught error or rejected promise, and any failed page load (`useAsync`) to `client_errors` through `report_client_error`. It works before sign-in too. A report holds the page path without the query string, the message and stack, the build's commit (`__APP_VERSION__`) and the browser, but no page contents. Each different error goes once per page load, at most 10, and offline errors are skipped. The database keeps at most 200 an hour and deletes them after 90 days. Admins can read them: `select created_at, route, message, app_version from client_errors order by id desc limit 20;` The pure logic is in `src/lib/errorReport.ts`.
+- **The hourly check.** At 7 minutes past each hour, `pg_cron` runs `public.health_check()`. It looks at the hour since the last check for calls to the `notify` function that failed or got no answer (`notify_calls` records each call so its answer in `net._http_response` can be found), pushes a push service refused, failed `pg_cron` runs, and app errors. It also notices when `notify` hasn't answered for 30 minutes, and says so at most every 12 hours. If it finds anything, `send_alert()` emails the alert address through Resend with counts and where to look. The email never includes names or error text. No email means nothing went wrong.
+
+The check runs inside the database, not in an Edge Function, so it still works when the functions are what broke. It can't report on `pg_cron` itself stopping. `npm run env:check` shows when it last ran.
+
+Turn the emails on per environment once the migration has been deployed:
+
+```bash
+npm run alerts:setup -- staging
+```
+
+```bash
+npm run alerts:setup -- production
+```
+
+It asks for the address (default: your git email; separate several with commas) and that project's Resend API key, saves them in Vault (`alert_email`, `resend_api_key`, and `alert_label`, which goes at the start of the subject), and sends a test email. Until it has run, `health_check()` only returns what it found, so local databases and fresh environments stay quiet. Run it again after resetting the training site. To try the check by hand, run `select public.health_check();` as the database owner. It returns the problem lines and moves the window forward.
+
 ### Face ID and fingerprint sign-in (passkeys)
 
 After someone signs in once with an email link or Google, the app offers to "Turn on" Face ID or fingerprint sign-in for that device. After that, they tap **Face ID or fingerprint** on the sign-in screen and skip the email. This matters most on iPhone: an email link opens in Safari, not in the Home Screen app, so a link sign-in never reaches the installed app, but a passkey sign-in happens inside it. Each person can see and remove their devices on the Account page (Settings, then their name at the top). Passkeys sync through iCloud Keychain or Google Password Manager, so a new phone usually has them already.
@@ -310,8 +332,9 @@ Do these in order when passing the app to a successor:
 5. Invite them to the **Resend** team (Settings → Team) and make them owner
 6. Transfer the **domain** `warddesk.app` to the successor's Cloudflare account (Domain Registration → Transfer, or move the zone with the Pages projects). Its DNS records for the Pages sites and Resend move with it, so nothing else needs updating
 7. Hand over secrets securely (password manager, not email or chat)
-8. Confirm the successor can sign in, see the right data, and receive a test notification and sign-in email. `npm run env:check -- production` should be all ✓
-9. Remove your own admin access once they confirm
+8. Send alert emails to them: `npm run alerts:setup -- production --email <their email>` (and the same for staging)
+9. Confirm the successor can sign in, see the right data, and receive a test notification and sign-in email. `npm run env:check -- production` should be all ✓
+10. Remove your own admin access once they confirm
 
 ## Agenda templates
 

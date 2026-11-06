@@ -315,6 +315,34 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"client_errors": {
+                  Row: {
+                    "app_version": string | null,"created_at": string,"id": number,"message": string,"route": string | null,"source": string | null,"stack": string | null,"user_agent": string | null,"user_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "app_version"?: string | null,"created_at"?: string,"id"?: never,"message": string,"route"?: string | null,"source"?: string | null,"stack"?: string | null,"user_agent"?: string | null,"user_id"?: string | null
+                  }
+                  Update: {
+                    "app_version"?: string | null,"created_at"?: string,"id"?: never,"message"?: string,"route"?: string | null,"source"?: string | null,"stack"?: string | null,"user_agent"?: string | null,"user_id"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"health_state": {
+                  Row: {
+                    "checked_at": string | null,"checked_until": string,"id": boolean,"last_email_at": string | null,"last_email_request": number | null,"stalled_alerted_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "checked_at"?: string | null,"checked_until"?: string,"id"?: boolean,"last_email_at"?: string | null,"last_email_request"?: number | null,"stalled_alerted_at"?: string | null
+                  }
+                  Update: {
+                    "checked_at"?: string | null,"checked_until"?: string,"id"?: boolean,"last_email_at"?: string | null,"last_email_request"?: number | null,"stalled_alerted_at"?: string | null
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"interviews": {
                   Row: {
                     "candidate_id": string | null,"confirmed_at": string | null,"created_at": string,"duration_minutes": number,"id": string,"interviewer_id": string | null,"is_youth": boolean,"location": string | null,"missed_at": string | null,"notes": string | null,"offered_at": string | null,"offered_times": (string)[],"parent_name": string | null,"person_name": string | null,"purpose": Database["public"]['Enums']["interview_purpose"],"reminded_at": string | null,"report_note": string | null,"reported_at": string | null,"reported_by": string | null,"scheduled_at": string | null,"status": Database["public"]['Enums']["interview_status"]
@@ -496,6 +524,20 @@ isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
+                  ]
+                },"notify_calls": {
+                  Row: {
+                    "called_at": string,"request_id": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "called_at"?: string,"request_id": number
+                  }
+                  Update: {
+                    "called_at"?: string,"request_id"?: number
+                  }
+                  Relationships: [
+                    
                   ]
                 },"prayer_roll": {
                   Row: {
@@ -768,6 +810,12 @@ isOneToOne: false
 "has_role":
 { Args: { "check_role": Database["public"]['Enums']["app_role"] }; Returns: boolean
                            },
+"health_check":
+{ Args: Record<PropertyKey, never>; Returns: (string)[]
+                           },
+"health_report":
+{ Args: { "since": string,"until": string }; Returns: (string)[]
+                           },
 "holds_role":
 { Args: { "check_role": Database["public"]['Enums']["app_role"],"person": string }; Returns: boolean
                            },
@@ -788,6 +836,9 @@ isOneToOne: false
 "reorder_agenda_sections":
 { Args: { "section_ids": (string)[],"template": string }; Returns: undefined
                            },
+"report_client_error":
+{ Args: { "app_version"?: string,"message": string,"route"?: string,"source"?: string,"stack"?: string,"user_agent"?: string }; Returns: undefined
+                           },
 "request_recipients":
 { Args: Record<PropertyKey, never>; Returns: {
               "display_name": string,"id": string,"in_bishopric": boolean,"office": Database["public"]['Enums']["bishopric_office"]
@@ -795,6 +846,9 @@ isOneToOne: false
                            },
 "save_push_subscription":
 { Args: { "sub_auth": string,"sub_endpoint": string,"sub_p256dh": string }; Returns: undefined
+                           },
+"send_alert":
+{ Args: { "body": string,"subject": string }; Returns: number
                            },
 "submit_calling_request":
 { Args: { "names"?: (string)[],"needed"?: string,"org"?: string,"releasing"?: string,"request_kind": Database["public"]['Enums']["calling_request_kind"],"request_notes"?: string,"title": string }; Returns: string

@@ -22,6 +22,7 @@
     "functions:build": "esbuild scripts/notify/tick.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=supabase/functions/notify/tick.bundle.js --log-level=warning",
     "functions:deploy": "npm run functions:build && supabase functions deploy notify",
     "notify:setup": "node scripts/setup-notify.mjs",
+    "alerts:setup": "node scripts/setup-alerts.mjs",
     "setup": "node scripts/setup.mjs",
     "env:check": "node scripts/env-check.mjs",
     "env:github": "node scripts/env-github.mjs",

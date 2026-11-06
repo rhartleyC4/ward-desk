@@ -6,6 +6,7 @@ import { tidyTitle, type ListedCalling } from './callings'
 import type { MessageTemplate } from './messages'
 import type { NotificationKind } from './notifications'
 import { addDays, upcomingSunday, type IsoDate } from './dates'
+import type { ErrorReport } from './errorReport'
 import { toPasskeyError } from './passkeys'
 import type { CallingRequest, CallingRequestKind, MyCallingRequest, Recipient, Request, RequestStatus } from './requests'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from './database.types'
@@ -873,5 +874,22 @@ export async function setNotificationOn(client: Client, kind: NotificationKind, 
     on
       ? await client.from('notification_mutes').delete().eq('kind', kind)
       : await client.from('notification_mutes').upsert({ kind }, { onConflict: 'user_id,kind', ignoreDuplicates: true }),
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Errors the app hit, for the hourly health check
+// ---------------------------------------------------------------------------
+
+export async function reportClientError(client: Client, report: ErrorReport) {
+  check(
+    await client.rpc('report_client_error', {
+      message: report.message,
+      stack: report.stack ?? undefined,
+      route: report.route,
+      app_version: report.app_version,
+      user_agent: report.user_agent,
+      source: report.source,
+    }),
   )
 }

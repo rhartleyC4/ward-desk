@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { reportError } from './errorReport'
 
 /** Runs a loader on mount and whenever deps change; `reload` re-runs it after a save. */
 export function useAsync<T>(load: () => Promise<T>, deps: unknown[]) {
@@ -13,7 +14,12 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]) {
     setError(null)
     run()
       .then((d) => !cancelled && setData(d))
-      .catch((e: Error) => !cancelled && setError(e.message))
+      .catch((e: Error) => {
+        if (cancelled) return
+        setError(e.message)
+        // The page shows it too, but a load that fails is worth knowing about.
+        reportError('load', e)
+      })
     return () => {
       cancelled = true
     }

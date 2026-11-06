@@ -6,7 +6,8 @@
 //
 // For staging and production it reads the GitHub repository and environment settings, the
 // Supabase functions and their secrets (names and digests only), the database's Vault names, the
-// last answer from the notify function, the Auth settings and the allowlist. Each line is ✓ or ✗,
+// last answer from the notify function, the health check and its alert emails, the Auth settings
+// and the allowlist. Each line is ✓ or ✗,
 // and each ✗ shows the command that fixes it. Secret values are never read or printed: GitHub
 // secrets are checked for presence only.
 //
@@ -160,9 +161,10 @@ async function checkHosted() {
     supabaseJson(['functions', 'list', ...remote]),
     querySql(
       `select
-        (select coalesce(array_agg(name order by name), '{}') from vault.secrets where name in ('notify_url', 'notify_secret')) as vault,
+        (select coalesce(array_agg(name order by name), '{}') from vault.secrets where name in ('notify_url', 'notify_secret', 'alert_email', 'resend_api_key')) as vault,
         to_regclass('public.allowlist') is not null as has_schema,
-        to_regclass('net._http_response') is not null as has_net`,
+        to_regclass('net._http_response') is not null as has_net,
+        to_regclass('public.health_state') is not null as has_health`,
       remote,
     ),
     liveAuthConfig(remote),
@@ -212,14 +214,43 @@ async function checkHosted() {
     const vault = parseArray(row.vault)
     for (const name of ['notify_url', 'notify_secret']) db.check(vault.includes(name), `Vault has ${name}`, { fix: fixNotify })
     // pg_net arrives with the notifications migration; before that there is nothing to call.
+    // Since the health check migration, notify_calls says which answers were the notify function's
+    // (alert emails go through pg_net too).
     const answers = row.has_net
-      ? await querySql(`select status_code as status, error_msg as error, created as at from net._http_response order by created desc limit 1`, remote)
+      ? await querySql(
+          row.has_health
+            ? `select r.status_code as status, r.error_msg as error, r.created as at from public.notify_calls c join net._http_response r on r.id = c.request_id order by c.called_at desc limit 1`
+            : `select status_code as status, error_msg as error, created as at from net._http_response order by created desc limit 1`,
+          remote,
+        )
       : { rows: [] }
     const last = answers.rows?.[0]
     db.check(last?.status === 200, 'the last call to the notify function answered 200', {
       detail: answers.error ?? (last ? `${last.status ?? last.error ?? 'no answer'}, ${new Date(last.at).toLocaleString()}` : row.has_net ? 'no calls yet' : 'pg_net isn’t installed yet: deploy the notifications migration first'),
       fix: last?.status === 401 ? `${fixNotify} (401: the Vault secret and NOTIFY_SECRET differ)` : fixNotify,
     })
+    if (row.has_health) {
+      const fixAlerts = `npm run alerts:setup -- ${env}`
+      for (const name of ['alert_email', 'resend_api_key']) db.check(vault.includes(name), `Vault has ${name}, so the health check can email`, { fix: fixAlerts })
+      const health = await querySql(
+        `select s.checked_at, s.last_email_at, r.status_code as email_status, r.error_msg as email_error,
+          (select count(*)::int from public.client_errors where created_at > now() - interval '7 days') as errors_week
+        from public.health_state s left join net._http_response r on r.id = s.last_email_request`,
+        remote,
+      )
+      const h = health.rows?.[0]
+      const recent = !!h?.checked_at && Date.now() - new Date(h.checked_at).getTime() < 2 * 60 * 60 * 1000
+      db.check(recent, 'the hourly health check is running', {
+        detail: health.error ?? (h?.checked_at ? `last ran ${new Date(h.checked_at).toLocaleString()}` : 'hasn’t run yet (it runs at 7 past the hour)'),
+        fix: 'check the health job: select * from cron.job_run_details order by start_time desc limit 5',
+      })
+      if (h?.last_email_at) {
+        // pg_net keeps answers 6 hours, so an older email may have no answer left to show.
+        const ok = h.email_status === 200 || (h.email_status == null && !h.email_error)
+        db.check(ok, 'the last alert email was accepted by Resend', { detail: `${h.email_status ?? h.email_error ?? 'answer no longer kept'}, sent ${new Date(h.last_email_at).toLocaleString()}`, fix: fixAlerts })
+      }
+      if (h) db.note(`${h.errors_week} app error${h.errors_week === 1 ? '' : 's'} reported in the last 7 days`)
+    }
     if (row.has_schema) {
       const admins = await querySql(`select count(*)::int as admins from public.allowlist where 'admin' = any(initial_roles)`, remote)
       const count = admins.rows?.[0]?.admins ?? 0
