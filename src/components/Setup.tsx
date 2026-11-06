@@ -6,7 +6,6 @@ import Typography from '@mui/material/Typography'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
-import { canSeeAppointments } from '../lib/access'
 import { currentDevice, installPlatform } from '../lib/install'
 import { passkeysSupported } from '../lib/passkeys'
 import { currentSubscription, pushAvailability, pushSupported, vapidPublicKey } from '../lib/push'
@@ -19,7 +18,7 @@ type Device = Pick<SetupFacts, 'passkeys' | 'notifications'>
 
 const SetupContext = createContext<SetupStep[]>([])
 
-/** What this device has set up: saved passkeys, and whether the day-ahead summary is on. */
+/** What this device has set up: saved passkeys, and whether notifications are on. */
 async function loadDevice(wantsNotifications: boolean): Promise<Device> {
   const passkeys = passkeysSupported() ? await listPasskeys(supabase).then((p) => p.length, () => null) : null
   let notifications: Device['notifications'] = null
@@ -44,7 +43,7 @@ export function SetupProvider({ children }: { children: ReactNode }) {
   const { roles, office, hasHours, session } = useAuth()
   const { pathname } = useLocation()
   const [device, setDevice] = useState<Device>({ passkeys: null, notifications: null })
-  const wantsNotifications = canSeeAppointments(roles)
+  const wantsNotifications = roles.length > 0
   const userId = session?.user.id
 
   useEffect(() => {

@@ -22,11 +22,11 @@ import {
   type MeetingReminder,
   type RemindedEvent,
 } from '../../src/lib/followUp'
-import { deliver, type Device, type PushMessage, type Sender } from './deliver'
+import { deliver, loadMuted, type Device, type PushMessage, type Sender } from './deliver'
 
 type Person = { id: string; office: Enums<'bishopric_office'> | null }
 
-export type FollowUpReport = { userId: string; office: Person['office']; kind: 'report_due' | 'reminders'; body: string; devices: number; outcome: 'sent' | 'no-devices' | 'failed' | 'dry-run' }
+export type FollowUpReport = { userId: string; office: Person['office']; kind: 'report_due' | 'reminders'; body: string; devices: number; outcome: 'sent' | 'no-devices' | 'muted' | 'failed' | 'dry-run' }
 
 export type FollowUpOptions = { sql: Sql; now: Date; timeZone: string; send: Sender; dryRun?: boolean; only?: string[] }
 
@@ -72,12 +72,13 @@ function schedulers(leaderIds: string[], secretaries: Person[], assignments: { l
 export async function sendFollowUps({ sql, now, timeZone, send, dryRun = false, only }: FollowUpOptions): Promise<FollowUpReport[]> {
   const { date: today } = wardNow(now, timeZone)
   const tomorrow = remindersWindow(now, timeZone)
-  const data = await load(sql, today, tomorrow ?? today)
+  const [data, muted] = await Promise.all([load(sql, today, tomorrow ?? today), loadMuted(sql)])
   const reports: FollowUpReport[] = []
 
   const nudge = async (person: Person, kind: FollowUpReport['kind'], forDate: IsoDate, message: PushMessage) => {
     const devices = data.devices.filter((d) => d.user_id === person.id)
     const report = (outcome: FollowUpReport['outcome']) => reports.push({ userId: person.id, office: person.office, kind, body: message.body, devices: devices.length, outcome })
+    if (muted(person.id, kind)) return report('muted')
     if (!devices.length) return report('no-devices')
     if (dryRun) return report('dry-run')
     report(await deliver(sql, send, devices, person.id, kind, forDate, message))

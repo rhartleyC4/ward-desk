@@ -7,7 +7,7 @@ import { withDefaultSecretary } from '../../src/lib/appointments'
 import { keepsHours } from '../../src/lib/availability'
 import { daySummary, pushMessage, type DaySummaryInput, type SummaryLine, type SummaryPerson } from '../../src/lib/daySummary'
 import type { IsoDate } from '../../src/lib/dates'
-import { deliver, type Device, type Sender } from './deliver'
+import { deliver, loadMuted, type Device, type Sender } from './deliver'
 
 export type { Device, SendResult, Sender } from './deliver'
 
@@ -58,7 +58,7 @@ export async function loadDay(sql: Sql, date: IsoDate): Promise<DayData> {
   }
 }
 
-export type PersonReport = { userId: string; office: SummaryPerson['office']; lines: SummaryLine[]; devices: number; outcome: 'sent' | 'nothing-on' | 'no-devices' | 'already-sent' | 'failed' | 'dry-run' }
+export type PersonReport = { userId: string; office: SummaryPerson['office']; lines: SummaryLine[]; devices: number; outcome: 'sent' | 'nothing-on' | 'muted' | 'no-devices' | 'already-sent' | 'failed' | 'dry-run' }
 
 export type RunOptions = {
   sql: Sql
@@ -74,7 +74,7 @@ export type RunOptions = {
 }
 
 export async function sendDaySummaries({ sql, date, timeZone, send, dryRun = false, force = false, only }: RunOptions): Promise<PersonReport[]> {
-  const day = await loadDay(sql, date)
+  const [day, muted] = await Promise.all([loadDay(sql, date), loadMuted(sql)])
   const reports: PersonReport[] = []
   for (const person of day.people) {
     if (only && !only.includes(person.id)) continue
@@ -83,6 +83,7 @@ export async function sendDaySummaries({ sql, date, timeZone, send, dryRun = fal
     const report = (outcome: PersonReport['outcome']) => reports.push({ userId: person.id, office: person.office, lines, devices: devices.length, outcome })
 
     if (!lines.length) report('nothing-on')
+    else if (muted(person.id, 'day_summary')) report('muted')
     else if (!devices.length) report('no-devices')
     else if (day.alreadySent.has(person.id) && !force) report('already-sent')
     else if (dryRun) report('dry-run')

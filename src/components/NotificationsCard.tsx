@@ -34,7 +34,7 @@ function initialState(): PushState | 'loading' {
   return availability === 'ready' ? 'loading' : availability
 }
 
-/** Turns the day-ahead summary on or off for this device. */
+/** Turns notifications on or off for this device. */
 export function NotificationsCard({ actions }: { actions: NotificationActions }) {
   const [state, setState] = useState<PushState | 'loading'>(initialState)
   const [busy, setBusy] = useState(false)
@@ -76,10 +76,10 @@ export function NotificationsCard({ actions }: { actions: NotificationActions })
   const note = state !== 'loading' ? NOTES[state] : undefined
 
   return (
-    <SectionCard title="Day-ahead summary">
+    <SectionCard title="This device">
       <Muted>
-        The evening before, a notification on this device with your next day: standing meetings, conducting sacrament meeting, and your
-        appointments. It says when and how many, never who, so it’s safe on a lock screen. Nothing is sent on a day with nothing on it.
+        Notifications say what kind of thing happened and when, never who or what an appointment is for, so they’re safe on a lock
+        screen. Choose which ones you get below.
       </Muted>
       <ErrorNote error={error} />
       {note ? (

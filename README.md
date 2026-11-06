@@ -72,13 +72,22 @@ Adjust these as the real needs become clear.
 
 ## Notifications
 
-Bishopric members turn on notifications for each device on the Account page (Settings, then their name at the top). Besides the instant ones for requests (below), three are sent on a schedule:
+Anyone with a role turns on notifications for each device on the Account page (Settings, then their name at the top). Below that, a switch for each kind they could be sent lets them turn any of it off; the choice is per person, so it applies on every device. Everything starts on. Turned-off kinds are stored in `notification_mutes`, and every sender skips them. The list of kinds, and who sees which switch, is in `src/lib/notifications.ts`.
+
+Besides the instant ones for requests (below), these are sent:
 
 - **How did your appointments go?** to a bishop or counselor, half an hour after their last appointment of the day ends, if any are still unreported. Opens Home.
 - **Reminders for tomorrow** to a secretary, from 10 AM the day before, when appointments they schedule (or meetings they remind people about) still need a reminder. Opens the Reminders page. A leader no secretary covers counts for every secretary.
 - The **day-ahead summary**, in the evening (6 to 10 PM ward time), described below.
+- **Requests due tomorrow** to the person asked, from 10 AM the day before, when it isn't done.
+- **Callings to record** to the ward clerk, Sunday from 1 PM: how many callings were sustained and people released that day, so the church's records can be updated.
+- **Calling request progress** to the ward leader who asked, in the daytime: when the bishopric starts on it, and when it's finished (`push_events` keeps each to once).
+- **Appointment changes**, as they happen:
+  - To the secretaries who book for that leader: a new appointment to book (added, or handed to that leader), a missed one sent back for a new time, and away dates that cover appointments already booked.
+  - To the leader: one booked for today, or for tomorrow after tomorrow's summary went out, one moved or cancelled, and one handed to them.
+  - Nobody hears about their own change. Triggers on `interviews` and `absences` write each change to `notification_outbox` and ask the `notify` function to run straight away; the 10-minute run picks up anything that call missed. Who hears what is in `src/lib/notices.ts`. Changes made as the database owner (seed, imports) notify no one.
 
-Each goes once per person and day (`notification_log`), and only when there's something to do. The timing and text are in `src/lib/followUp.ts` and `scripts/notify/`.
+The scheduled ones go once per person and day (`notification_log`), and only when there's something to do. The timing and text are in `src/lib/followUp.ts` and `scripts/notify/`.
 
 The **day-ahead summary** lists that person's next day:
 
@@ -94,7 +103,7 @@ Notifications show on lock screens, so the text says when and how many, never wh
 
 Each device's push subscription lives in `push_subscriptions` (saved through `save_push_subscription`, so whoever turns it on last on a shared device owns it). `notification_log` records each person, kind and day sent, so a rerun never sends twice. Push services that report a device gone (404 or 410) get it removed.
 
-**How the schedule runs:** every 10 minutes, `pg_cron` in the database runs `public.call_notify()`, which posts to the `notify` Edge Function with a shared secret. The function runs `scripts/notify/tick.ts` (bundled into the function by `npm run functions:build`), which sends whatever is due at that moment in the ward's time zone. Until the Vault secrets below are set, `call_notify()` does nothing, so local databases stay quiet.
+**How the schedule runs:** every 10 minutes, `pg_cron` in the database runs `public.call_notify()`, which posts to the `notify` Edge Function with a shared secret. The function runs `scripts/notify/tick.ts` (bundled into the function by `npm run functions:build`), which sends whatever is due at that moment in the ward's time zone. A run takes an advisory lock, so a run started by a change and the 10-minute one never send the same thing twice. Until the Vault secrets below are set, `call_notify()` does nothing, so local databases stay quiet.
 
 On iPhone, notifications only work from the Home Screen app (see "iPhone users"). The service worker that shows them is only in a built app, so locally use `npm run build && npm run preview`, not `npm run dev`.
 

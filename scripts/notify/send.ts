@@ -89,7 +89,7 @@ try {
     console.log(`Due at ${wardParts(now.toISOString(), timeZone).time} in ${timeZone}${dryRun ? ' (dry run, nothing sent)' : ''}: ${lines.length ? '' : 'nothing'}`)
     for (const l of lines) console.log(`- ${l}`)
     for (const r of report.followUps) console.log(`    ${r.body.replace(/\n/g, '\n    ')}`)
-    if ([...report.summaries, ...report.followUps].some((r) => r.outcome === 'failed')) process.exitCode = 1
+    if ([...report.summaries, ...report.notices, ...report.followUps, ...report.daily].some((r) => r.outcome === 'failed')) process.exitCode = 1
   } else {
     const reports = await sendDaySummaries({ sql, date, timeZone, send, dryRun, force: args.force, only })
     console.log(`Day-ahead summaries for ${date}${dryRun ? ' (dry run, nothing sent)' : ''}:`)

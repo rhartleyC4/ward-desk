@@ -433,6 +433,70 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"notification_mutes": {
+                  Row: {
+                    "created_at": string,"kind": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"kind": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"kind"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_mutes_user_id_fkey"
+      columns: ["user_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"notification_outbox": {
+                  Row: {
+                    "absence_id": string | null,"actor_id": string | null,"claimed_at": string | null,"created_at": string,"event": string,"id": number,"interview_id": string | null,"leader_id": string | null,"old_leader_id": string | null,"old_scheduled_at": string | null,"scheduled_at": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "absence_id"?: string | null,"actor_id"?: string | null,"claimed_at"?: string | null,"created_at"?: string,"event": string,"id"?: never,"interview_id"?: string | null,"leader_id"?: string | null,"old_leader_id"?: string | null,"old_scheduled_at"?: string | null,"scheduled_at"?: string | null
+                  }
+                  Update: {
+                    "absence_id"?: string | null,"actor_id"?: string | null,"claimed_at"?: string | null,"created_at"?: string,"event"?: string,"id"?: never,"interview_id"?: string | null,"leader_id"?: string | null,"old_leader_id"?: string | null,"old_scheduled_at"?: string | null,"scheduled_at"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "notification_outbox_absence_id_fkey"
+      columns: ["absence_id"]
+isOneToOne: false
+      referencedRelation: "absences"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_outbox_actor_id_fkey"
+      columns: ["actor_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_outbox_interview_id_fkey"
+      columns: ["interview_id"]
+isOneToOne: false
+      referencedRelation: "interviews"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_outbox_leader_id_fkey"
+      columns: ["leader_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_outbox_old_leader_id_fkey"
+      columns: ["old_leader_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"prayer_roll": {
                   Row: {
                     "added_on": string,"id": string,"name": string,"removed_on": string | null

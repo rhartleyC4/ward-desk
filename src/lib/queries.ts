@@ -4,6 +4,7 @@
 import type { Block, DayChange, UsualHours } from './availability'
 import { tidyTitle, type ListedCalling } from './callings'
 import type { MessageTemplate } from './messages'
+import type { NotificationKind } from './notifications'
 import { addDays, upcomingSunday, type IsoDate } from './dates'
 import { toPasskeyError } from './passkeys'
 import type { CallingRequest, CallingRequestKind, MyCallingRequest, Recipient, Request, RequestStatus } from './requests'
@@ -859,4 +860,18 @@ export async function deletePushSubscription(client: Client, endpoint: string) {
 /** Whether this device is saved for the signed-in person (it may have been taken over by someone else). */
 export async function hasPushSubscription(client: Client, endpoint: string): Promise<boolean> {
   return !!maybe(await client.from('push_subscriptions').select('id').eq('endpoint', endpoint).maybeSingle())
+}
+
+/** The kinds of notification this person turned off. Everything else is sent. */
+export async function loadMutedNotifications(client: Client): Promise<NotificationKind[]> {
+  return must(await client.from('notification_mutes').select('kind')).map((r) => r.kind as NotificationKind)
+}
+
+/** Turns one kind of notification on or off for this person, on every device. */
+export async function setNotificationOn(client: Client, kind: NotificationKind, on: boolean) {
+  check(
+    on
+      ? await client.from('notification_mutes').delete().eq('kind', kind)
+      : await client.from('notification_mutes').upsert({ kind }, { onConflict: 'user_id,kind', ignoreDuplicates: true }),
+  )
 }

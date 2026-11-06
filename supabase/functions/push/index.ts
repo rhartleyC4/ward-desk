@@ -7,6 +7,8 @@
 // the change must be a few minutes old at most. Each notification is recorded in push_events
 // first, so repeating a call sends nothing.
 //
+// Nobody gets a kind they turned off (notification_mutes; the kinds are the event names).
+//
 // Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT (supabase secrets set ...).
 // Supabase provides SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY. Deploying is
 // manual; see "Instant notifications" in README.md.
@@ -60,11 +62,16 @@ Deno.serve(async (req) => {
   const plan = planPush(event, row as RequestRow | CallingRequestRow, auth.user.id, (me?.office ?? null) as Office, new Date())
   if ('skip' in plan) return reply(200, { sent: 0, skipped: plan.skip })
 
+  // Each kind of notification is named after its event, and anyone can turn one off.
+  const { data: muted } = await admin.from('notification_mutes').select('user_id').eq('kind', event).in('user_id', plan.to)
+  const to = plan.to.filter((id) => !muted?.some((m) => m.user_id === id))
+  if (!to.length) return reply(200, { sent: 0, skipped: 'turned off' })
+
   // Claim it before sending, so two calls at once can't both send.
   const { error: claimed } = await admin.from('push_events').insert({ key: plan.key })
   if (claimed) return reply(200, { sent: 0, skipped: claimed.code === '23505' ? 'already sent' : claimed.message })
 
-  const { data: devices } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').in('user_id', plan.to)
+  const { data: devices } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').in('user_id', to)
   webpush.setVapidDetails(env('VAPID_SUBJECT') || 'mailto:noreply@warddesk.app', publicKey, privateKey)
 
   let sent = 0

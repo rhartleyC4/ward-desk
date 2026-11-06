@@ -29,7 +29,8 @@ describe('setupSteps', () => {
     expect(step).toMatchObject({ label: 'Add Ward Desk to your Home Screen', done: false })
   })
 
-  it('only offers notifications to the bishopric, who get the summary', () => {
-    expect(ids(facts({ roles: ['admin'], office: null }))).toEqual(['passkey'])
+  it('offers notifications to anyone with a role, since anyone can be sent a request', () => {
+    expect(ids(facts({ roles: ['leader'], office: null }))).toEqual(['passkey', 'notifications'])
+    expect(ids(facts({ roles: [], office: null }))).toEqual(['passkey'])
   })
 })
