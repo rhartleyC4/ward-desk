@@ -19,6 +19,12 @@ import { describeTick, tick } from './tick.bundle.js'
 type Device = { endpoint: string; p256dh: string; auth: string }
 type PushMessage = { tag: string }
 
+/** What the push service said. Its answer never holds the message, only why it was refused. */
+const reason = (e: unknown) => {
+  const body = String((e as { body?: unknown }).body ?? '').trim().slice(0, 300)
+  return body || (e as Error).message
+}
+
 const env = (name: string) => Deno.env.get(name) ?? ''
 
 const reply = (status: number, body: Record<string, unknown>) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
@@ -40,18 +46,29 @@ Deno.serve(async (req) => {
   if (!publicKey || !privateKey) return reply(200, { skipped: 'notifications are not set up here' })
   webpush.setVapidDetails(env('VAPID_SUBJECT') || 'mailto:noreply@warddesk.app', publicKey, privateKey)
 
+  const push = (device: Device, message: PushMessage, topic: boolean) =>
+    webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, JSON.stringify(message), {
+      TTL: 12 * 60 * 60, // a phone that's off overnight still gets it in the morning
+      urgency: 'normal',
+      // A newer one with the same topic replaces an undelivered one. Some push services refuse a
+      // topic they don't like with a 400, so that one is sent again without it.
+      ...(topic ? { topic: message.tag } : {}),
+    })
+
   const send = async (device: Device, message: PushMessage) => {
     try {
-      await webpush.sendNotification({ endpoint: device.endpoint, keys: { p256dh: device.p256dh, auth: device.auth } }, JSON.stringify(message), {
-        TTL: 12 * 60 * 60, // a phone that's off overnight still gets it in the morning
-        urgency: 'normal',
-        topic: message.tag, // a newer one for the same day replaces an undelivered one
-      })
+      try {
+        await push(device, message, true)
+      } catch (e) {
+        if ((e as { statusCode?: number }).statusCode !== 400) throw e
+        console.error(`push refused with a topic (400): ${reason(e)}; sending without one`)
+        await push(device, message, false)
+      }
       return 'sent' as const
     } catch (e) {
       const status = (e as { statusCode?: number }).statusCode
       if (status === 404 || status === 410) return 'gone' as const
-      console.error(`push failed (${status ?? 'no status'}): ${(e as Error).message}`)
+      console.error(`push failed (${status ?? 'no status'}) at ${new URL(device.endpoint).host}: ${reason(e)}`)
       return 'failed' as const
     }
   }
