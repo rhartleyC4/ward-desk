@@ -25,6 +25,10 @@ export type ScheduleData = {
   profiles: Profile[]
   /** The bishop and counselors, who can be given a rotation or an assignment. */
   bishopric: Profile[]
+  /** The executive and assistant executive secretaries, who can send a meeting's reminders. */
+  secretaries: Profile[]
+  /** Meetings with agendas, so a reminder can name who has the prayers on that day's agenda. */
+  agendaTemplates: { id: string; name: string }[]
 }
 
 export type ScheduleActions = {
@@ -89,14 +93,24 @@ function FormButtons({ busy, canSave, onCancel, onDelete, saveLabel }: { busy: b
 // Regular meetings
 // ---------------------------------------------------------------------------
 
-function EventForm({ event, busy, onSave, onCancel, onDelete }: { event?: StandingEvent; busy: boolean; onSave: (e: EventDraft) => void; onCancel: () => void; onDelete?: () => void }) {
+function EventForm({ event, secretaries, agendaTemplates, busy, onSave, onCancel, onDelete }: {
+  event?: StandingEvent
+  secretaries: Profile[]
+  agendaTemplates: ScheduleData['agendaTemplates']
+  busy: boolean
+  onSave: (e: EventDraft) => void
+  onCancel: () => void
+  onDelete?: () => void
+}) {
   const [title, setTitle] = useState(event?.title ?? '')
+  const [reminderBy, setReminderBy] = useState(event?.reminder_by ?? '')
+  const [agenda, setAgenda] = useState(event?.agenda_template_id ?? '')
   const [weekday, setWeekday] = useState(event?.weekday ?? 0)
   const [week, setWeek] = useState(event?.week_of_month ?? 0)
   const [time, setTime] = useState(event?.start_time?.slice(0, 5) ?? '')
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (title.trim()) onSave({ title: title.trim(), weekday, week_of_month: week || null, start_time: time || null })
+    if (title.trim()) onSave({ title: title.trim(), weekday, week_of_month: week || null, start_time: time || null, reminder_by: reminderBy || null, agenda_template_id: agenda || null })
   }
   return (
     <Box component="form" onSubmit={submit} aria-label={event ? `Edit ${event.title}` : 'New meeting'} sx={{ py: 1 }}>
@@ -126,6 +140,44 @@ function EventForm({ event, busy, onSave, onCancel, onDelete }: { event?: Standi
         <Grid size={{ xs: 12, sm: 4 }}>
           <TextField label="Time (optional)" type="time" slotProps={{ inputLabel: { shrink: true } }} value={time} onChange={(e) => setTime(e.target.value)} />
         </Grid>
+        {(secretaries.length > 0 || reminderBy) && (
+          <Grid size={12}>
+            <TextField
+              select
+              label="Who reminds people the day before"
+              slotProps={nativeSelect}
+              value={reminderBy}
+              onChange={(e) => setReminderBy(e.target.value)}
+              helperText="They get a notification the morning before, with the reminder ready to send."
+            >
+              <option value="">No one</option>
+              {secretaries.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.display_name ?? p.email}
+                </option>
+              ))}
+            </TextField>
+          </Grid>
+        )}
+        {reminderBy && (agendaTemplates.length > 0 || agenda) && (
+          <Grid size={12}>
+            <TextField
+              select
+              label="Its agenda"
+              slotProps={nativeSelect}
+              value={agenda}
+              onChange={(e) => setAgenda(e.target.value)}
+              helperText="The reminder can name who has the prayers and the spiritual thought on that day's agenda."
+            >
+              <option value="">No agenda</option>
+              {agendaTemplates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </TextField>
+          </Grid>
+        )}
       </Grid>
       <FormButtons busy={busy} canSave={!!title.trim()} onCancel={onCancel} onDelete={onDelete} saveLabel={event ? 'Save' : 'Add meeting'} />
     </Box>
@@ -347,13 +399,15 @@ export function ScheduleEditor({ data, canEdit, actions, busy }: Props) {
       <SectionCard title="Regular meetings" action={addButton('event', 'Add a meeting')}>
         {is('event', 'new') && (
           <>
-            <EventForm busy={busy} onCancel={close} onSave={(e) => void actions.saveEvent(e).then(after)} />
+            <EventForm secretaries={data.secretaries} agendaTemplates={data.agendaTemplates} busy={busy} onCancel={close} onSave={(e) => void actions.saveEvent(e).then(after)} />
             <Divider sx={{ my: 1 }} />
           </>
         )}
         {data.events.map((e) =>
           is('event', e.id) ? (
             <EventForm
+              secretaries={data.secretaries}
+              agendaTemplates={data.agendaTemplates}
               key={e.id}
               event={e}
               busy={busy}
@@ -362,7 +416,7 @@ export function ScheduleEditor({ data, canEdit, actions, busy }: Props) {
               onDelete={() => void actions.deleteEvent(e.id).then(after)}
             />
           ) : (
-            <Row key={e.id} primary={e.title} secondary={eventWhen(e)} editLabel={`Edit ${e.title}`} onEdit={canEdit && !editing ? () => setEditing({ kind: 'event', id: e.id }) : undefined} />
+            <Row key={e.id} primary={e.title} secondary={e.reminder_by ? `${eventWhen(e)} · ${personLabel(e.reminder_by, data.profiles)} sends reminders` : eventWhen(e)} editLabel={`Edit ${e.title}`} onEdit={canEdit && !editing ? () => setEditing({ kind: 'event', id: e.id }) : undefined} />
           ),
         )}
         {!data.events.length && <Muted>No regular meetings yet.</Muted>}

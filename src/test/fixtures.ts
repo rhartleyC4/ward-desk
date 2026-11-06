@@ -101,7 +101,7 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
       { id: 'l3', title: 'RS Teacher', organization: null },
     ],
     appointments: [
-      { id: 'ap1', interviewer_id: 'l', scheduled_at: '2026-11-08T17:00:00Z', person_name: 'Sister Nash', purpose: 'calling', candidate_id: 'c3', location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], is_youth: false, parent_name: null },
+      { id: 'ap1', interviewer_id: 'l', scheduled_at: '2026-11-08T17:00:00Z', person_name: 'Sister Nash', purpose: 'calling', candidate_id: 'c3', location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], is_youth: false, parent_name: null, confirmed_at: null, reminded_at: null, missed_at: null, report_note: null, reported_at: null, reported_by: null },
     ],
     agendaItems: [
       { id: 'd1', section_id: 'bishopric-s1', kind: 'discussion', body: 'Fifth Sunday topic', event_date: null, resolved_on: null, created_by: 'b', created_at: ts },
@@ -110,8 +110,8 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
     ],
     prayerRoll: [{ id: 'p1', name: 'Example family', added_on: '2026-10-01', removed_on: null }],
     events: [
-      { id: 'r1', title: 'Bishopric meeting', weekday: 0, week_of_month: null, start_time: '08:30:00', notes: null, created_at: ts },
-      { id: 'r2', title: 'Welfare', weekday: 0, week_of_month: 1, start_time: '09:15:00', notes: null, created_at: ts },
+      { id: 'r1', title: 'Bishopric meeting', weekday: 0, week_of_month: null, start_time: '08:30:00', notes: null, created_at: ts, reminder_by: null, agenda_template_id: null },
+      { id: 'r2', title: 'Welfare', weekday: 0, week_of_month: 1, start_time: '09:15:00', notes: null, created_at: ts, reminder_by: null, agenda_template_id: null },
     ],
     rotations: [{ id: 'ro1', title: 'PPI: YW President', assignee_id: null, assignee_label: 'YW President', months: [3, 7, 11], weekday: null, week_of_month: null, notes: null, created_at: ts }],
     stewardships: [],

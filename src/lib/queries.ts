@@ -219,7 +219,7 @@ export async function loadSchedule(client: Client) {
 
 export type StandingEvent = Tables<'recurring_events'>
 export type StandingRotation = Tables<'rotations'>
-export type EventDraft = Pick<StandingEvent, 'title' | 'weekday' | 'week_of_month' | 'start_time'>
+export type EventDraft = Pick<StandingEvent, 'title' | 'weekday' | 'week_of_month' | 'start_time' | 'reminder_by' | 'agenda_template_id'>
 export type RotationDraft = Pick<StandingRotation, 'title' | 'months' | 'assignee_id' | 'assignee_label' | 'weekday' | 'week_of_month'>
 
 /** Every rotation, for Home and the day-ahead summary. */
@@ -492,6 +492,55 @@ export async function assignCallingAppointment(client: Client, candidate: Pick<C
 
 export async function updateAppointment(client: Client, id: string, changes: Pick<TablesUpdate<'interviews'>, 'scheduled_at' | 'status' | 'interviewer_id' | 'duration_minutes' | 'is_youth' | 'parent_name'>) {
   check(await client.from('interviews').update(changes).eq('id', id))
+}
+
+/** How an appointment went, reported by the leader who held it. */
+export type Report =
+  | { outcome: 'done' }
+  /** They didn't come, and the secretary should find a new time. */
+  | { outcome: 'reschedule'; note: string | null }
+  /** They didn't come, and the leader will handle it. */
+  | { outcome: 'handled'; note: string }
+
+export async function reportAppointment(client: Client, appointment: Pick<Appointment, 'id' | 'scheduled_at'>, report: Report, userId: string) {
+  const reported = { reported_at: new Date().toISOString(), reported_by: userId }
+  const changes: TablesUpdate<'interviews'> =
+    report.outcome === 'done'
+      ? { ...reported, status: 'completed' }
+      : report.outcome === 'reschedule'
+        ? // Back to the secretary's list. Offered times are let go, since they were for the old time.
+          { ...reported, missed_at: appointment.scheduled_at, report_note: report.note?.trim() || null, scheduled_at: null, offered_at: null, offered_times: [] }
+        : { ...reported, missed_at: appointment.scheduled_at, report_note: report.note.trim(), status: 'cancelled' }
+  // Only while it's still open, so two reports at once can't both apply.
+  check(await client.from('interviews').update(changes).eq('id', appointment.id).eq('status', 'scheduled'))
+}
+
+/** Records that the person was sent their confirmation (or told another way). */
+export async function markConfirmed(client: Client, id: string) {
+  check(await client.from('interviews').update({ confirmed_at: new Date().toISOString() }).eq('id', id))
+}
+
+/** Records the day-before reminder, or with `false` takes it back. */
+export async function markReminded(client: Client, id: string, sent = true) {
+  check(await client.from('interviews').update({ reminded_at: sent ? new Date().toISOString() : null }).eq('id', id))
+}
+
+/** Standing meetings, the reminders already sent for a date, and that date's agendas (for who has the prayers). */
+export async function loadMeetingReminders(client: Client, date: IsoDate) {
+  const [events, sent, agendas] = await Promise.all([
+    client.from('recurring_events').select('id, title, weekday, week_of_month, start_time, reminder_by, agenda_template_id'),
+    client.from('meeting_reminders').select('event_id, for_date').eq('for_date', date),
+    client.from('agendas').select('template_id, opening_prayer, spiritual_thought, closing_prayer').eq('meeting_date', date),
+  ])
+  return { events: must(events), sent: must(sent), agendas: must(agendas) }
+}
+
+export async function markMeetingReminded(client: Client, eventId: string, date: IsoDate, sent = true) {
+  check(
+    sent
+      ? await client.from('meeting_reminders').upsert({ event_id: eventId, for_date: date }, { onConflict: 'event_id,for_date', ignoreDuplicates: true })
+      : await client.from('meeting_reminders').delete().eq('event_id', eventId).eq('for_date', date),
+  )
 }
 
 export async function addSecretary(client: Client, leaderId: string, secretaryId: string) {

@@ -8,12 +8,15 @@ import { BishopricHome, type BishopricHomeActions, type BishopricHomeData } from
 const TZ = 'America/Denver'
 // Today is Sunday 2026-11-08.
 const TODAY = '2026-11-08'
+// 7:00 AM, before anything on the day.
+const MORNING = new Date('2026-11-08T14:00:00Z')
 const ts = '2026-11-05T12:00:00Z'
 
 type Appt = BishopricHomeData['appointments'][number]
 const appt = (id: string, name: string, extra: Partial<Appt> = {}): Appt => ({
   id, interviewer_id: 'b', scheduled_at: null, person_name: name, purpose: 'other', candidate_id: null,
-  location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], is_youth: false, parent_name: null, ...extra,
+  location: null, status: 'scheduled', notes: null, created_at: ts, duration_minutes: 10, offered_at: null, offered_times: [], is_youth: false, parent_name: null,
+  confirmed_at: null, reminded_at: null, missed_at: null, report_note: null, reported_at: null, reported_by: null, ...extra,
 })
 
 function data(extra: Partial<BishopricHomeData> = {}): BishopricHomeData {
@@ -35,11 +38,11 @@ function data(extra: Partial<BishopricHomeData> = {}): BishopricHomeData {
   }
 }
 
-function setup(d = data(), userId = 'b') {
-  const actions: BishopricHomeActions = { requestInterview: vi.fn(async () => true), addItem: vi.fn(async () => true) }
+function setup(d = data(), userId = 'b', now = MORNING) {
+  const actions: BishopricHomeActions = { requestInterview: vi.fn(async () => true), addItem: vi.fn(async () => true), report: vi.fn(async () => true) }
   render(
     <MemoryRouter>
-      <BishopricHome data={d} userId={userId} today={TODAY} timeZone={TZ} actions={actions} busy={false} />
+      <BishopricHome data={d} userId={userId} today={TODAY} now={now} timeZone={TZ} actions={actions} busy={false} />
     </MemoryRouter>,
   )
   return { actions, user: userEvent.setup() }
@@ -48,6 +51,57 @@ function setup(d = data(), userId = 'b') {
 const card = (title: string) => screen.getByRole('heading', { name: title }).closest('section')!
 
 describe('BishopricHome', () => {
+  describe('reporting how appointments went', () => {
+    // 9:20 AM: Brother Hale (9–9:15) is over; Brother Ward is someone else's.
+    const AFTER = new Date('2026-11-08T16:20:00Z')
+
+    it('asks only about my appointments that are over', () => {
+      setup(data(), 'b', MORNING)
+      expect(screen.queryByRole('heading', { name: 'How did these go?' })).not.toBeInTheDocument()
+      setup(data(), 'b', AFTER)
+      const report = within(card('How did these go?'))
+      expect(report.getByRole('article', { name: 'Brother Hale' })).toHaveTextContent('Sunday, November 8th · 9–9:15 AM')
+      expect(report.queryByText('Brother Ward')).not.toBeInTheDocument()
+      expect(report.queryByText('Sister Moss')).not.toBeInTheDocument()
+    })
+
+    it('marks one done', async () => {
+      const { actions, user } = setup(data(), 'b', AFTER)
+      await user.click(within(card('How did these go?')).getByRole('button', { name: 'Done' }))
+      expect(actions.report).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }), { outcome: 'done' })
+    })
+
+    it('sends a missed one back to the secretary for a new time, with an optional note', async () => {
+      const { actions, user } = setup(data(), 'b', AFTER)
+      const hale = within(screen.getByRole('article', { name: 'Brother Hale' }))
+      await user.click(hale.getByRole('button', { name: "Didn't come" }))
+      expect(hale.getByRole('radio', { name: /Find a new time/ })).toBeChecked()
+      expect(hale.getByText('Brother Quinn will reach out and book another time.')).toBeInTheDocument()
+      await user.type(hale.getByLabelText('Note for the secretary (optional)'), 'Evenings')
+      await user.click(hale.getByRole('button', { name: 'Send back to Brother Quinn' }))
+      expect(actions.report).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }), { outcome: 'reschedule', note: 'Evenings' })
+    })
+
+    it("needs a note when the leader will handle a missed one", async () => {
+      const { actions, user } = setup(data(), 'b', AFTER)
+      const hale = within(screen.getByRole('article', { name: 'Brother Hale' }))
+      await user.click(hale.getByRole('button', { name: "Didn't come" }))
+      await user.click(hale.getByRole('radio', { name: /I'll take care of it/ }))
+      expect(hale.getByRole('button', { name: 'Save' })).toBeDisabled()
+      await user.type(hale.getByLabelText('How will you handle it?'), 'See him after church')
+      await user.click(hale.getByRole('button', { name: 'Save' }))
+      expect(actions.report).toHaveBeenCalledWith(expect.objectContaining({ id: 'a1' }), { outcome: 'handled', note: 'See him after church' })
+    })
+
+    it('marks them all done at once', async () => {
+      const d = data()
+      d.appointments.push(appt('a5', 'Sister Early', { scheduled_at: '2026-11-08T15:00:00Z' }))
+      const { actions, user } = setup(d, 'b', AFTER)
+      await user.click(screen.getByRole('button', { name: 'Mark all done' }))
+      expect(actions.report).toHaveBeenCalledTimes(2)
+    })
+  })
+
   it("shows today's meetings, conducting and my appointments only", () => {
     setup()
     const today = within(card('Today'))

@@ -24,6 +24,7 @@ import { SchedulePage } from './pages/SchedulePage'
 import { SettingsLayout, SettingsPage } from './pages/SettingsPage'
 import { WhoBooksPage } from './pages/WhoBooksPage'
 import { RequestsPage } from './pages/RequestsPage'
+import { RemindersPage } from './pages/RemindersPage'
 
 function Guard({ allow, children }: { allow: (roles: AppRole[], templates: AgendaTemplate[]) => boolean; children: ReactNode }) {
   const { roles, templates, office } = useAuth()
@@ -57,6 +58,7 @@ function AppRoutes() {
         {/* Callings moved onto the bishopric agenda. */}
         <Route path="callings" element={<Navigate to="/agenda/bishopric" replace />} />
         <Route path="requests" element={<RequestsPage />} />
+        <Route path="reminders" element={<Guard allow={canSeeAppointments}><RemindersPage /></Guard>} />
         {/* Suggesting a name is now one kind of calling request. */}
         <Route path="suggest" element={<Navigate to="/requests?new=calling" replace />} />
         <Route element={<SettingsLayout />}>

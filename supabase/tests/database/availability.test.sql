@@ -109,8 +109,8 @@ select throws_ok(
 -- Message templates
 -- ---------------------------------------------------------------------------
 
-select is((select count(*)::int from public.message_templates where created_by is null and audience = 'member'), 2, 'the ward starts with an offer and a confirm template');
-select is((select count(*)::int from public.message_templates where created_by is null and audience = 'parent'), 2, 'and the same two for writing to a parent');
+select is((select count(*)::int from public.message_templates where created_by is null and audience = 'member'), 4, 'the ward starts with an offer, a confirm, a reminder and a meeting reminder template');
+select is((select count(*)::int from public.message_templates where created_by is null and audience = 'parent'), 3, 'and the first three for writing to a parent');
 select is((select count(*)::int from public.message_templates where created_by is null and body like E'%\n\nThanks,\n{my_name}'), 4, 'the default templates are spaced out, with the sign-off on its own lines');
 insert into public.interviews (person_name, purpose) values ('Youth Default', 'youth');
 select is((select is_youth from public.interviews where person_name = 'Youth Default'), false, 'an appointment is not a youth''s unless marked');

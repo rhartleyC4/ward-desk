@@ -27,7 +27,7 @@ describe('the standing schedule', () => {
 
   it('lets a counselor keep the regular meetings and assignments', async () => {
     const lane = await signIn('first')
-    await saveEvent(lane, { title: `${TAG} council`, weekday: 0, week_of_month: 3, start_time: '09:30' })
+    await saveEvent(lane, { title: `${TAG} council`, weekday: 0, week_of_month: 3, start_time: '09:30', reminder_by: null, agenda_template_id: null })
     const event = (await loadSchedule(lane)).events.find((e) => e.title === `${TAG} council`)!
     expect(event.start_time).toBe('09:30:00')
     await deleteEvent(lane, event.id)
@@ -42,6 +42,6 @@ describe('the standing schedule', () => {
   it('refuses changes from a called leader', async () => {
     const leader = await signIn('leader')
     await expect(saveRotation(leader, { title: `${TAG} x`, assignee_id: null, assignee_label: null, months: [1], weekday: null, week_of_month: null })).rejects.toThrow(/row-level security/)
-    await expect(saveEvent(leader, { title: `${TAG} x`, weekday: 0, week_of_month: null, start_time: null })).rejects.toThrow(/row-level security/)
+    await expect(saveEvent(leader, { title: `${TAG} x`, weekday: 0, week_of_month: null, start_time: null, reminder_by: null, agenda_template_id: null })).rejects.toThrow(/row-level security/)
   })
 })

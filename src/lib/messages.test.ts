@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addressName, addressOptions, audienceFor, emailLink, emailSubject, fillTemplate, firstName, insertAt, usesVariable, lengthWords, smsLink, templatesFor, unknownVariables, type MessageTemplate } from './messages'
+import { addressName, addressOptions, audienceFor, emailLink, emailSubject, fillTemplate, firstName, missingAssignments, insertAt, usesVariable, lengthWords, smsLink, templatesFor, unknownVariables, type MessageTemplate } from './messages'
 
 const OFFER = 'Hi {first_name}, {leader} would like to meet with you for about {length}. Would one of these times work?\n{times}\nThanks, {my_name}'
 
@@ -122,7 +122,7 @@ describe('unknownVariables', () => {
   it('finds typos once each', () => {
     expect(unknownVariables(OFFER)).toEqual([])
     expect(unknownVariables('Hi {parent_name}')).toEqual([])
-    expect(unknownVariables('Hi {frist_name} {frist_name} at {when}')).toEqual(['frist_name', 'when'])
+    expect(unknownVariables('Hi {frist_name} {frist_name} at {wehn}')).toEqual(['frist_name', 'wehn'])
   })
 })
 
@@ -145,5 +145,31 @@ describe('emailSubject', () => {
   it('names the leader but not the purpose', () => {
     expect(emailSubject('Bishop Avery')).toBe('Appointment with Bishop Avery')
     expect(emailSubject(' ')).toBe('Appointment')
+  })
+})
+
+describe('meeting assignments', () => {
+  const base = { name: '', leader: '', minutes: 0, myName: 'Brother Quinn', meeting: 'Ward Council', when: 'Sunday, November 8th at 9:15 AM' }
+  const GROUP = 'Hi all, {meeting} is tomorrow, {when}.\n{assignments}\nSee you there. {my_name}'
+
+  it('lists who has each assignment, one per line', () => {
+    const text = fillTemplate(GROUP, { ...base, assignments: { openingPrayer: 'Brother Ortiz', closingPrayer: ' Sister Young ' } })
+    expect(text).toBe('Hi all, Ward Council is tomorrow, Sunday, November 8th at 9:15 AM.\nOpening prayer: Brother Ortiz\nClosing prayer: Sister Young\nSee you there. Brother Quinn')
+  })
+
+  it('drops the line when no one is down yet', () => {
+    expect(fillTemplate(GROUP, { ...base, assignments: {} })).toBe('Hi all, Ward Council is tomorrow, Sunday, November 8th at 9:15 AM.\nSee you there. Brother Quinn')
+  })
+
+  it('addresses the person with an assignment, and marks one no one has', () => {
+    const body = 'Hi {opening_prayer}, you have the opening prayer at {meeting}. {spiritual_thought} has the thought.'
+    expect(fillTemplate(body, { ...base, assignments: { openingPrayer: 'Brother Ortiz' } })).toBe('Hi Brother Ortiz, you have the opening prayer at Ward Council. (not assigned yet) has the thought.')
+  })
+
+  it('says which assignments a template needs that no one has', () => {
+    expect(missingAssignments(GROUP, { openingPrayer: 'Brother Ortiz' })).toEqual(['Spiritual thought', 'Closing prayer'])
+    expect(missingAssignments('Hi {opening_prayer}', { openingPrayer: 'Brother Ortiz' })).toEqual([])
+    expect(missingAssignments('Hi {closing_prayer}', {})).toEqual(['Closing prayer'])
+    expect(missingAssignments('Hi all', {})).toEqual([])
   })
 })

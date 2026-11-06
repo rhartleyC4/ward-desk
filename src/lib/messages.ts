@@ -7,25 +7,60 @@ export type MessageTemplate = Pick<Tables<'message_templates'>, 'id' | 'name' | 
 export type MessageKind = Enums<'message_kind'>
 export type MessageAudience = Enums<'message_audience'>
 
-export const KIND_LABELS: Record<MessageKind, string> = { offer: 'Offering times', confirm: 'Confirming a time' }
+export const KIND_LABELS: Record<MessageKind, string> = { offer: 'Offering times', confirm: 'Confirming a time', reminder: 'Reminder the day before', meeting: 'Meeting reminder' }
+
+/** The kinds about one person's appointment; a meeting reminder goes to everyone who attends. */
+export const APPOINTMENT_KINDS: MessageKind[] = ['offer', 'confirm', 'reminder']
 export const AUDIENCE_LABELS: Record<MessageAudience, string> = { member: 'To the person', parent: 'To a parent of a youth' }
 
 /** The variables a template can use, with what each becomes. */
 export const VARIABLES: { name: string; meaning: string; kinds: MessageKind[]; parentOnly?: boolean }[] = [
-  { name: 'first_name', meaning: 'What to call them: "Mary", or "Sister Reyes" or "Brother Reyes" when you pick that before sending (the youth\'s name, in a message to a parent)', kinds: ['offer', 'confirm'] },
-  { name: 'parent_name', meaning: 'The parent\'s name, like "Sister Quinn"', kinds: ['offer', 'confirm'], parentOnly: true },
-  { name: 'name', meaning: 'Full name as entered', kinds: ['offer', 'confirm'] },
-  { name: 'leader', meaning: 'Who they meet with, like "Bishop Avery"', kinds: ['offer', 'confirm'] },
-  { name: 'length', meaning: 'How long, like "10 minutes"', kinds: ['offer', 'confirm'] },
+  { name: 'first_name', meaning: 'What to call them: "Mary", or "Sister Reyes" or "Brother Reyes" when you pick that before sending (the youth\'s name, in a message to a parent)', kinds: APPOINTMENT_KINDS },
+  { name: 'parent_name', meaning: 'The parent\'s name, like "Sister Quinn"', kinds: APPOINTMENT_KINDS, parentOnly: true },
+  { name: 'name', meaning: 'Full name as entered', kinds: APPOINTMENT_KINDS },
+  { name: 'leader', meaning: 'Who they meet with, like "Bishop Avery"', kinds: APPOINTMENT_KINDS },
+  { name: 'length', meaning: 'How long, like "10 minutes"', kinds: APPOINTMENT_KINDS },
   { name: 'times', meaning: 'The times picked, one per line', kinds: ['offer'] },
-  { name: 'time', meaning: 'The time booked, like "Sun, November 8th at 9:10 AM"', kinds: ['confirm'] },
-  { name: 'my_name', meaning: 'Your name', kinds: ['offer', 'confirm'] },
+  { name: 'time', meaning: 'The time booked, like "Sun, November 8th at 9:10 AM"', kinds: ['confirm', 'reminder'] },
+  { name: 'meeting', meaning: 'The meeting, like "Ward Council"', kinds: ['meeting'] },
+  { name: 'when', meaning: 'Its day and time, like "Sunday, November 8th at 9:15 AM"', kinds: ['meeting'] },
+  { name: 'assignments', meaning: 'Who has each assignment on that day\'s agenda, one per line, like "Opening prayer: Brother Ortiz". Left out when no one is down yet', kinds: ['meeting'] },
+  { name: 'opening_prayer', meaning: 'Who has the opening prayer, as written on the agenda', kinds: ['meeting'] },
+  { name: 'spiritual_thought', meaning: 'Who has the spiritual thought (or handbook review), as written on the agenda', kinds: ['meeting'] },
+  { name: 'closing_prayer', meaning: 'Who has the closing prayer, as written on the agenda', kinds: ['meeting'] },
+  { name: 'my_name', meaning: 'Your name', kinds: ['offer', 'confirm', 'reminder', 'meeting'] },
 ]
 
 /** How {first_name} addresses someone: by first name, or as Sister or Brother with the last name. */
 export type Address = 'first' | 'sister' | 'brother'
 
-export type MessageValues = { name: string; leader: string; minutes: number; myName: string; times?: string[]; time?: string; parentName?: string | null; address?: Address }
+export type MessageValues = { name: string; leader: string; minutes: number; myName: string; times?: string[]; time?: string; parentName?: string | null; address?: Address; meeting?: string; when?: string; assignments?: MeetingAssignments }
+
+/** Who is down on a meeting's agenda for that day. Text as typed there, usually a name. */
+export type MeetingAssignments = { openingPrayer?: string | null; spiritualThought?: string | null; closingPrayer?: string | null }
+
+export const ASSIGNMENT_LABELS: { key: keyof MeetingAssignments; label: string }[] = [
+  { key: 'openingPrayer', label: 'Opening prayer' },
+  { key: 'spiritualThought', label: 'Spiritual thought' },
+  { key: 'closingPrayer', label: 'Closing prayer' },
+]
+
+/** Shown in place of an assignment no one is down for, so it's easy to spot before sending. */
+export const NOT_ASSIGNED = '(not assigned yet)'
+
+/** "Opening prayer: Brother Ortiz", one per line, for the assignments someone has. */
+export function assignmentLines(a: MeetingAssignments = {}): string {
+  return ASSIGNMENT_LABELS.filter(({ key }) => a[key]?.trim())
+    .map(({ key, label }) => `${label}: ${a[key]!.trim()}`)
+    .join('\n')
+}
+
+/** The assignments a template names that no one is down for yet. */
+export function missingAssignments(body: string, a: MeetingAssignments = {}): string[] {
+  const vars: Record<keyof MeetingAssignments, string> = { openingPrayer: 'opening_prayer', spiritualThought: 'spiritual_thought', closingPrayer: 'closing_prayer' }
+  const usesAll = usesVariable(body, 'assignments')
+  return ASSIGNMENT_LABELS.filter(({ key }) => !a[key]?.trim() && (usesAll || usesVariable(body, vars[key]))).map(({ label }) => label)
+}
 
 /** Names entered with a title ("Sister Nash") keep it, since a bare "Sister" would read oddly. */
 const TITLES = ['brother', 'sister', 'bro', 'bro.', 'sis', 'sis.', 'elder', 'bishop', 'president']
@@ -97,7 +132,15 @@ export function fillTemplate(body: string, values: MessageValues): string {
     my_name: values.myName,
     // "Hi there" reads fine when the parent's name hasn't been entered.
     parent_name: values.parentName?.trim() || 'there',
+    meeting: values.meeting ?? '',
+    when: values.when ?? '',
+    assignments: assignmentLines(values.assignments),
+    opening_prayer: values.assignments?.openingPrayer?.trim() || NOT_ASSIGNED,
+    spiritual_thought: values.assignments?.spiritualThought?.trim() || NOT_ASSIGNED,
+    closing_prayer: values.assignments?.closingPrayer?.trim() || NOT_ASSIGNED,
   }
+  // {assignments} on a line of its own disappears, line and all, when no one is down yet.
+  if (!vars.assignments) body = body.replace(/^[ \t]*\{assignments\}[ \t]*(\r?\n|$)/m, '')
   return body
     .replace(/\{([^{}|]*)\|([^{}|]*)\}/g, (_, single: string, plural: string) => (one ? single : plural))
     .replace(/\{(\w+)\}/g, (whole, key: string) => (key in vars ? vars[key] : whole))
@@ -112,6 +155,9 @@ export const SAMPLE_VALUES: MessageValues = {
   times: ['Sun, November 8th at 9:10 AM', 'Wed, November 11th at 7 PM'],
   time: 'Sun, November 8th at 9:10 AM',
   parentName: 'Sister Reyes',
+  meeting: 'Ward Council',
+  when: 'Sunday, November 8th at 9:15 AM',
+  assignments: { openingPrayer: 'Brother Ortiz', spiritualThought: 'Sister Young', closingPrayer: 'Brother Lane' },
 }
 
 /** Puts text into a template where the cursor is (or over the selection), returning the new text and cursor. */
@@ -130,6 +176,9 @@ const mailtoEncode = (text: string) => encodeURIComponent(text.replace(/\r?\n/g,
 
 /** A subject that says who the appointment is with but never what it is for. */
 export const emailSubject = (leader: string) => (leader.trim() ? `Appointment with ${leader.trim()}` : 'Appointment')
+
+/** The subject for a meeting reminder: "Reminder: Ward Council". */
+export const meetingSubject = (meeting: string) => `Reminder: ${meeting.trim() || 'meeting'}`
 
 /** Like smsLink, but opens the mail app: a new email with the subject and text and no recipient. */
 export const emailLink = (subject: string, text: string) => `mailto:?subject=${mailtoEncode(subject)}&body=${mailtoEncode(text)}`

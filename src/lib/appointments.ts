@@ -74,6 +74,16 @@ export function leadersScheduledBy(userId: string, assignments: SecretaryAssignm
   return assignments.filter((a) => a.secretary_id === userId).map((a) => a.leader_id)
 }
 
+/** The leaders this secretary schedules for, or everyone when they haven't been assigned any. */
+export function myLeaderIds(
+  userId: string,
+  data: { assignments: SecretaryAssignment[]; bishopric: { id: string }[]; secretaries: { id: string; office: Enums<'bishopric_office'> | null }[] },
+): { leaderIds: string[]; assigned: boolean } {
+  const assigned = leadersScheduledBy(userId, withDefaultSecretary(data.assignments, data.bishopric.map((l) => l.id), data.secretaries))
+  const leaderIds = assigned.length ? data.bishopric.filter((l) => assigned.includes(l.id)).map((l) => l.id) : data.bishopric.map((l) => l.id)
+  return { leaderIds, assigned: assigned.length > 0 }
+}
+
 /** Open appointments, split into those waiting for a time (oldest first) and those booked (soonest first). */
 export function splitAppointments<T extends Appointment>(appointments: T[], leaderIds?: string[]): { toSchedule: T[]; scheduled: T[] } {
   const open = appointments.filter((a) => a.status === 'scheduled' && (!leaderIds || (a.interviewer_id && leaderIds.includes(a.interviewer_id))))

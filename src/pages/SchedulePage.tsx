@@ -1,18 +1,18 @@
 import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading } from '../components/Layout'
 import { ScheduleEditor, type ScheduleActions } from '../components/ScheduleEditor'
-import { canEditSchedule } from '../lib/access'
+import { canEditSchedule, isSecretaryOffice } from '../lib/access'
 import * as q from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 
 /** The standing schedule, editable by the bishopric. */
 export function SchedulePage() {
-  const { roles } = useAuth()
+  const { roles, templates } = useAuth()
   const { data, error, reload } = useAsync(async () => {
-    const [schedule, profiles, bishopric] = await Promise.all([q.loadSchedule(supabase), q.loadProfiles(supabase), q.loadBishopric(supabase)])
-    return { ...schedule, profiles, bishopric }
-  }, [])
+    const [schedule, profiles, bishopric, secretaries] = await Promise.all([q.loadSchedule(supabase), q.loadProfiles(supabase), q.loadBishopric(supabase), q.loadSecretaries(supabase)])
+    return { ...schedule, profiles, bishopric, secretaries: secretaries.filter((s) => isSecretaryOffice(s.office)), agendaTemplates: templates }
+  }, [templates])
   const save = useAction()
 
   if (error) return <ErrorNote error={error} />

@@ -19,6 +19,8 @@ export function HomePage() {
 
 function BishopricHomePage() {
   const { profile, templates } = useAuth()
+  // Times before this are past. Fixed for the visit; reopening the page moves it on.
+  const [now] = useState(() => new Date())
   const userId = profile?.id ?? ''
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
@@ -45,6 +47,7 @@ function BishopricHomePage() {
   const actions: BishopricHomeActions = {
     requestInterview: (r) => run(() => q.addAppointment(supabase, { ...r, scheduled_at: null })),
     addItem: (section, body, eventDate) => run(() => q.addAgendaItem(supabase, section, body, eventDate)),
+    report: (a, report) => run(() => q.reportAppointment(supabase, a, report, userId)),
   }
 
   return (
@@ -52,7 +55,7 @@ function BishopricHomePage() {
       <ErrorNote error={save.error} />
       <SetupCard />
       <RequestsOnHome />
-      <BishopricHome data={data} userId={userId} today={today} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
+      <BishopricHome data={data} userId={userId} today={today} now={now} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
     </>
   )
 }
@@ -61,14 +64,15 @@ function SecretaryHomePage() {
   const { profile } = useAuth()
   const today = todayIso()
   const { data, error, reload } = useAsync(async () => {
-    const [appointments, hours, templates, lengths, schedule] = await Promise.all([
+    const [appointments, hours, templates, lengths, schedule, reminders] = await Promise.all([
       q.loadAppointments(supabase),
       q.loadHours(supabase, today, addDays(today, DAYS_AHEAD - 1)),
       q.loadTemplates(supabase),
       q.loadLengths(supabase),
       q.loadSchedule(supabase),
+      q.loadMeetingReminders(supabase, addDays(today, 1)),
     ])
-    return { ...appointments, ...hours, templates, lengths, rotations: schedule.rotations, stewardships: schedule.stewardships }
+    return { ...appointments, ...hours, templates, lengths, rotations: schedule.rotations, stewardships: schedule.stewardships, events: reminders.events, meetingsSent: reminders.sent }
   }, [today])
   const save = useAction()
   // Times before this are past. Fixed for the visit; reopening the page moves it on.
@@ -86,7 +90,7 @@ function SecretaryHomePage() {
   const actions: SecretaryHomeActions = {
     book: (id, at, minutes) => run(() => q.updateAppointment(supabase, id, { scheduled_at: at, duration_minutes: minutes })),
     setLength: (id, minutes) => void run(() => q.updateAppointment(supabase, id, { duration_minutes: minutes })),
-    complete: (id) => void run(() => q.updateAppointment(supabase, id, { status: 'completed' })),
+    confirm: (id) => void run(() => q.markConfirmed(supabase, id)),
     offer: (id, times) => void run(() => q.markOffered(supabase, id, times)),
     setYouth: (id, isYouth, parentName) => void run(() => q.updateAppointment(supabase, id, { is_youth: isYouth, parent_name: parentName })),
     release: (id) => void run(() => q.releaseOffered(supabase, id)),

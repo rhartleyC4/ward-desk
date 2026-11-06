@@ -76,6 +76,8 @@ export function MessagePanel({
   templates,
   onSent,
   busy,
+  subject,
+  warn,
 }: {
   kind: MessageKind
   audience: MessageAudience
@@ -83,6 +85,10 @@ export function MessagePanel({
   templates: MessageTemplate[]
   onSent?: () => void
   busy?: boolean
+  /** The email subject; "Appointment with {leader}" unless given. */
+  subject?: string
+  /** Something to point out about the chosen template before it's sent, or null. */
+  warn?: (body: string) => string | null
 }) {
   const options = templatesFor(templates, kind, audience)
   const [templateId, setTemplateId] = useState(options[0]?.id ?? '')
@@ -96,7 +102,8 @@ export function MessagePanel({
   if (!template)
     return (
       <Muted>
-        No templates for {KIND_LABELS[kind].toLowerCase()} {audience === 'parent' ? 'to a parent' : 'to the person'} yet. Add one under Message templates.
+        No templates for {KIND_LABELS[kind].toLowerCase()}
+        {kind === 'meeting' ? '' : audience === 'parent' ? ' to a parent' : ' to the person'} yet. Add one under Message templates.
       </Muted>
     )
 
@@ -150,6 +157,11 @@ export function MessagePanel({
           }}
         />
       )}
+      {warn?.(template.body) && (
+        <Typography variant="body2" color="warning.main" sx={{ mb: 1 }}>
+          {warn(template.body)}
+        </Typography>
+      )}
       <TextField
         label="Message"
         multiline
@@ -173,7 +185,7 @@ export function MessagePanel({
         <Button variant="outlined" startIcon={<SmsOutlinedIcon />} component="a" href={smsLink(text)} onClick={() => onSent?.()}>
           Open Messages
         </Button>
-        <Button variant="outlined" startIcon={<EmailOutlinedIcon />} component="a" href={emailLink(emailSubject(values.leader), text)} onClick={() => onSent?.()}>
+        <Button variant="outlined" startIcon={<EmailOutlinedIcon />} component="a" href={emailLink(subject ?? emailSubject(values.leader), text)} onClick={() => onSent?.()}>
           Email
         </Button>
       </Stack>
@@ -195,6 +207,7 @@ function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDr
   const unknown = unknownVariables(form.body)
   const usable = VARIABLES.filter((v) => v.kinds.includes(form.kind) && (!v.parentOnly || form.audience === 'parent'))
   const sample = { ...SAMPLE_VALUES, address: previewAddress, ...(form.kind === 'offer' ? { time: undefined } : { times: undefined }) }
+  const forMeeting = form.kind === 'meeting'
 
   useLayoutEffect(() => {
     if (cursor.current === null || !body.current) return
@@ -223,14 +236,27 @@ function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDr
     <Box component="form" onSubmit={submit} aria-label={initial.id ? `Edit ${initial.name}` : 'New template'} sx={{ py: 1 }}>
       <Stack direction="row" useFlexGap sx={{ gap: 1.5, flexWrap: 'wrap' }}>
         <TextField label="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} sx={{ flex: '2 1 12rem' }} />
-        <TextField select label="Used for" slotProps={nativeSelect} value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as MessageKind })} sx={{ flex: '1 1 10rem' }}>
-          <option value="offer">{KIND_LABELS.offer}</option>
-          <option value="confirm">{KIND_LABELS.confirm}</option>
+        <TextField
+          select
+          label="Used for"
+          slotProps={nativeSelect}
+          value={form.kind}
+          // A meeting reminder goes to everyone who attends, so it has no parent version.
+          onChange={(e) => setForm({ ...form, kind: e.target.value as MessageKind, ...(e.target.value === 'meeting' ? { audience: 'member' as const } : {}) })}
+          sx={{ flex: '1 1 10rem' }}
+        >
+          {(Object.keys(KIND_LABELS) as MessageKind[]).map((k) => (
+            <option key={k} value={k}>
+              {KIND_LABELS[k]}
+            </option>
+          ))}
         </TextField>
-        <TextField select label="Sent" slotProps={nativeSelect} value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value as MessageAudience })} sx={{ flex: '1 1 12rem' }}>
-          <option value="member">{AUDIENCE_LABELS.member}</option>
-          <option value="parent">{AUDIENCE_LABELS.parent}</option>
-        </TextField>
+        {!forMeeting && (
+          <TextField select label="Sent" slotProps={nativeSelect} value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value as MessageAudience })} sx={{ flex: '1 1 12rem' }}>
+            <option value="member">{AUDIENCE_LABELS.member}</option>
+            <option value="parent">{AUDIENCE_LABELS.parent}</option>
+          </TextField>
+        )}
       </Stack>
       <TextField
         label="Text"
@@ -290,7 +316,7 @@ function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDr
       {form.body.trim() && (
         <Box component="section" aria-label="Preview" sx={{ mt: 2, p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1 }}>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Preview, for a made-up {form.audience === 'parent' ? 'youth' : 'person'} entered as "{SAMPLE_VALUES.name}"
+            {forMeeting ? `Preview, for ${SAMPLE_VALUES.meeting}` : `Preview, for a made-up ${form.audience === 'parent' ? 'youth' : 'person'} entered as "${SAMPLE_VALUES.name}"`}
           </Typography>
           {usesVariable(form.body, 'first_name') && <AddressPicker name={SAMPLE_VALUES.name} value={previewAddress} onChange={setPreviewAddress} />}
           <Typography variant="body2" sx={{ whiteSpace: 'pre-line' }} data-testid="template-preview">
@@ -342,7 +368,8 @@ export function TemplatesEditor({
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>
                     {t.name}{' '}
                     <Typography component="span" variant="body2" color="text.secondary">
-                      · {KIND_LABELS[t.kind]} · {AUDIENCE_LABELS[t.audience].toLowerCase()}
+                      · {KIND_LABELS[t.kind]}
+                      {t.kind !== 'meeting' && ` · ${AUDIENCE_LABELS[t.audience].toLowerCase()}`}
                     </Typography>
                   </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'pre-line' }}>

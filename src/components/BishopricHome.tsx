@@ -20,7 +20,9 @@ import { timeLabel, WEEKDAYS } from '../lib/availability'
 import type { AgendaSection, AgendaTemplate, Appointment, AppointmentsData } from '../lib/queries'
 import { bookedRange, minutesLabel, wardParts } from '../lib/slots'
 import { Muted, SectionCard, Side, Split } from './Layout'
+import { ReportCard, type ReportAction } from './ReportCard'
 import { ActionButton, Choices, StepFrame } from './Steps'
+import { toReport } from '../lib/followUp'
 import { ThisMonth } from './ThisMonth'
 import type { Rotation } from '../lib/schedule'
 
@@ -37,9 +39,11 @@ export type InterviewRequest = { person_name: string; purpose: Enums<'interview_
 export type BishopricHomeActions = {
   requestInterview: (request: InterviewRequest) => Promise<boolean>
   addItem: (section: Pick<AgendaSection, 'id' | 'kind'>, body: string, eventDate: IsoDate | null) => Promise<boolean>
+  /** Marks an appointment that's over as done or missed. */
+  report: ReportAction
 }
 
-type Props = { data: BishopricHomeData; userId: string; today: IsoDate; timeZone: string; actions: BishopricHomeActions; busy: boolean }
+type Props = { data: BishopricHomeData; userId: string; today: IsoDate; now: Date; timeZone: string; actions: BishopricHomeActions; busy: boolean }
 
 const PURPOSES: { value: Enums<'interview_purpose'>; label: string; hint?: string }[] = [
   { value: 'temple_recommend', label: 'Temple recommend' },
@@ -354,13 +358,18 @@ function QuickActions(props: Props) {
 
 /** The bishop's and counselors' home: today, quick actions, the week ahead, and open requests. */
 export function BishopricHome(props: Props) {
-  const { data, userId, today, timeZone } = props
+  const { data, userId, today, now, timeZone, actions, busy } = props
+  const secretaryFor = (a: Appointment) => {
+    const names = schedulersFor(a.interviewer_id ?? userId, data.assignments, data.secretaries).map((s) => s.display_name ?? s.email)
+    return names.length ? names.join(' or ') : 'the secretary'
+  }
   const [todayPlan, ...week] = planDays({ userId, from: today, days: WEEK_AHEAD + 1, appointments: data.appointments, templates: data.templates, agendaItems: data.agendaItems, sacrament: data.sacrament, rotations: data.rotations, timeZone })
   return (
     <>
       <Typography variant="h1" sx={{ mb: 1.5 }}>
         {fullDay(today)}
       </Typography>
+      <ReportCard appointments={toReport(userId, data.appointments, now)} timeZone={timeZone} secretaryFor={secretaryFor} onReport={actions.report} busy={busy} />
       <Split>
         <Today today={todayPlan} week={week} timeZone={timeZone} />
         <QuickActions {...props} />

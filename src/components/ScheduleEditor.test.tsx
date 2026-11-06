@@ -9,8 +9,8 @@ const ts = '2026-11-01T12:00:00Z'
 function data(): ScheduleData {
   return {
     events: [
-      { id: 'e1', title: 'Bishopric meeting', weekday: 0, week_of_month: null, start_time: '08:30:00', notes: null, created_at: ts },
-      { id: 'e2', title: 'Ward Council', weekday: 0, week_of_month: 2, start_time: '09:15:00', notes: null, created_at: ts },
+      { id: 'e1', title: 'Bishopric meeting', weekday: 0, week_of_month: null, start_time: '08:30:00', notes: null, created_at: ts, reminder_by: null, agenda_template_id: null },
+      { id: 'e2', title: 'Ward Council', weekday: 0, week_of_month: 2, start_time: '09:15:00', notes: null, created_at: ts, reminder_by: null, agenda_template_id: null },
     ],
     rotations: [
       { id: 'r1', title: 'Primary message', assignee_id: 'l', assignee_label: null, months: [3, 6, 9, 12], weekday: 0, week_of_month: 3, notes: null, created_at: ts },
@@ -19,6 +19,8 @@ function data(): ScheduleData {
     stewardships: [{ id: 's1', user_id: 'l', area: 'Sunday School', notes: null, created_at: ts }],
     profiles,
     bishopric: profiles,
+    secretaries: [{ id: 'exec', email: 'secretary@ward.test', display_name: 'Brother Quinn', short_name: 'Quinn' }],
+    agendaTemplates: [{ id: 'wc', name: 'Ward Council' }],
   }
 }
 
@@ -38,6 +40,16 @@ function setup(canEdit = true) {
 const card = (title: string) => screen.getByRole('heading', { name: title }).closest('section')!
 
 describe('ScheduleEditor', () => {
+  it('lets a secretary be picked to send a meeting\'s reminders', async () => {
+    const { actions, user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Edit Ward Council' }))
+    const form = within(screen.getByRole('form', { name: 'Edit Ward Council' }))
+    await user.selectOptions(form.getByLabelText('Who reminds people the day before'), 'Brother Quinn')
+    await user.selectOptions(form.getByLabelText('Its agenda'), 'Ward Council')
+    await user.click(form.getByRole('button', { name: 'Save' }))
+    expect(actions.saveEvent).toHaveBeenCalledWith(expect.objectContaining({ title: 'Ward Council', reminder_by: 'exec', agenda_template_id: 'wc' }), 'e2')
+  })
+
   it('lists meetings, rotations with their day and months, and assignments', () => {
     setup(false)
     expect(within(card('Regular meetings')).getByText('Every Sunday, 8:30')).toBeInTheDocument()
@@ -63,7 +75,7 @@ describe('ScheduleEditor', () => {
     await user.selectOptions(form.getByLabelText('Which weeks'), '3rd only')
     await user.type(form.getByLabelText('Time (optional)'), '09:30')
     await user.click(form.getByRole('button', { name: 'Add meeting' }))
-    expect(actions.saveEvent).toHaveBeenCalledWith({ title: 'Youth council', weekday: 0, week_of_month: 3, start_time: '09:30' })
+    expect(actions.saveEvent).toHaveBeenCalledWith({ title: 'Youth council', weekday: 0, week_of_month: 3, start_time: '09:30', reminder_by: null, agenda_template_id: null })
   })
 
   it('changes and deletes a meeting', async () => {
@@ -72,7 +84,7 @@ describe('ScheduleEditor', () => {
     const form = within(screen.getByRole('form', { name: 'Edit Ward Council' }))
     await user.selectOptions(form.getByLabelText('Which weeks'), '4th only')
     await user.click(form.getByRole('button', { name: 'Save' }))
-    expect(actions.saveEvent).toHaveBeenCalledWith({ title: 'Ward Council', weekday: 0, week_of_month: 4, start_time: '09:15' }, 'e2')
+    expect(actions.saveEvent).toHaveBeenCalledWith({ title: 'Ward Council', weekday: 0, week_of_month: 4, start_time: '09:15', reminder_by: null, agenda_template_id: null }, 'e2')
 
     await user.click(screen.getByRole('button', { name: 'Edit Bishopric meeting' }))
     await user.click(screen.getByRole('button', { name: 'Delete' }))

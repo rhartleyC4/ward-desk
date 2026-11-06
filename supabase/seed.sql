@@ -99,6 +99,9 @@ insert into public.recurring_events (title, weekday, week_of_month, start_time, 
   ('Ministering nights or interviews', 3, null, null, null),
   ('Interviews', 4, null, null, null);
 
+-- The executive secretary reminds ward council the day before.
+update public.recurring_events set reminder_by = '00000000-0000-0000-0000-00000000000c' where title = 'Ward Council';
+
 insert into public.rotations (title, assignee_id, assignee_label, months, weekday, week_of_month) values
   ('PPI: Elders Quorum President', null, 'EQ President', '{2,6,10}', null, null),
   ('PPI: Relief Society President', null, 'RS President', '{1,4,8}', null, null),
@@ -168,6 +171,10 @@ insert into public.interviews (interviewer_id, scheduled_at, person_name, purpos
 insert into public.interviews (interviewer_id, scheduled_at, person_name, purpose, candidate_id)
 select '00000000-0000-0000-0000-000000000001', null, person_name, 'calling', id
 from public.calling_candidates where person_name = 'Sister Nash';
+
+-- Didn't come, and the bishop asked the secretary to find another time.
+insert into public.interviews (interviewer_id, scheduled_at, person_name, purpose, missed_at, report_note, reported_at, reported_by) values
+  ('00000000-0000-0000-0000-00000000000b', null, 'Brother Ames', 'temple_recommend', '2026-11-01 11:00 America/Denver', 'Evenings work better for him', '2026-11-01 12:00 America/Denver', '00000000-0000-0000-0000-00000000000b');
 
 insert into public.agenda_items (section_id, kind, body, event_date)
 select s.id, i.kind::public.agenda_item_kind, i.body, i.event_date

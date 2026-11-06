@@ -1,5 +1,4 @@
 import AddIcon from '@mui/icons-material/Add'
-import CheckIcon from '@mui/icons-material/Check'
 import RemoveIcon from '@mui/icons-material/Remove'
 import Alert from '@mui/material/Alert'
 import Checkbox from '@mui/material/Checkbox'
@@ -14,9 +13,10 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { NavLink } from 'react-router'
-import { appointmentPurpose, leadersScheduledBy, splitAppointments, withDefaultSecretary } from '../lib/appointments'
+import { appointmentPurpose, myLeaderIds, splitAppointments } from '../lib/appointments'
+import { appointmentsOn, meetingsToRemind, toConfirm, type MeetingReminder, type RemindedEvent } from '../lib/followUp'
 import { dayLabel, daysFor, WEEKDAYS } from '../lib/availability'
-import { daysBetween, longDate, todayIso, weekday, type IsoDate } from '../lib/dates'
+import { addDays, daysBetween, longDate, todayIso, weekday, type IsoDate } from '../lib/dates'
 import { audienceFor, type MessageTemplate } from '../lib/messages'
 import type { Enums } from '../lib/database.types'
 import type { Appointment, AppointmentLength, AppointmentsData } from '../lib/queries'
@@ -24,17 +24,29 @@ import { adjustMinutes, bookedRange, heldTimes, holdEnds, isHolding, minutesLabe
 import type { HoursData } from './HoursView'
 import { Muted, SectionCard, Side, Split } from './Layout'
 import { MessagePanel } from './Messages'
+import { RemindersSummary } from './Reminders'
 import type { Tables } from '../lib/database.types'
 import { ThisMonth } from './ThisMonth'
 import { WhoCovers } from './WhoCovers'
 import type { Rotation } from '../lib/schedule'
 
-export type SecretaryHomeData = AppointmentsData & HoursData & { templates: MessageTemplate[]; lengths: AppointmentLength[]; rotations: Rotation[]; stewardships: Pick<Tables<'stewardships'>, 'id' | 'user_id' | 'area'>[] }
+export type SecretaryHomeData = AppointmentsData &
+  HoursData & {
+    templates: MessageTemplate[]
+    lengths: AppointmentLength[]
+    rotations: Rotation[]
+    stewardships: Pick<Tables<'stewardships'>, 'id' | 'user_id' | 'area'>[]
+    /** Standing meetings, for the ones this secretary reminds people about. */
+    events: RemindedEvent[]
+    /** Meeting reminders already sent for tomorrow. */
+    meetingsSent: MeetingReminder[]
+  }
 
 export type SecretaryHomeActions = {
   book: (id: string, at: string, minutes: number) => Promise<boolean>
   setLength: (id: string, minutes: number) => void
-  complete: (id: string) => void
+  /** Records that the person has their confirmation, sent here or another way. */
+  confirm: (id: string) => void
   /** Records the times sent in a message. */
   offer: (id: string, times: string[]) => void
   /** Marks an appointment as a youth's, so messages go to a parent. */
@@ -243,6 +255,12 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
             {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)} · {waiting < 1 ? 'added today' : `waiting ${waiting} day${waiting === 1 ? '' : 's'}`}
             {a.offered_at && ` · offered ${shortDay(todayIso(new Date(a.offered_at)))}`}
           </Typography>
+          {a.missed_at && (
+            <Typography variant="body2" color="warning.main">
+              Didn't come on {shortDay(wardParts(a.missed_at, ctx.timeZone).date)}. Find a new time.
+              {a.report_note && ` ${leaderName(a.interviewer_id, ctx.data)}: “${a.report_note}”`}
+            </Typography>
+          )}
           {holding && (
             <Typography variant="body2" color="text.secondary">
               {a.offered_times.length === 1 ? 'That time is' : `Those ${a.offered_times.length} times are`} held for them until {shortDay(todayIso(holdEnds(a.offered_at!)))}.{' '}
@@ -261,11 +279,12 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
   )
 }
 
-function BookedRow({ appointment: a, ctx, clash }: { appointment: Appointment; ctx: Ctx; clash: boolean }) {
+/** A booked time the person hasn't been told about yet: send the confirmation, or say they know. */
+function ConfirmRow({ appointment: a, ctx, clash }: { appointment: Appointment; ctx: Ctx; clash: boolean }) {
   const [writing, setWriting] = useState(false)
   const name = a.person_name ?? 'Unnamed'
-  const past = new Date(a.scheduled_at!) < ctx.now
   const when = wardParts(a.scheduled_at!, ctx.timeZone)
+  const leader = leaderName(a.interviewer_id, ctx.data)
   return (
     <Box component="article" aria-label={name}>
       <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
@@ -275,28 +294,18 @@ function BookedRow({ appointment: a, ctx, clash }: { appointment: Appointment; c
             {a.is_youth && <YouthTag />}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {leaderName(a.interviewer_id, ctx.data)} · {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)}
+            {leader} · {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)}
           </Typography>
-          {past && (
-            <Typography variant="body2" color="text.secondary">
-              Already past. Mark it done, or move it on the Appointments page.
-            </Typography>
-          )}
-          {clash && !past && (
+          {clash && (
             <Typography variant="body2" color="warning.main">
-              Runs into another appointment with {leaderName(a.interviewer_id, ctx.data)}.
+              Runs into another appointment with {leader}.
             </Typography>
           )}
         </Box>
         <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5 }}>
           <LengthControl minutes={a.duration_minutes} onChange={(m) => ctx.actions.setLength(a.id, m)} purpose={a.purpose} name={name} busy={ctx.busy} />
-          {!past && (
-            <Button size="small" onClick={() => setWriting(!writing)}>
-              {writing ? 'Hide' : 'Message'}
-            </Button>
-          )}
-          <Button size="small" startIcon={<CheckIcon />} disabled={ctx.busy} onClick={() => ctx.actions.complete(a.id)}>
-            Done
+          <Button size="small" variant={writing ? 'text' : 'outlined'} onClick={() => setWriting(!writing)}>
+            {writing ? 'Hide' : 'Confirm'}
           </Button>
         </Stack>
       </Stack>
@@ -308,9 +317,15 @@ function BookedRow({ appointment: a, ctx, clash }: { appointment: Appointment; c
             kind="confirm"
             audience={audienceFor(a)}
             templates={ctx.data.templates}
-            values={{ name: a.person_name ?? '', leader: leaderName(a.interviewer_id, ctx.data), minutes: a.duration_minutes, myName: ctx.myName, time: slotLabel(when), parentName: a.parent_name }}
+            values={{ name: a.person_name ?? '', leader, minutes: a.duration_minutes, myName: ctx.myName, time: slotLabel(when), parentName: a.parent_name }}
+            onSent={() => ctx.actions.confirm(a.id)}
           />
         </>
+      )}
+      {!writing && (
+        <Button size="small" sx={{ p: 0, minWidth: 0 }} disabled={ctx.busy} onClick={() => ctx.actions.confirm(a.id)}>
+          They already know
+        </Button>
       )}
     </Box>
   )
@@ -349,9 +364,10 @@ function WeekGlance({ leaderIds, ctx }: { leaderIds: string[]; ctx: Ctx }) {
 }
 
 /**
- * The executive secretary's home: who needs an appointment and the open times to book them, what's
- * booked, and when each leader is free this week. Shows the leaders this secretary schedules for,
- * or everyone if they haven't been assigned any.
+ * The executive secretary's home: tomorrow's reminders, who needs an appointment and the open
+ * times to book them, booked times still to confirm, and when each leader is free this week.
+ * Once confirmed, an appointment is the leader's: it shows on their Home, and they report how it
+ * went. Shows the leaders this secretary schedules for, or everyone if they haven't been assigned any.
  */
 export function SecretaryHome({
   data,
@@ -373,10 +389,11 @@ export function SecretaryHome({
   actions: SecretaryHomeActions
   busy: boolean
 }) {
-  const assigned = leadersScheduledBy(userId, withDefaultSecretary(data.assignments, data.bishopric.map((l) => l.id), data.secretaries))
-  const leaderIds = assigned.length ? data.bishopric.filter((l) => assigned.includes(l.id)).map((l) => l.id) : data.bishopric.map((l) => l.id)
-  const { toSchedule, scheduled } = splitAppointments(data.appointments, leaderIds)
+  const { leaderIds, assigned } = myLeaderIds(userId, data)
+  const { toSchedule } = splitAppointments(data.appointments, leaderIds)
+  const confirming = toConfirm(data.appointments, leaderIds, now)
   const clashes = overlapping(data.appointments)
+  const tomorrow = addDays(today, 1)
   const ctx: Ctx = { data, today, now, timeZone, myName, actions, busy }
 
   return (
@@ -385,11 +402,13 @@ export function SecretaryHome({
         Your week
       </Typography>
 
-      {!assigned.length && (
+      {!assigned && (
         <Alert severity="info" sx={{ mb: 1.5 }}>
           You aren't assigned to schedule for anyone yet, so this shows every leader. The bishopric sets who books for whom in Settings.
         </Alert>
       )}
+
+      <RemindersSummary date={tomorrow} appointments={appointmentsOn(data.appointments, leaderIds, tomorrow, timeZone)} meetings={meetingsToRemind(userId, tomorrow, data.events)} sent={data.meetingsSent} />
 
       <Split>
         <SectionCard title={`Needs an appointment (${toSchedule.length})`}>
@@ -404,15 +423,15 @@ export function SecretaryHome({
           )}
         </SectionCard>
 
-        <SectionCard title={`Booked (${scheduled.length})`}>
-          {scheduled.length ? (
+        <SectionCard title={`To confirm (${confirming.length})`}>
+          {confirming.length ? (
             <Stack divider={<Divider flexItem />} spacing={1.5}>
-              {scheduled.map((a) => (
-                <BookedRow key={a.id} appointment={a} ctx={ctx} clash={clashes.has(a.id)} />
+              {confirming.map((a) => (
+                <ConfirmRow key={a.id} appointment={a} ctx={ctx} clash={clashes.has(a.id)} />
               ))}
             </Stack>
           ) : (
-            <Muted>Nothing booked yet.</Muted>
+            <Muted>Every booked time has been confirmed. From here they're on the leader's Home, and the leader reports how they went.</Muted>
           )}
         </SectionCard>
 

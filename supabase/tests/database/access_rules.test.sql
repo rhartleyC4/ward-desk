@@ -284,7 +284,7 @@ select pg_temp.act_as('assistant@ward.test');
 
 select is((select count(*)::int from public.secretary_assignments), 3, 'assistant executive secretary sees who schedules for whom');
 select is(
-  (select count(*)::int from public.interviews where scheduled_at is null and status = 'scheduled'),
+  (select count(*)::int from public.interviews where scheduled_at is null and status = 'scheduled' and candidate_id is not null),
   1, 'an approved name waits as an appointment with no time'
 );
 select lives_ok(

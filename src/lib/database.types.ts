@@ -317,14 +317,14 @@ isOneToOne: false
                   ]
                 },"interviews": {
                   Row: {
-                    "candidate_id": string | null,"created_at": string,"duration_minutes": number,"id": string,"interviewer_id": string | null,"is_youth": boolean,"location": string | null,"notes": string | null,"offered_at": string | null,"offered_times": (string)[],"parent_name": string | null,"person_name": string | null,"purpose": Database["public"]['Enums']["interview_purpose"],"scheduled_at": string | null,"status": Database["public"]['Enums']["interview_status"]
+                    "candidate_id": string | null,"confirmed_at": string | null,"created_at": string,"duration_minutes": number,"id": string,"interviewer_id": string | null,"is_youth": boolean,"location": string | null,"missed_at": string | null,"notes": string | null,"offered_at": string | null,"offered_times": (string)[],"parent_name": string | null,"person_name": string | null,"purpose": Database["public"]['Enums']["interview_purpose"],"reminded_at": string | null,"report_note": string | null,"reported_at": string | null,"reported_by": string | null,"scheduled_at": string | null,"status": Database["public"]['Enums']["interview_status"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "candidate_id"?: string | null,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"interviewer_id"?: string | null,"is_youth"?: boolean,"location"?: string | null,"notes"?: string | null,"offered_at"?: string | null,"offered_times"?: (string)[],"parent_name"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
+                    "candidate_id"?: string | null,"confirmed_at"?: string | null,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"interviewer_id"?: string | null,"is_youth"?: boolean,"location"?: string | null,"missed_at"?: string | null,"notes"?: string | null,"offered_at"?: string | null,"offered_times"?: (string)[],"parent_name"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"reminded_at"?: string | null,"report_note"?: string | null,"reported_at"?: string | null,"reported_by"?: string | null,"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
                   }
                   Update: {
-                    "candidate_id"?: string | null,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"interviewer_id"?: string | null,"is_youth"?: boolean,"location"?: string | null,"notes"?: string | null,"offered_at"?: string | null,"offered_times"?: (string)[],"parent_name"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
+                    "candidate_id"?: string | null,"confirmed_at"?: string | null,"created_at"?: string,"duration_minutes"?: number,"id"?: string,"interviewer_id"?: string | null,"is_youth"?: boolean,"location"?: string | null,"missed_at"?: string | null,"notes"?: string | null,"offered_at"?: string | null,"offered_times"?: (string)[],"parent_name"?: string | null,"person_name"?: string | null,"purpose"?: Database["public"]['Enums']["interview_purpose"],"reminded_at"?: string | null,"report_note"?: string | null,"reported_at"?: string | null,"reported_by"?: string | null,"scheduled_at"?: string | null,"status"?: Database["public"]['Enums']["interview_status"]
                   }
                   Relationships: [
                     {
@@ -336,6 +336,38 @@ isOneToOne: false
     },{
       foreignKeyName: "interviews_interviewer_id_fkey"
       columns: ["interviewer_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "interviews_reported_by_fkey"
+      columns: ["reported_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"meeting_reminders": {
+                  Row: {
+                    "event_id": string,"for_date": string,"sent_at": string,"sent_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "event_id": string,"for_date": string,"sent_at"?: string,"sent_by"?: string | null
+                  }
+                  Update: {
+                    "event_id"?: string,"for_date"?: string,"sent_at"?: string,"sent_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "meeting_reminders_event_id_fkey"
+      columns: ["event_id"]
+isOneToOne: false
+      referencedRelation: "recurring_events"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "meeting_reminders_sent_by_fkey"
+      columns: ["sent_by"]
 isOneToOne: false
       referencedRelation: "profiles"
       referencedColumns: ["id"]
@@ -485,17 +517,29 @@ isOneToOne: false
                   ]
                 },"recurring_events": {
                   Row: {
-                    "created_at": string,"id": string,"notes": string | null,"start_time": string | null,"title": string,"week_of_month": number | null,"weekday": number
+                    "agenda_template_id": string | null,"created_at": string,"id": string,"notes": string | null,"reminder_by": string | null,"start_time": string | null,"title": string,"week_of_month": number | null,"weekday": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"notes"?: string | null,"start_time"?: string | null,"title": string,"week_of_month"?: number | null,"weekday": number
+                    "agenda_template_id"?: string | null,"created_at"?: string,"id"?: string,"notes"?: string | null,"reminder_by"?: string | null,"start_time"?: string | null,"title": string,"week_of_month"?: number | null,"weekday": number
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"notes"?: string | null,"start_time"?: string | null,"title"?: string,"week_of_month"?: number | null,"weekday"?: number
+                    "agenda_template_id"?: string | null,"created_at"?: string,"id"?: string,"notes"?: string | null,"reminder_by"?: string | null,"start_time"?: string | null,"title"?: string,"week_of_month"?: number | null,"weekday"?: number
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "recurring_events_agenda_template_id_fkey"
+      columns: ["agenda_template_id"]
+isOneToOne: false
+      referencedRelation: "agenda_templates"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "recurring_events_reminder_by_fkey"
+      columns: ["reminder_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"requests": {
                   Row: {
@@ -630,6 +674,9 @@ isOneToOne: false
 "bishopric_template":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"call_notify":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "calling_request_recipients":
 { Args: { "org": string }; Returns: (string)[]
                            },
@@ -690,7 +737,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer"|"follow_ups","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"assistant_executive_secretary"|"ward_clerk","calling_request_kind": "fill"|"release"|"replace"|"suggest","candidate_status": "suggested"|"discussing"|"approved"|"extended"|"accepted"|"declined"|"sustained"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","message_audience": "member"|"parent","message_kind": "offer"|"confirm","need_status": "open"|"filled"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other","request_status": "sent"|"seen"|"done"|"declined"
+            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer"|"follow_ups","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"assistant_executive_secretary"|"ward_clerk","calling_request_kind": "fill"|"release"|"replace"|"suggest","candidate_status": "suggested"|"discussing"|"approved"|"extended"|"accepted"|"declined"|"sustained"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","message_audience": "member"|"parent","message_kind": "offer"|"confirm"|"reminder"|"meeting","need_status": "open"|"filled"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other","request_status": "sent"|"seen"|"done"|"declined"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -810,7 +857,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer", "follow_ups"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "assistant_executive_secretary", "ward_clerk"],"calling_request_kind": ["fill", "release", "replace", "suggest"],"candidate_status": ["suggested", "discussing", "approved", "extended", "accepted", "declined", "sustained", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"message_audience": ["member", "parent"],"message_kind": ["offer", "confirm"],"need_status": ["open", "filled", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"],"request_status": ["sent", "seen", "done", "declined"]
+            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer", "follow_ups"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "assistant_executive_secretary", "ward_clerk"],"calling_request_kind": ["fill", "release", "replace", "suggest"],"candidate_status": ["suggested", "discussing", "approved", "extended", "accepted", "declined", "sustained", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"message_audience": ["member", "parent"],"message_kind": ["offer", "confirm", "reminder", "meeting"],"need_status": ["open", "filled", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"],"request_status": ["sent", "seen", "done", "declined"]
           }
         }
 } as const
