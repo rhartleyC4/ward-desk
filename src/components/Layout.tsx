@@ -119,7 +119,9 @@ function Shell() {
                   value={l.to}
                   label={
                     countFor(l.to) ? (
-                      <Badge color="error" badgeContent={countFor(l.to)} max={99} sx={{ '& .MuiBadge-badge': { right: -10 } }}>
+                      // The count sits inline after the label: the tab row scrolls sideways, so it
+                      // clips anything raised above the label, like a regular corner badge.
+                      <Badge color="error" badgeContent={countFor(l.to)} max={99} sx={{ alignItems: 'center', '& .MuiBadge-badge': { position: 'static', transform: 'none', ml: 0.75 } }}>
                         {l.label}
                       </Badge>
                     ) : (

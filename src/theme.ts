@@ -45,6 +45,12 @@ export const theme = createTheme({
       styleOverrides: { root: { textTransform: 'none', minHeight: 44 }, sizeSmall: { minHeight: 40 } },
     },
     MuiTab: { styleOverrides: { root: { textTransform: 'none', minWidth: 0, fontSize: '1rem' } } },
+    // Safari (iPad, iPhone) doesn't open the gap in an outlined field's border for a raised label
+    // in some flex layouts, so the line runs through the label: it mishandles the legend's
+    // percentage max-width. Use none once the label is raised. See mui/material-ui#48566.
+    MuiOutlinedInput: {
+      styleOverrides: { root: { 'label[data-shrink="true"] ~ & > .MuiOutlinedInput-notchedOutline > legend': { maxWidth: 'none' } } },
+    },
     MuiCard: { defaultProps: { variant: 'outlined' } },
     MuiTableCell: { styleOverrides: { root: { paddingLeft: 6, paddingRight: 6 } } },
   },
