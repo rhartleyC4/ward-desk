@@ -140,6 +140,14 @@ npx supabase functions serve --env-file supabase/functions/.env
 | Callings Needed table | The callings section of the bishopric agenda on **Meetings** (`calling_needs`, `calling_candidates`). The bishopric adds callings and names, changes statuses, and picks who meets with each approved name. Marking a name Accepted sets the sustaining and the release for that Sunday (or the coming one), marks the appointment met, and from that Sunday on the calling shows under "Sustainings today" and "Releases today" instead of in the callings list. The bishopric can move either date from those sections |
 | Interviews kept by the executive secretary | **Appointments** page (`interviews`, `secretary_assignments`). Approved names arrive without a time; the secretary who covers that leader books them |
 
+### Moving data to and from the sheets
+
+Both are commands run by hand against a database (`SUPABASE_DB_URL` from `.env`, or `--db-url`). Neither is in the app.
+
+- **Import** (one time): download each sheet as .xlsx, then `npm run import-sheets -- --bishopric <file> --ward-council <file>`. It's a dry run until you add `--apply`. See the top of `scripts/import-sheets/import.ts`.
+- **Export**: `npm run export-sheets` writes `Bishopric Agendas <date>.xlsx` and `Ward Council Agenda <date>.xlsx` to `~/Downloads` (change it with `--out`), in the sheets' layout with the newest meeting tab first. It covers the last 2 months plus what's planned ahead. Change that with `--months 6`, `--since 2026-01-01` or `--all`. Upload the files to Google Drive to open them as sheets. The files hold member names and callings, so the command won't write them inside the repo.
+  - Each meeting tab shows its items as they stood that day. Callings show their current status, since the app doesn't keep a history of status changes, and callings already filled don't appear on earlier tabs.
+
 ## Setup
 
 Requirements: Node 24+ (`nvm use` reads `.nvmrc`) and Docker (OrbStack or Docker Desktop) for local Supabase.
