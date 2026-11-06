@@ -90,7 +90,7 @@ export function callingsNeeded(date: IsoDate, needs: CallingNeed[], candidates: 
   return needsToDiscuss(date, needs, candidates)
     .map((need) => {
       const forNeed = candidates.filter((c) => c.need_id === need.id && c.status !== 'declined')
-      const approved = forNeed.some((c) => ['approved', 'extended', 'accepted', 'sustained', 'set_apart'].includes(c.status))
+      const approved = forNeed.some((c) => ['approved', 'accepted', 'sustained', 'set_apart'].includes(c.status))
       return { need, candidates: forNeed, approved }
     })
 }

@@ -80,11 +80,11 @@ describe('CallingsManager', () => {
 
   it('offers only the steps the bishopric uses, showing older statuses as the nearest one', () => {
     const data = agendaData()
-    data.candidates[2] = { ...data.candidates[2], status: 'extended' }
+    data.candidates[2] = { ...data.candidates[2], status: 'sustained' }
     render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
     const status = screen.getByLabelText('Status for Sister Nash')
     expect(within(status).getAllByRole('option').map((o) => o.textContent)).toEqual(['Considering', 'Approved', 'Accepted', 'Declined'])
-    expect(status).toHaveValue('approved')
+    expect(status).toHaveValue('accepted')
   })
 
   it('shows Announce on only once a name has accepted', () => {

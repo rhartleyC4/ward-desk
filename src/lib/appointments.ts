@@ -19,7 +19,7 @@ export const PURPOSE_LABELS: Record<Enums<'interview_purpose'>, string> = {
 }
 
 /** Candidate statuses where someone in the bishopric is meeting with the person. */
-export const NEEDS_APPOINTMENT: Candidate['status'][] = ['approved', 'extended']
+export const NEEDS_APPOINTMENT: Candidate['status'][] = ['approved']
 
 /** The calling appointment for a name: the open one if there is one, otherwise the latest met. */
 export function appointmentFor<T extends Appointment>(candidateId: string, appointments: T[]): T | undefined {

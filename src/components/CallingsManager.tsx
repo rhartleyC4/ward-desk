@@ -27,7 +27,7 @@ import { CallingRequestRow } from './Requests'
 type Status = Enums<'candidate_status'>
 
 // The steps the bishopric picks from. The database keeps a few more: 'suggested' marks a leader's
-// suggestion not yet attached to a calling, and older rows may say extended, sustained or set apart.
+// suggestion not yet attached to a calling, and older rows may say sustained or set apart.
 const STATUSES: { value: Status; label: string }[] = [
   { value: 'discussing', label: 'Considering' },
   { value: 'approved', label: 'Approved' },
@@ -40,7 +40,6 @@ const SHOWN_AS: Record<Status, Status> = {
   suggested: 'discussing',
   discussing: 'discussing',
   approved: 'approved',
-  extended: 'approved',
   accepted: 'accepted',
   sustained: 'accepted',
   set_apart: 'accepted',
