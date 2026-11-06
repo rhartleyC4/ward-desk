@@ -17,78 +17,20 @@
 //
 // Flags: --yes skips the "are you sure", --skip-deploy leaves the functions as they are.
 
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { createInterface } from 'node:readline'
+import { existsSync, readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
+import { ask, confirmOrStop, environmentArg, fail, ghVar as ghEnvVar, quote, rowsOf, runSql, step, supabase, withPrivateFile } from './lib/cli.mjs'
 
 const { values: flags, positionals } = parseArgs({
   allowPositionals: true,
   options: { yes: { type: 'boolean', default: false }, 'skip-deploy': { type: 'boolean', default: false } },
 })
-const env = positionals[0]
-if (!['staging', 'production', 'local'].includes(env)) {
-  console.error('Say which environment: npm run notify:setup -- staging (or production, or local)')
-  process.exit(1)
-}
+const env = environmentArg(positionals, 'notify:setup', ['staging', 'production', 'local'])
 const local = env === 'local'
+const ghVar = (name) => ghEnvVar(name, env)
 
-const step = (text) => console.log(`\n▸ ${text}`)
-const fail = (text) => {
-  console.error(`\n✗ ${text}`)
-  process.exit(1)
-}
-
-/** Runs the Supabase CLI. `--yes` is passed because you already confirmed below. */
-function supabase(args, { capture = false } = {}) {
-  // --agent no: the CLI shapes its JSON differently when it thinks an AI agent is running it, so
-  // pin it to what a person at a terminal gets.
-  const result = spawnSync('npx', ['supabase', ...args, '--agent', 'no'], { encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit' })
-  if (result.status !== 0) fail(`supabase ${args[0]} ${args[1] ?? ''} failed${capture ? `:\n${result.stderr || result.stdout}` : ''}`)
-  return result.stdout
-}
-
-const ghVar = (name) => {
-  try {
-    return execFileSync('gh', ['variable', 'get', name, '--env', env], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
-  } catch {
-    return ''
-  }
-}
-
-function ask(question, { hidden = false } = {}) {
-  return new Promise((resolve) => {
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true })
-    if (hidden) rl._writeToOutput = (s) => rl.output.write(s.startsWith(question) ? s : '')
-    rl.question(question, (answer) => {
-      rl.close()
-      if (hidden) process.stdout.write('\n')
-      resolve(answer.trim())
-    })
-  })
-}
-
-/** Runs SQL from a private temp file, so values in it never show in the process list or shell history. */
-function runSql(sql, remote, { readOnly = false } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'ward-desk-'))
-  const file = join(dir, 'query.sql')
-  try {
-    writeFileSync(file, sql, { mode: 0o600 })
-    const out = supabase(['db', 'query', ...remote, '--file', file, '--output-format', 'json', ...(readOnly ? ['--read-only'] : ['--yes'])], { capture: true })
-    // A statement with no rows (DO) prints its command tag, not JSON.
-    if (!/^\s*[[{]/.test(out)) return []
-    const parsed = JSON.parse(out)
-    // A list of rows, or (for an agent) the rows wrapped in an object.
-    return Array.isArray(parsed) ? parsed : (parsed.rows ?? [])
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-  }
-}
-
-const quote = (s) => `'${String(s).replace(/'/g, "''")}'`
 const upsertVault = (name, value) => `
   if exists (select 1 from vault.secrets where name = ${quote(name)}) then
     perform vault.update_secret((select id from vault.secrets where name = ${quote(name)}), ${quote(value)});
@@ -117,21 +59,17 @@ if (local) {
   url = `https://${ref}.supabase.co/functions/v1/notify`
   console.log(`  Project ${ref}`)
 
-  if (!flags.yes) {
-    const answer = await ask(`\nSet up notifications on ${env.toUpperCase()} (${ref})? This makes a new notify secret and redeploys the functions. [y/N] `)
-    if (!/^y(es)?$/i.test(answer)) fail('Stopped. Nothing was changed.')
-  }
+  await confirmOrStop(`Set up notifications on ${env.toUpperCase()} (${ref})? This makes a new notify secret and redeploys the functions.`, { yes: flags.yes })
 
   const publicKey = ghVar('VAPID_PUBLIC_KEY')
   const timeZone = ghVar('WARD_TIME_ZONE') || 'America/Denver'
-  if (!publicKey) fail(`No VAPID_PUBLIC_KEY variable on the ${env} GitHub environment. See "Notifications" in README.md to make a key pair.`)
+  if (!publicKey) fail(`No VAPID_PUBLIC_KEY variable on the ${env} GitHub environment. Run npm run env:github -- ${env} to make a key pair.`)
 
   step('Checking the functions’ secrets')
   let existing = []
   try {
     const listed = JSON.parse(supabase(['secrets', 'list', ...remote, '--output-format', 'json'], { capture: true }))
-    const rows = Array.isArray(listed) ? listed : (listed.rows ?? listed.secrets ?? [])
-    existing = rows.map((r) => ({ name: r.name ?? r.Name, digest: String(r.value ?? r.digest ?? r.Digest ?? '') }))
+    existing = rowsOf(listed, 'secrets').map((r) => ({ name: r.name ?? r.Name, digest: String(r.value ?? r.digest ?? r.Digest ?? '') }))
   } catch {
     console.log('  Could not read the list; setting everything.')
   }
@@ -152,14 +90,8 @@ if (local) {
   }
 
   step(`Setting ${Object.keys(secrets).join(', ')}`)
-  const dir = mkdtempSync(join(tmpdir(), 'ward-desk-'))
-  try {
-    const file = join(dir, 'secrets.env')
-    writeFileSync(file, Object.entries(secrets).map(([k, v]) => `${k}=${v}`).join('\n') + '\n', { mode: 0o600 })
-    supabase(['secrets', 'set', ...remote, '--env-file', file, '--yes'])
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-  }
+  const envFile = Object.entries(secrets).map(([k, v]) => `${k}=${v}`).join('\n') + '\n'
+  withPrivateFile('secrets.env', envFile, (file) => supabase(['secrets', 'set', ...remote, '--env-file', file, '--yes']))
 
   if (flags['skip-deploy']) {
     console.log('\n  Skipping the deploy (--skip-deploy).')
