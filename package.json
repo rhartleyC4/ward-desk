@@ -16,7 +16,7 @@
     "db:start": "npm run functions:build && supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
-    "db:types": "supabase gen types typescript > src/lib/database.types.ts",
+    "db:types": "supabase gen types typescript --agent no > src/lib/database.types.ts",
     "db:env": "node scripts/write-local-env.mjs",
     "notify": "tsx scripts/notify/send.ts",
     "functions:build": "esbuild scripts/notify/tick.ts --bundle --format=esm --platform=neutral --target=es2022 --outfile=supabase/functions/notify/tick.bundle.js --log-level=warning",

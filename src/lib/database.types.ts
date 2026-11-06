@@ -217,6 +217,20 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"backup_runs": {
+                  Row: {
+                    "bytes": number,"finished_at": string,"id": number,"object_key": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "bytes": number,"finished_at"?: string,"id"?: never,"object_key": string
+                  }
+                  Update: {
+                    "bytes"?: number,"finished_at"?: string,"id"?: never,"object_key"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"calling_candidates": {
                   Row: {
                     "calling_title": string | null,"created_at": string,"id": string,"need_id": string | null,"notes": string | null,"person_name": string,"request_id": string | null,"status": Database["public"]['Enums']["candidate_status"],"suggested_by": string | null,"sustain_on": string | null,"updated_at": string
