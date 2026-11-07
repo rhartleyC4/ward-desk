@@ -31,9 +31,9 @@ export async function loadDay(sql: Sql, date: IsoDate): Promise<DayData> {
       where status = 'scheduled' and scheduled_at >= ${date}::date - 1 and scheduled_at < ${date}::date + 2`,
     sql<DaySummaryInput['assignments']>`select leader_id, secretary_id from public.secretary_assignments`,
     sql<DaySummaryInput['needs']>`
-      select id, calling_title, release_name, release_on::text, status from public.calling_needs where release_on = ${date}`,
+      select id, calling_title, release_name, release_on::text, release_only, status from public.calling_needs where release_on = ${date}`,
     sql<DaySummaryInput['candidates']>`
-      select id, need_id, calling_title, person_name, status, sustain_on::text from public.calling_candidates where sustain_on = ${date}`,
+      select id, need_id, calling_title, person_name, status, sustain_on::text, set_apart_on::text from public.calling_candidates where sustain_on = ${date}`,
     sql<DaySummaryInput['absences']>`
       select user_id, starts_on::text, ends_on::text, location from public.absences where starts_on <= ${date} and ends_on >= ${date}`,
     sql<{ user_id: string }[]>`select user_id from public.notification_log where kind = 'day_summary' and for_date = ${date}`,

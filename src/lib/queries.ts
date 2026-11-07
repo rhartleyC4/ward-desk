@@ -342,6 +342,11 @@ export async function acceptCandidate(client: Client, candidate: Pick<Candidate,
   )
 }
 
+/** They were set apart on this day, which completes the calling. */
+export async function setApart(client: Client, candidateId: string, on: IsoDate) {
+  check(await client.from('calling_candidates').update({ status: 'set_apart', set_apart_on: on }).eq('id', candidateId))
+}
+
 /** For called leaders: insert only. They can't read the row back, so don't ask for it. */
 export async function submitSuggestion(client: Client, s: { calling_title: string; person_name: string; notes?: string }) {
   check(await client.from('calling_candidates').insert({ ...s, status: 'suggested' }))

@@ -67,6 +67,9 @@ describe('callings confidentiality', () => {
     await addCandidate(bishop, { need_id: need.id, person_name: `${TAG} Brother West`, status: 'discussing' })
     const candidate = (await loadCallings(bishop)).candidates.find((c) => c.person_name === `${TAG} Brother West`)!
 
+    // A name can't skip a step: it's approved before it's accepted.
+    await expect(updateCandidate(bishop, candidate.id, { status: 'accepted' })).rejects.toThrow(/can't go from discussing to accepted/)
+    await updateCandidate(bishop, candidate.id, { status: 'approved' })
     await updateCandidate(bishop, candidate.id, { status: 'accepted', sustain_on: '2030-06-02' })
 
     const [bishopric] = await loadAgendaTemplates(bishop)
@@ -103,8 +106,8 @@ describe('calling list', () => {
     const need = (await loadCallings(first)).needs.find((n) => n.calling_id === added!.id)!
     expect(need.calling_title).toBe(`${TAG} Ward Greeter`)
 
-    // Once filled, a later rename leaves it alone.
-    await updateNeed(first, need.id, { status: 'filled' })
+    // Once no longer needed, a later rename leaves it alone.
+    await updateNeed(first, need.id, { status: 'cancelled' })
     await updateCallingListEntry(bishop, added!.id, { title: `${TAG} Greeter` })
     expect((await loadCallings(first)).needs.find((n) => n.id === need.id)!.calling_title).toBe(`${TAG} Ward Greeter`)
   })

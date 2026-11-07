@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  awaitingSettingApart,
+  callingDone,
   callingsNeeded,
   needsToDiscuss,
   moveId,
@@ -94,16 +96,16 @@ describe('openItems', () => {
 
 describe('callings', () => {
   const needs: CallingNeed[] = [
-    { id: 'n1', calling_title: 'Primary Teacher', release_name: 'Brother Ivey', release_on: null, status: 'open' },
-    { id: 'n2', calling_title: 'RS Teacher', release_name: null, release_on: null, status: 'open' },
-    { id: 'n3', calling_title: 'Sunday School', release_name: 'Sister Kemp', release_on: '2026-11-08', status: 'open' },
-    { id: 'n4', calling_title: 'Filled already', release_name: null, release_on: null, status: 'filled' },
+    { id: 'n1', calling_title: 'Primary Teacher', release_name: 'Brother Ivey', release_on: null, release_only: false, status: 'open' },
+    { id: 'n2', calling_title: 'RS Teacher', release_name: null, release_on: null, release_only: false, status: 'open' },
+    { id: 'n3', calling_title: 'Sunday School', release_name: 'Sister Kemp', release_on: '2026-11-08', release_only: false, status: 'open' },
+    { id: 'n4', calling_title: 'No longer needed', release_name: null, release_on: null, release_only: false, status: 'cancelled' },
   ]
   const candidates: Candidate[] = [
-    { id: 'c1', need_id: 'n1', calling_title: null, person_name: 'Declined person', status: 'declined', sustain_on: null },
-    { id: 'c2', need_id: 'n1', calling_title: null, person_name: 'Under discussion', status: 'discussing', sustain_on: null },
-    { id: 'c3', need_id: 'n2', calling_title: null, person_name: 'Sister Moss', status: 'accepted', sustain_on: '2026-11-01' },
-    { id: 'c4', need_id: null, calling_title: 'Primary Teacher', person_name: 'From a leader', status: 'suggested', sustain_on: null },
+    { id: 'c1', need_id: 'n1', calling_title: null, person_name: 'Declined person', status: 'declined', sustain_on: null, set_apart_on: null },
+    { id: 'c2', need_id: 'n1', calling_title: null, person_name: 'Under discussion', status: 'discussing', sustain_on: null, set_apart_on: null },
+    { id: 'c3', need_id: 'n2', calling_title: null, person_name: 'Sister Moss', status: 'accepted', sustain_on: '2026-11-01', set_apart_on: null },
+    { id: 'c4', need_id: null, calling_title: 'Primary Teacher', person_name: 'From a leader', status: 'suggested', sustain_on: null, set_apart_on: null },
   ]
 
   it('builds the Callings Needed table from open needs, hiding declined names', () => {
@@ -120,6 +122,30 @@ describe('callings', () => {
     // Accepted but no date yet: stays so someone sets one.
     const undated = candidates.map((c) => (c.id === 'c3' ? { ...c, sustain_on: null } : c))
     expect(needsToDiscuss('2026-11-08', needs, undated).map((n) => n.id)).toEqual(['n1', 'n2', 'n3'])
+  })
+
+  it('keeps a sustained name waiting to be set apart until it is', () => {
+    expect(awaitingSettingApart('2026-10-25', needs, candidates)).toEqual([])
+    expect(awaitingSettingApart('2026-11-01', needs, candidates).map((w) => [w.candidate.person_name, w.calling])).toEqual([['Sister Moss', 'RS Teacher']])
+
+    const setApart = candidates.map((c) => (c.id === 'c3' ? { ...c, status: 'set_apart' as const, set_apart_on: '2026-11-04' } : c))
+    // A past agenda still shows it waiting; from the day it happened the calling is done.
+    expect(awaitingSettingApart('2026-11-03', needs, setApart).map((w) => w.candidate.id)).toEqual(['c3'])
+    expect(awaitingSettingApart('2026-11-04', needs, setApart)).toEqual([])
+    expect(callingDone('2026-11-03', needs[1], setApart)).toBe(false)
+    expect(callingDone('2026-11-04', needs[1], setApart)).toBe(true)
+
+    // Set apart before this was tracked: done whatever the day.
+    const undated = setApart.map((c) => (c.id === 'c3' ? { ...c, set_apart_on: null } : c))
+    expect(callingDone('2026-10-25', needs[1], undated)).toBe(true)
+  })
+
+  it('finishes a release with no one new on its release date', () => {
+    const releaseOnly = needs.map((n) => (n.id === 'n3' ? { ...n, release_only: true } : n))
+    expect(needsToDiscuss('2026-11-01', releaseOnly, candidates).map((n) => n.id)).toContain('n3')
+    expect(needsToDiscuss('2026-11-08', releaseOnly, candidates).map((n) => n.id)).not.toContain('n3')
+    // A calling with a release and someone new waits for them instead.
+    expect(needsToDiscuss('2026-11-08', needs, candidates).map((n) => n.id)).toContain('n3')
   })
 
   it('lists leader submissions that are not yet attached to a need', () => {

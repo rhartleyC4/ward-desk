@@ -216,7 +216,7 @@ try {
     )
     const openNeeds = new Set(
       (await tx<{ k: string }[]>`
-        select lower(calling_title) || '|' || coalesce(release_name, '') as k from public.calling_needs where status in ('open', 'filled')`).map((r) => r.k),
+        select lower(calling_title) || '|' || coalesce(release_name, '') as k from public.calling_needs where status = 'open'`).map((r) => r.k),
     )
 
     if (sacrament) {
@@ -342,20 +342,23 @@ try {
         let names = 0
         for (const need of agenda.callings) {
           if (openNeeds.has(`${need.callingTitle.toLowerCase()}|${need.releaseName ?? ''}`)) continue
-          // Sustained already: the calling is done, so it goes in filled and stays off the agenda.
-          // Accepted: like marking Accepted in the app, sustain (and release) on the coming Sunday.
-          const filled = need.candidates.some((c) => c.status === 'sustained')
-          const accepted = need.candidates.some((c) => c.status === 'accepted')
-          const releaseOn = !filled && accepted && need.releaseName ? sustainingSunday(today) : null
+          // Sustained already: taken as set apart (day unknown), so the calling is done and stays off
+          // the agenda. Accepted: like marking Accepted in the app, sustain (and release) on the
+          // coming Sunday. Only one name per calling can be approved, so the one furthest along keeps
+          // its step and any others go back to being considered.
+          const lead = need.candidates.find((c) => c.status === 'sustained') ?? need.candidates.find((c) => c.status === 'accepted') ?? need.candidates.find((c) => c.status === 'approved')
+          const accepted = lead?.status === 'accepted'
+          const releaseOn = accepted && need.releaseName ? sustainingSunday(today) : null
           const [row] = await tx<{ id: string }[]>`
-            insert into public.calling_needs (calling_title, release_name, release_on, notes, status)
-            values (${need.callingTitle}, ${need.releaseName}, ${releaseOn}, ${need.notes}, ${filled ? 'filled' : 'open'})
+            insert into public.calling_needs (calling_title, release_name, release_on, notes)
+            values (${need.callingTitle}, ${need.releaseName}, ${releaseOn}, ${need.notes})
             returning id`
           for (const c of need.candidates) {
-            const sustainOn = c.status === 'accepted' ? sustainingSunday(today) : null
+            const status = c !== lead && c.status !== 'discussing' ? 'discussing' : c.status === 'sustained' ? 'set_apart' : c.status
+            const sustainOn = status === 'accepted' ? sustainingSunday(today) : null
             await tx`
               insert into public.calling_candidates (need_id, person_name, status, sustain_on, notes)
-              values (${row.id}, ${c.personName}, ${c.status}, ${sustainOn}, ${c.notes})`
+              values (${row.id}, ${c.personName}, ${status}, ${sustainOn}, ${c.notes})`
             names++
           }
           added++

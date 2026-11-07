@@ -12,7 +12,7 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
-import { needsToDiscuss, unsortedSuggestions } from '../lib/agenda'
+import { awaitingSettingApart, needsToDiscuss, unsortedSuggestions } from '../lib/agenda'
 import { coveringLeader, organizationFor, type ListedCalling } from '../lib/callings'
 import { appointmentFor, NEEDS_APPOINTMENT, whenLabel } from '../lib/appointments'
 import { longDate, type IsoDate } from '../lib/dates'
@@ -26,29 +26,21 @@ import { CallingRequestRow } from './Requests'
 
 type Status = Enums<'candidate_status'>
 
-// The steps the bishopric picks from once a name is approved; before that the row shows only an
-// Approve button. The database keeps a few more: 'suggested' marks a leader's suggestion not yet
-// attached to a calling, and older rows may say sustained or set apart.
-const STATUSES: { value: Status; label: string }[] = [
-  { value: 'discussing', label: 'Considering' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'accepted', label: 'Accepted' },
-  { value: 'declined', label: 'Declined' },
-]
+// A name goes Considering -> Approved -> Accepted, is sustained on its sustain date, then set apart,
+// which completes the calling (the database enforces the order). Before approval the row shows only
+// an Approve button; after it, the picker offers the next steps plus one step back for a mis-tap.
+// A declined name is final. Sustained names wait under "Waiting to be set apart".
+const LABELS: Partial<Record<Status, string>> = { discussing: 'Considering', approved: 'Approved', accepted: 'Accepted', declined: 'Declined' }
 
-/** The step a status shows as in the picker. */
-const SHOWN_AS: Record<Status, Status> = {
-  suggested: 'discussing',
-  discussing: 'discussing',
-  approved: 'approved',
-  accepted: 'accepted',
-  sustained: 'accepted',
-  set_apart: 'accepted',
-  declined: 'declined',
+const STEPS: Partial<Record<Status, Status[]>> = {
+  approved: ['discussing', 'approved', 'accepted', 'declined'],
+  accepted: ['approved', 'accepted'],
 }
 
-const ACCEPTED: Status[] = ['accepted', 'sustained', 'set_apart']
+const ACCEPTED: Status[] = ['accepted', 'set_apart']
 const UNAPPROVED: Status[] = ['suggested', 'discussing']
+/** Only one name per calling can be at one of these steps at a time. */
+const IN_FLIGHT: Status[] = ['approved', 'accepted', 'set_apart']
 
 const dateLabel = { inputLabel: { shrink: true } } as const
 
@@ -68,6 +60,8 @@ export type CallingsData = {
 export type CallingsActions = {
   addNeed: (need: { calling_title: string; release_name: string | null }) => void
   updateNeed: (id: string, changes: TablesUpdate<'calling_needs'>) => void
+  /** Marks a sustained name set apart today, which completes the calling. */
+  setApart: (candidate: Candidate) => void
   /** Removes the calling, its names and their open appointments. */
   deleteNeed: (id: string) => void
   addCandidate: (needId: string, name: string) => void
@@ -114,6 +108,7 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
   const open = appointment?.status === 'scheduled' ? appointment : undefined
   const showMeets = NEEDS_APPOINTMENT.includes(c.status) || !!open
   const showSustain = ACCEPTED.includes(c.status)
+  const taken = data.candidates.some((o) => o.id !== c.id && o.need_id === c.need_id && IN_FLIGHT.includes(o.status))
   // The leader assigned to the calling's organization meets with them, unless someone already does.
   const approve = () => {
     const leader = open ? null : coveringLeader(organizationFor(c, data.needs, data.callingList), data.stewardships, data.bishopric.map((p) => p.id))
@@ -141,25 +136,31 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
       <Grid size={{ xs: 6, sm: 3 }}>
         {/* A name can't be accepted or declined until the bishopric approves it, so until then the only step is Approve. */}
         {UNAPPROVED.includes(c.status) ? (
-          <Button variant="outlined" startIcon={<CheckIcon />} onClick={approve} aria-label={`Approve ${c.person_name}`} sx={{ minHeight: 40 }}>
-            Approve
-          </Button>
+          <>
+            <Button variant="outlined" startIcon={<CheckIcon />} onClick={approve} disabled={taken} aria-label={`Approve ${c.person_name}`} sx={{ minHeight: 40 }}>
+              Approve
+            </Button>
+            {taken && <Muted>Another name is approved</Muted>}
+          </>
+        ) : !STEPS[c.status] ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', minHeight: { sm: 40 }, color: 'text.secondary' }}>{LABELS[c.status] ?? c.status}</Box>
         ) : (
           <TextField
             select
             label="Status"
             slotProps={{ ...nativeSelect, htmlInput: { 'aria-label': `Status for ${c.person_name}` } }}
-            value={SHOWN_AS[c.status]}
+            value={c.status}
             onChange={(e) => {
               const status = e.target.value as Status
               if (status === 'accepted') actions.acceptCandidate(c)
-              else if (status === 'approved') approve()
+              // Taking back an accept: the database clears the dates it set.
+              else if (status === 'approved' && c.status !== 'accepted') approve()
               else actions.updateCandidate(c.id, { status })
             }}
           >
-            {STATUSES.map((s) => (
-              <option key={s.value} value={s.value}>
-                {s.label}
+            {STEPS[c.status]!.map((s) => (
+              <option key={s} value={s}>
+                {LABELS[s]}
               </option>
             ))}
           </TextField>
@@ -317,10 +318,17 @@ function NeedBlock({ need, data, actions, timeZone }: { need: CallingNeed; data:
         <Typography variant="h3" sx={{ flex: 1 }}>
           {need.calling_title}
         </Typography>
-        <Button size="small" startIcon={<CheckIcon />} onClick={() => actions.updateNeed(need.id, { status: 'filled' })}>
-          Mark filled
+        {/* A calling is done once its name is set apart; these are for when it isn't needed after all. */}
+        <Button
+          size="small"
+          sx={{ color: 'text.secondary' }}
+          onClick={() => {
+            if (window.confirm(`${need.calling_title} is no longer needed? It leaves the list.`)) actions.updateNeed(need.id, { status: 'cancelled' })
+          }}
+        >
+          No longer needed
         </Button>
-        {/* Kept apart from Mark filled and behind a confirm, so it isn't hit by mistake. */}
+        {/* Removing is for a calling added by mistake. Kept apart and behind a confirm. */}
         <IconButton
           size="small"
           aria-label={`Remove ${need.calling_title}`}
@@ -333,7 +341,7 @@ function NeedBlock({ need, data, actions, timeZone }: { need: CallingNeed; data:
         </IconButton>
       </Stack>
       <RequestedBy need={need} data={data} />
-      <ReleaseLine need={need} actions={actions} showDate={accepted} />
+      <ReleaseLine need={need} actions={actions} showDate={accepted || need.release_only} />
       {all.length > 0 && (
         <Stack divider={<Divider flexItem />} spacing={1.5}>
           {all.map((c) => (
@@ -341,7 +349,7 @@ function NeedBlock({ need, data, actions, timeZone }: { need: CallingNeed; data:
           ))}
         </Stack>
       )}
-      <AddCandidate need={need} onAdd={actions.addCandidate} collapsed={all.length > 0} />
+      {!need.release_only && <AddCandidate need={need} onAdd={actions.addCandidate} collapsed={all.length > 0} />}
     </Box>
   )
 }
@@ -378,12 +386,14 @@ function AddNeed({ onAdd, callings }: { onAdd: CallingsActions['addNeed']; calli
 
 /**
  * Everything the bishopric does with callings, worked through during the bishopric meeting. A
- * calling leaves this list on the Sunday its accepted name is sustained.
+ * calling moves to "Waiting to be set apart" on the Sunday its accepted name is sustained, and is
+ * done once they're set apart.
  */
 export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDate; data: CallingsData; actions: CallingsActions; timeZone: string }) {
   const suggestions = unsortedSuggestions(data.candidates)
   const openNeeds = needsToDiscuss(date, data.needs, data.candidates)
   const newRequests = unreceived(data.callingRequests)
+  const waiting = awaitingSettingApart(date, data.needs, data.candidates)
 
   return (
     <Stack divider={<Divider flexItem />} spacing={2}>
@@ -439,6 +449,27 @@ export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDa
                 </TextField>
                 <Button size="small" onClick={() => actions.updateCandidate(s.id, { status: 'declined' })}>
                   Dismiss
+                </Button>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
+      )}
+
+      {waiting.length > 0 && (
+        <Box component="section" aria-label="Waiting to be set apart">
+          <Typography variant="h3" sx={{ mb: 0.5 }}>
+            Waiting to be set apart
+          </Typography>
+          <List disablePadding>
+            {waiting.map(({ candidate: c, calling }) => (
+              <ListItem key={c.id} disableGutters sx={{ gap: 1, flexWrap: 'wrap' }}>
+                <Box sx={{ flex: '1 1 12rem' }}>
+                  <strong>{c.person_name}</strong>, {calling}
+                  <Muted>Sustained {longDate(c.sustain_on!)}</Muted>
+                </Box>
+                <Button variant="outlined" startIcon={<CheckIcon />} onClick={() => actions.setApart(c)} aria-label={`${c.person_name} was set apart`}>
+                  Set apart
                 </Button>
               </ListItem>
             ))}

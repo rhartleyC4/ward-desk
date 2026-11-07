@@ -9,6 +9,7 @@ function actions(): AgendaActions {
     saveHeader: vi.fn(),
     addItem: vi.fn(),
     resolveItem: vi.fn(),
+    setApart: vi.fn(),
     addPrayerName: vi.fn(),
     removePrayerName: vi.fn(),
     addNeed: vi.fn(),

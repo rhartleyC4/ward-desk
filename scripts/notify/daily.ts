@@ -36,7 +36,7 @@ export type DailyOptions = { sql: Sql; now: Date; timeZone: string; send: Sender
 const between = (hour: number, from: number, until: number) => hour >= from && hour < until
 
 /** Accepted names count; one still being considered on that Sunday wasn't sustained. */
-const ACCEPTED = ['accepted', 'sustained', 'set_apart']
+const ACCEPTED = ['accepted', 'set_apart']
 
 export async function sendDaily({ sql, now, timeZone, send, dryRun = false, only }: DailyOptions): Promise<DailyReport[]> {
   const { date: today, hour } = wardNow(now, timeZone)
@@ -81,10 +81,10 @@ export async function sendDaily({ sql, now, timeZone, send, dryRun = false, only
       sql<{ id: string }[]>`
         select p.id from public.profiles p join public.roles r on r.user_id = p.id and r.role = 'bishopric' where p.office = 'ward_clerk'`,
       sql<DaySummaryInput['needs']>`
-        select id, calling_title, release_name, release_on::text, status from public.calling_needs
+        select id, calling_title, release_name, release_on::text, release_only, status from public.calling_needs
         where release_on = ${today} or id in (select need_id from public.calling_candidates where sustain_on = ${today})`,
       sql<DaySummaryInput['candidates']>`
-        select id, need_id, calling_title, person_name, status, sustain_on::text from public.calling_candidates
+        select id, need_id, calling_title, person_name, status, sustain_on::text, set_apart_on::text from public.calling_candidates
         where sustain_on = ${today} and status in ${sql(ACCEPTED)}`,
     ])
     const released = releasesOn(today, [...needs]).length

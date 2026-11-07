@@ -63,7 +63,7 @@ select set_config('request.jwt.claims', '', true);
 insert into public.allowlist (email, initial_roles) values ('listadmin@ward.test', '{admin}');
 insert into auth.users (id, email, aud, role)
   values ('20000000-0000-0000-0000-000000000010', 'listadmin@ward.test', 'authenticated', 'authenticated');
-update public.calling_needs set status = 'filled' where calling_title = 'primary teacher';
+update public.calling_needs set status = 'cancelled' where calling_title = 'primary teacher';
 
 select pg_temp.act_as('listadmin@ward.test');
 
@@ -86,7 +86,7 @@ select pg_temp.act_as('first@ward.test');
 select is((select count(*)::int from public.calling_needs where calling_title = 'Ward Host'), 1, 'renaming updates the open calling that used the old title');
 select is(
   (select array_agg(calling_title order by calling_title)::text from public.calling_needs where calling_id = (select id from public.callings where title = 'Primary Class Teacher')),
-  '{"Primary Class Teacher","primary teacher"}', 'open needs take the new name; a filled one keeps its history'
+  '{"Primary Class Teacher","primary teacher"}', 'open needs take the new name; a cancelled one keeps its history'
 );
 select is((select count(*)::int from public.callings where title = 'Interpreter'), 0, 'the removed entry is gone for everyone');
 
@@ -95,7 +95,7 @@ select is((select count(*)::int from public.callings where title = 'Interpreter'
 -- ---------------------------------------------------------------------------
 
 insert into public.calling_needs (calling_title) values ('YW Sec');
-insert into public.calling_needs (calling_title, status) values ('YW Sec', 'filled');
+insert into public.calling_needs (calling_title, status) values ('YW Sec', 'cancelled');
 insert into public.calling_candidates (calling_title, person_name) values ('yw sec', 'Sister Merge');
 create temp table merge_ids as
   select (select id from public.callings where title = 'YW Sec') as stray, (select id from public.callings where title = 'Young Women Secretary') as keep;
@@ -124,8 +124,8 @@ select is(
   1, 'the open calling takes the right title'
 );
 select is(
-  (select calling_title from public.calling_needs where status = 'filled' and calling_id = (select keep from merge_ids)),
-  'YW Sec', 'a filled calling keeps its title but points at the right entry'
+  (select calling_title from public.calling_needs where status = 'cancelled' and calling_id = (select keep from merge_ids)),
+  'YW Sec', 'a cancelled calling keeps its title but points at the right entry'
 );
 select is(
   (select calling_title from public.calling_candidates where person_name = 'Sister Merge'),

@@ -5,7 +5,7 @@ import { agendaData } from '../test/fixtures'
 import { CallingsManager, type CallingsActions } from './CallingsManager'
 
 function actions(): CallingsActions {
-  return { addNeed: vi.fn(), updateNeed: vi.fn(), deleteNeed: vi.fn(), addCandidate: vi.fn(), updateCandidate: vi.fn(), acceptCandidate: vi.fn(), approveCandidate: vi.fn(), assignAppointment: vi.fn(), receiveCallingRequest: vi.fn() }
+  return { addNeed: vi.fn(), updateNeed: vi.fn(), setApart: vi.fn(), deleteNeed: vi.fn(), addCandidate: vi.fn(), updateCandidate: vi.fn(), acceptCandidate: vi.fn(), approveCandidate: vi.fn(), assignAppointment: vi.fn(), receiveCallingRequest: vi.fn() }
 }
 
 const need = (title: string) => screen.getByRole('article', { name: title })
@@ -86,21 +86,54 @@ describe('CallingsManager', () => {
     expect(a.updateCandidate).not.toHaveBeenCalled()
   })
 
-  it('offers only the steps the bishopric uses, showing older statuses as the nearest one', () => {
-    const data = agendaData()
-    data.candidates[2] = { ...data.candidates[2], status: 'sustained' }
-    render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
-    const status = screen.getByLabelText('Status for Sister Nash')
-    expect(within(status).getAllByRole('option').map((o) => o.textContent)).toEqual(['Considering', 'Approved', 'Accepted', 'Declined'])
-    expect(status).toHaveValue('accepted')
+  it('offers only the next steps and one step back', () => {
+    render(<CallingsManager date="2026-10-25" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
+    const options = (name: string) => within(screen.getByLabelText(`Status for ${name}`)).getAllByRole('option').map((o) => o.textContent)
+    expect(options('Sister Nash')).toEqual(['Considering', 'Approved', 'Accepted', 'Declined'])
+    expect(options('Sister Moss')).toEqual(['Approved', 'Accepted'])
   })
 
-  it('shows Announce on only once a name has accepted', () => {
+  it('takes back an accept without handing out a new appointment', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
+
+    await user.selectOptions(screen.getByLabelText('Status for Sister Moss'), 'Approved')
+    expect(a.updateCandidate).toHaveBeenCalledWith('c1', { status: 'approved' })
+    expect(a.approveCandidate).not.toHaveBeenCalled()
+  })
+
+  it('leaves a declined name declined', () => {
+    const data = agendaData()
+    data.candidates[2] = { ...data.candidates[2], status: 'declined' }
+    render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
+    expect(screen.queryByLabelText('Status for Sister Nash')).not.toBeInTheDocument()
+    expect(within(need('Primary Teacher')).getByText('Declined')).toBeInTheDocument()
+  })
+
+  it('approves only one name per calling at a time', () => {
+    const data = agendaData()
+    data.candidates.push({ ...data.candidates[2], id: 'c8', person_name: 'Sister Pratt', status: 'discussing' })
+    render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
+    expect(screen.getByRole('button', { name: 'Approve Sister Pratt' })).toBeDisabled()
+    expect(within(need('Primary Teacher')).getByText('Another name is approved')).toBeInTheDocument()
+  })
+
+  it('shows Announce on once a name has accepted, or right away for a release only', () => {
     const data = agendaData()
     data.needs[1] = { ...data.needs[1], release_name: 'Sister Hale' }
     render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
     expect(within(need('Primary Teacher')).queryByLabelText('Announce on')).not.toBeInTheDocument()
     expect(within(need('RS Teacher')).getByLabelText('Announce on')).toBeInTheDocument()
+  })
+
+  it('takes no names for a release only', () => {
+    const data = agendaData()
+    data.needs[2] = { ...data.needs[2], release_on: null, release_only: true }
+    render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
+    const ss = need('Sunday School')
+    expect(within(ss).getByLabelText('Announce on')).toBeInTheDocument()
+    expect(within(ss).queryByLabelText('Name to consider for Sunday School')).not.toBeInTheDocument()
   })
 
   it('hides the name box behind a button once a calling has a name', async () => {
@@ -141,10 +174,32 @@ describe('CallingsManager', () => {
     confirm.mockRestore()
   })
 
-  it('drops a calling on the Sunday its accepted name is sustained', () => {
-    render(<CallingsManager date="2026-11-01" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
+  it('moves a calling to Waiting to be set apart on the Sunday its name is sustained', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    const data = agendaData()
+    render(<CallingsManager date="2026-11-01" data={data} actions={a} timeZone="America/Denver" />)
     expect(screen.queryByRole('article', { name: 'RS Teacher' })).not.toBeInTheDocument()
     expect(need('Primary Teacher')).toBeInTheDocument()
+
+    const waiting = screen.getByRole('region', { name: 'Waiting to be set apart' })
+    expect(within(waiting).getByText('Sister Moss')).toBeInTheDocument()
+    await user.click(within(waiting).getByRole('button', { name: 'Sister Moss was set apart' }))
+    expect(a.setApart).toHaveBeenCalledWith(data.candidates[0])
+  })
+
+  it('marks a calling no longer needed only after confirming', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+    render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
+
+    const button = within(need('Sunday School')).getByRole('button', { name: 'No longer needed' })
+    await user.click(button)
+    expect(a.updateNeed).not.toHaveBeenCalled()
+    await user.click(button)
+    expect(a.updateNeed).toHaveBeenCalledWith('n3', { status: 'cancelled' })
+    confirm.mockRestore()
   })
 
   it('does everything the callings tab did', async () => {
@@ -158,9 +213,6 @@ describe('CallingsManager', () => {
     await user.type(within(need('Sunday School')).getByLabelText('Name to consider for Sunday School'), 'Brother Hale')
     await user.click(within(need('Sunday School')).getByRole('button', { name: 'Add' }))
     expect(a.addCandidate).toHaveBeenCalledWith('n3', 'Brother Hale')
-
-    await user.click(within(need('Sunday School')).getByRole('button', { name: 'Mark filled' }))
-    expect(a.updateNeed).toHaveBeenCalledWith('n3', { status: 'filled' })
 
     await user.selectOptions(screen.getByLabelText('Attach Brother Vale to a calling'), 'Primary Teacher')
     expect(a.updateCandidate).toHaveBeenCalledWith('c2', { need_id: 'n1', status: 'discussing' })

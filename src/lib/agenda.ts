@@ -6,8 +6,8 @@ import type { Enums, Tables } from './database.types'
 
 export type Meeting = Pick<Tables<'meetings'>, 'id' | 'meeting_date' | 'meeting_type' | 'title' | 'conducting_id'>
 export type ProgramItem = Pick<Tables<'program_items'>, 'meeting_id' | 'position' | 'kind' | 'person_name' | 'note'>
-export type CallingNeed = Pick<Tables<'calling_needs'>, 'id' | 'calling_title' | 'release_name' | 'release_on' | 'status'>
-export type Candidate = Pick<Tables<'calling_candidates'>, 'id' | 'need_id' | 'calling_title' | 'person_name' | 'status' | 'sustain_on'>
+export type CallingNeed = Pick<Tables<'calling_needs'>, 'id' | 'calling_title' | 'release_name' | 'release_on' | 'release_only' | 'status'>
+export type Candidate = Pick<Tables<'calling_candidates'>, 'id' | 'need_id' | 'calling_title' | 'person_name' | 'status' | 'sustain_on' | 'set_apart_on'>
 export type AgendaItem = Pick<Tables<'agenda_items'>, 'id' | 'section_id' | 'body' | 'event_date' | 'resolved_on' | 'created_at'>
 export type AgendaSection = Pick<Tables<'agenda_sections'>, 'id' | 'kind'>
 export type Profile = Pick<Tables<'profiles'>, 'id' | 'display_name' | 'short_name'>
@@ -80,17 +80,45 @@ export type NeedRow = {
   approved: boolean
 }
 
-const DECIDED: Candidate['status'][] = ['accepted', 'sustained', 'set_apart']
+// A calling's steps, as the database enforces them: a name goes Considering -> Approved ->
+// Accepted, is sustained on its sustain date, and is then set apart, which completes the calling.
+// A release with no one new is complete once the release is announced. "Sustained" and "done" are
+// worked out from the dates, so an agenda for any day shows what was still open that day.
+
+/** Sustained by this date: accepted (or since set apart) and the sustain date has come. */
+export const sustainedBy = (c: Candidate, date: IsoDate): boolean =>
+  (c.status === 'accepted' || c.status === 'set_apart') && !!c.sustain_on && c.sustain_on <= date
+
+/** Set apart by this date. A set-apart name with no date (from the sheet) always counts. */
+export const setApartBy = (c: Candidate, date: IsoDate): boolean => c.status === 'set_apart' && (!c.set_apart_on || c.set_apart_on <= date)
+
+/** Whether a calling is complete on this date: its name set apart or, for a release only, the release announced. */
+export function callingDone(date: IsoDate, need: CallingNeed, candidates: Candidate[]): boolean {
+  if (need.release_only) return !!need.release_on && need.release_on <= date
+  return candidates.some((c) => c.need_id === need.id && setApartBy(c, date))
+}
 
 /**
  * Open needs still being discussed on this date. Once someone accepts, the need moves to
- * Sustainings (and its release to Releases) on their sustain date and drops off from then on.
- * An accepted name with no sustain date stays so someone notices and sets one.
+ * Sustainings (and its release to Releases) on their sustain date and drops off from then on; it
+ * then waits to be set apart (awaitingSettingApart). An accepted name with no sustain date stays so
+ * someone notices and sets one. A release only drops off on its release date.
  */
 export function needsToDiscuss<T extends CallingNeed>(date: IsoDate, needs: T[], candidates: Candidate[]): T[] {
   return needs.filter(
-    (n) => n.status === 'open' && !candidates.some((c) => c.need_id === n.id && DECIDED.includes(c.status) && c.sustain_on && c.sustain_on <= date),
+    (n) => n.status === 'open' && !callingDone(date, n, candidates) && !candidates.some((c) => c.need_id === n.id && sustainedBy(c, date)),
   )
+}
+
+/** Names sustained by this date and not yet set apart then, with their calling, oldest sustaining first. */
+export function awaitingSettingApart<C extends Candidate>(date: IsoDate, needs: CallingNeed[], candidates: C[]): { candidate: C; calling: string }[] {
+  return candidates
+    .filter((c) => sustainedBy(c, date) && !setApartBy(c, date))
+    .flatMap((c) => {
+      const need = needs.find((n) => n.id === c.need_id)
+      return need && need.status === 'open' ? [{ candidate: c, calling: need.calling_title }] : []
+    })
+    .sort((a, b) => (a.candidate.sustain_on ?? '').localeCompare(b.candidate.sustain_on ?? ''))
 }
 
 /** The "Callings Needed (to discuss)" table: needs still being discussed with their names to consider. */
@@ -98,7 +126,7 @@ export function callingsNeeded(date: IsoDate, needs: CallingNeed[], candidates: 
   return needsToDiscuss(date, needs, candidates)
     .map((need) => {
       const forNeed = candidates.filter((c) => c.need_id === need.id && c.status !== 'declined')
-      const approved = forNeed.some((c) => ['approved', 'accepted', 'sustained', 'set_apart'].includes(c.status))
+      const approved = forNeed.some((c) => ['approved', 'accepted', 'set_apart'].includes(c.status))
       return { need, candidates: forNeed, approved }
     })
 }

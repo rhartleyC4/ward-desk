@@ -76,10 +76,10 @@ describe('daySummary', () => {
   it('says when this person is conducting, with the releases and sustainings to read', () => {
     const input = base({
       person: { id: LANE, office: 'first_counselor' },
-      needs: [{ id: 'n1', calling_title: 'Primary Teacher', release_name: 'Brother Ivey', release_on: SUNDAY, status: 'open' }],
+      needs: [{ id: 'n1', calling_title: 'Primary Teacher', release_name: 'Brother Ivey', release_on: SUNDAY, release_only: false, status: 'open' }],
       candidates: [
-        { id: 'c1', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'accepted', sustain_on: SUNDAY },
-        { id: 'c2', need_id: null, calling_title: 'Clerk', person_name: 'Brother Bell', status: 'accepted', sustain_on: SUNDAY },
+        { id: 'c1', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'accepted', sustain_on: SUNDAY, set_apart_on: null },
+        { id: 'c2', need_id: null, calling_title: 'Clerk', person_name: 'Brother Bell', status: 'accepted', sustain_on: SUNDAY, set_apart_on: null },
       ],
     })
     expect(texts(input)).toContain('Conducting sacrament meeting, with 1 release and 2 sustainings')

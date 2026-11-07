@@ -86,14 +86,14 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
     items: [programItem(m2.id, 1, { person_name: 'Brother Cole', note: 'Stake' }), programItem(m2.id, 2, { person_name: 'Sister Diaz' })],
     absences: [{ id: 'ab1', user_id: 'l', starts_on: '2026-10-30', ends_on: '2026-11-02', location: 'Denver', created_at: ts }],
     needs: [
-      { id: 'n1', calling_id: null, calling_title: 'Primary Teacher', release_name: 'Brother Ivey', release_on: null, status: 'open', notes: null, created_at: ts, updated_at: ts },
-      { id: 'n2', calling_id: null, calling_title: 'RS Teacher', release_name: null, release_on: null, status: 'open', notes: null, created_at: ts, updated_at: ts },
-      { id: 'n3', calling_id: null, calling_title: 'Sunday School', release_name: 'Sister Kemp', release_on: '2026-11-01', status: 'open', notes: null, created_at: ts, updated_at: ts },
+      { id: 'n1', calling_id: null, calling_title: 'Primary Teacher', release_name: 'Brother Ivey', release_on: null, release_only: false, status: 'open', notes: null, created_at: ts, updated_at: ts },
+      { id: 'n2', calling_id: null, calling_title: 'RS Teacher', release_name: null, release_on: null, release_only: false, status: 'open', notes: null, created_at: ts, updated_at: ts },
+      { id: 'n3', calling_id: null, calling_title: 'Sunday School', release_name: 'Sister Kemp', release_on: '2026-11-01', release_only: false, status: 'open', notes: null, created_at: ts, updated_at: ts },
     ],
     candidates: [
-      { id: 'c1', need_id: 'n2', calling_title: null, person_name: 'Sister Moss', status: 'accepted', sustain_on: '2026-11-01', notes: null, suggested_by: 'b', request_id: null, created_at: ts, updated_at: ts },
-      { id: 'c2', need_id: null, calling_title: 'Primary Teacher', person_name: 'Brother Vale', status: 'suggested', sustain_on: null, notes: null, suggested_by: null, request_id: null, created_at: ts, updated_at: ts },
-      { id: 'c3', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, notes: null, suggested_by: 'b', request_id: null, created_at: ts, updated_at: ts },
+      { id: 'c1', need_id: 'n2', calling_title: null, person_name: 'Sister Moss', status: 'accepted', sustain_on: '2026-11-01', set_apart_on: null, notes: null, suggested_by: 'b', request_id: null, created_at: ts, updated_at: ts },
+      { id: 'c2', need_id: null, calling_title: 'Primary Teacher', person_name: 'Brother Vale', status: 'suggested', sustain_on: null, set_apart_on: null, notes: null, suggested_by: null, request_id: null, created_at: ts, updated_at: ts },
+      { id: 'c3', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, set_apart_on: null, notes: null, suggested_by: 'b', request_id: null, created_at: ts, updated_at: ts },
     ],
     callingList: [
       { id: 'l1', title: 'Primary Teacher', organization: 'Primary' },

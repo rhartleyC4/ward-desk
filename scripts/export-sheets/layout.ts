@@ -64,8 +64,8 @@ export interface ExportData {
   templates: ExportTemplate[]
   agendas: { template_id: string; meeting_date: IsoDate; start_time: string | null; opening_prayer: string | null; spiritual_thought: string | null; closing_prayer: string | null }[]
   agendaItems: { id: string; section_id: string; body: string; event_date: IsoDate | null; resolved_on: IsoDate | null; created_at: string }[]
-  needs: { id: string; calling_title: string; release_name: string | null; release_on: IsoDate | null; status: Enums<'need_status'>; notes: string | null }[]
-  candidates: { id: string; need_id: string | null; calling_title: string | null; person_name: string; status: Enums<'candidate_status'>; sustain_on: IsoDate | null; notes: string | null }[]
+  needs: { id: string; calling_title: string; release_name: string | null; release_on: IsoDate | null; release_only: boolean; status: Enums<'need_status'>; notes: string | null }[]
+  candidates: { id: string; need_id: string | null; calling_title: string | null; person_name: string; status: Enums<'candidate_status'>; sustain_on: IsoDate | null; set_apart_on: IsoDate | null; notes: string | null }[]
   prayerRoll: { name: string; added_on: IsoDate; removed_on: IsoDate | null }[]
   rotations: Rotation[]
   recurringEvents: RecurringEvent[]
@@ -309,7 +309,6 @@ function calendarLine(body: string, eventDate: IsoDate | null): string {
 const STATUS_MARKS: Partial<Record<Enums<'candidate_status'>, [boolean, boolean, boolean]>> = {
   approved: [true, false, false],
   accepted: [true, true, false],
-  sustained: [true, true, true],
   set_apart: [true, true, true],
 }
 

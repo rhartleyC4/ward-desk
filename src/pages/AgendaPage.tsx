@@ -42,6 +42,7 @@ export function AgendaPage() {
     deleteNeed: (id) => run(() => q.deleteNeed(supabase, id)),
     addCandidate: (needId, name) => run(() => q.addCandidate(supabase, { need_id: needId, person_name: name, status: 'discussing' })),
     updateCandidate: (id, changes) => run(() => q.updateCandidate(supabase, id, changes)),
+    setApart: (candidate) => run(() => q.setApart(supabase, candidate.id, todayIso())),
     acceptCandidate: (candidate) => run(() => q.acceptCandidate(supabase, candidate, sustainingSunday(todayIso()))),
     approveCandidate: (candidate, leaderId) =>
       run(async () => {

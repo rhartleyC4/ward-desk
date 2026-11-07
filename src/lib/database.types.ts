@@ -233,14 +233,14 @@ isOneToOne: false
                   ]
                 },"calling_candidates": {
                   Row: {
-                    "calling_title": string | null,"created_at": string,"id": string,"need_id": string | null,"notes": string | null,"person_name": string,"request_id": string | null,"status": Database["public"]['Enums']["candidate_status"],"suggested_by": string | null,"sustain_on": string | null,"updated_at": string
+                    "calling_title": string | null,"created_at": string,"id": string,"need_id": string | null,"notes": string | null,"person_name": string,"request_id": string | null,"set_apart_on": string | null,"status": Database["public"]['Enums']["candidate_status"],"suggested_by": string | null,"sustain_on": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "calling_title"?: string | null,"created_at"?: string,"id"?: string,"need_id"?: string | null,"notes"?: string | null,"person_name": string,"request_id"?: string | null,"status"?: Database["public"]['Enums']["candidate_status"],"suggested_by"?: string | null,"sustain_on"?: string | null,"updated_at"?: string
+                    "calling_title"?: string | null,"created_at"?: string,"id"?: string,"need_id"?: string | null,"notes"?: string | null,"person_name": string,"request_id"?: string | null,"set_apart_on"?: string | null,"status"?: Database["public"]['Enums']["candidate_status"],"suggested_by"?: string | null,"sustain_on"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "calling_title"?: string | null,"created_at"?: string,"id"?: string,"need_id"?: string | null,"notes"?: string | null,"person_name"?: string,"request_id"?: string | null,"status"?: Database["public"]['Enums']["candidate_status"],"suggested_by"?: string | null,"sustain_on"?: string | null,"updated_at"?: string
+                    "calling_title"?: string | null,"created_at"?: string,"id"?: string,"need_id"?: string | null,"notes"?: string | null,"person_name"?: string,"request_id"?: string | null,"set_apart_on"?: string | null,"status"?: Database["public"]['Enums']["candidate_status"],"suggested_by"?: string | null,"sustain_on"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -265,14 +265,14 @@ isOneToOne: false
                   ]
                 },"calling_needs": {
                   Row: {
-                    "calling_id": string | null,"calling_title": string,"created_at": string,"id": string,"notes": string | null,"release_name": string | null,"release_on": string | null,"status": Database["public"]['Enums']["need_status"],"updated_at": string
+                    "calling_id": string | null,"calling_title": string,"created_at": string,"id": string,"notes": string | null,"release_name": string | null,"release_on": string | null,"release_only": boolean,"status": Database["public"]['Enums']["need_status"],"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "calling_id"?: string | null,"calling_title": string,"created_at"?: string,"id"?: string,"notes"?: string | null,"release_name"?: string | null,"release_on"?: string | null,"status"?: Database["public"]['Enums']["need_status"],"updated_at"?: string
+                    "calling_id"?: string | null,"calling_title": string,"created_at"?: string,"id"?: string,"notes"?: string | null,"release_name"?: string | null,"release_on"?: string | null,"release_only"?: boolean,"status"?: Database["public"]['Enums']["need_status"],"updated_at"?: string
                   }
                   Update: {
-                    "calling_id"?: string | null,"calling_title"?: string,"created_at"?: string,"id"?: string,"notes"?: string | null,"release_name"?: string | null,"release_on"?: string | null,"status"?: Database["public"]['Enums']["need_status"],"updated_at"?: string
+                    "calling_id"?: string | null,"calling_title"?: string,"created_at"?: string,"id"?: string,"notes"?: string | null,"release_name"?: string | null,"release_on"?: string | null,"release_only"?: boolean,"status"?: Database["public"]['Enums']["need_status"],"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -869,7 +869,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer"|"follow_ups","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"assistant_executive_secretary"|"ward_clerk","calling_request_kind": "fill"|"release"|"replace"|"suggest","candidate_status": "suggested"|"discussing"|"approved"|"accepted"|"declined"|"sustained"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","message_audience": "member"|"parent","message_kind": "offer"|"confirm"|"reminder"|"meeting","need_status": "open"|"filled"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other","request_status": "sent"|"seen"|"done"|"declined"
+            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer"|"follow_ups","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"assistant_executive_secretary"|"ward_clerk","calling_request_kind": "fill"|"release"|"replace"|"suggest","candidate_status": "suggested"|"discussing"|"approved"|"accepted"|"declined"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","message_audience": "member"|"parent","message_kind": "offer"|"confirm"|"reminder"|"meeting","need_status": "open"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other","request_status": "sent"|"seen"|"done"|"declined"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -989,7 +989,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer", "follow_ups"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "assistant_executive_secretary", "ward_clerk"],"calling_request_kind": ["fill", "release", "replace", "suggest"],"candidate_status": ["suggested", "discussing", "approved", "accepted", "declined", "sustained", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"message_audience": ["member", "parent"],"message_kind": ["offer", "confirm", "reminder", "meeting"],"need_status": ["open", "filled", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"],"request_status": ["sent", "seen", "done", "declined"]
+            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer", "follow_ups"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "assistant_executive_secretary", "ward_clerk"],"calling_request_kind": ["fill", "release", "replace", "suggest"],"candidate_status": ["suggested", "discussing", "approved", "accepted", "declined", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"message_audience": ["member", "parent"],"message_kind": ["offer", "confirm", "reminder", "meeting"],"need_status": ["open", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"],"request_status": ["sent", "seen", "done", "declined"]
           }
         }
 } as const

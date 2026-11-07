@@ -81,15 +81,15 @@ function data(): ExportData {
       { id: 'i5', section_id: 'w-pri', body: 'Nursery needs helpers', event_date: null, resolved_on: null, created_at: '2026-10-30 15:00:00+00' },
     ],
     needs: [
-      { id: 'n1', calling_title: 'Primary Teacher', release_name: 'Sister Hale', release_on: null, status: 'open', notes: 'Sunbeams' },
-      { id: 'n2', calling_title: 'Ward Librarian', release_name: 'Brother Pike', release_on: '2026-11-15', status: 'open', notes: null },
-      { id: 'n3', calling_title: 'Choir Director', release_name: null, release_on: null, status: 'filled', notes: null },
+      { id: 'n1', calling_title: 'Primary Teacher', release_name: 'Sister Hale', release_on: null, release_only: false, status: 'open', notes: 'Sunbeams' },
+      { id: 'n2', calling_title: 'Ward Librarian', release_name: 'Brother Pike', release_on: '2026-11-15', release_only: false, status: 'open', notes: null },
+      { id: 'n3', calling_title: 'Choir Director', release_name: null, release_on: null, release_only: false, status: 'cancelled', notes: null },
     ],
     candidates: [
-      { id: 'k1', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, notes: null },
-      { id: 'k2', need_id: 'n1', calling_title: null, person_name: 'Sister Moss', status: 'discussing', sustain_on: null, notes: 'Ask in December' },
-      { id: 'k3', need_id: 'n2', calling_title: null, person_name: 'Brother Vale', status: 'accepted', sustain_on: '2026-11-15', notes: null },
-      { id: 'k4', need_id: 'n2', calling_title: null, person_name: 'Brother Hale', status: 'declined', sustain_on: null, notes: null },
+      { id: 'k1', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, set_apart_on: null, notes: null },
+      { id: 'k2', need_id: 'n1', calling_title: null, person_name: 'Sister Moss', status: 'discussing', sustain_on: null, set_apart_on: null, notes: 'Ask in December' },
+      { id: 'k3', need_id: 'n2', calling_title: null, person_name: 'Brother Vale', status: 'accepted', sustain_on: '2026-11-15', set_apart_on: null, notes: null },
+      { id: 'k4', need_id: 'n2', calling_title: null, person_name: 'Brother Hale', status: 'declined', sustain_on: null, set_apart_on: null, notes: null },
     ],
     prayerRoll: [
       { name: 'Fern family', added_on: '2026-09-01', removed_on: null },

@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(48);
+select plan(49);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -208,9 +208,15 @@ select pg_temp.act_as('leader@ward.test');
 select is((select stage from public.my_calling_requests() where calling_title = 'Primary Teacher'), 'in_progress', 'then that it''s being worked on');
 
 select pg_temp.act_as('second@ward.test');
-update public.calling_needs set status = 'filled' where calling_title = 'Primary Teacher';
+update public.calling_candidates set status = 'approved' where person_name = 'Sister Vale';
+update public.calling_candidates set status = 'accepted', sustain_on = current_date where person_name = 'Sister Vale';
 select pg_temp.act_as('leader@ward.test');
-select is((select stage from public.my_calling_requests() where calling_title = 'Primary Teacher'), 'finished', 'and finally that it''s finished');
+select is((select stage from public.my_calling_requests() where calling_title = 'Primary Teacher'), 'in_progress', 'sustained but not set apart is still being worked on');
+
+select pg_temp.act_as('second@ward.test');
+update public.calling_candidates set status = 'set_apart' where person_name = 'Sister Vale';
+select pg_temp.act_as('leader@ward.test');
+select is((select stage from public.my_calling_requests() where calling_title = 'Primary Teacher'), 'finished', 'and finally, once set apart, that it''s finished');
 
 select * from finish();
 rollback;

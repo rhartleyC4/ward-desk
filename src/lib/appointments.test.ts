@@ -14,10 +14,10 @@ const appt = (id: string, extra: Partial<Appointment> = {}): Appointment => ({
   ...extra,
 })
 
-const needs: CallingNeed[] = [{ id: 'n1', calling_title: 'Primary Teacher', release_name: null, release_on: null, status: 'open' }]
+const needs: CallingNeed[] = [{ id: 'n1', calling_title: 'Primary Teacher', release_name: null, release_on: null, release_only: false, status: 'open' }]
 const candidates: Candidate[] = [
-  { id: 'c1', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null },
-  { id: 'c2', need_id: null, calling_title: 'Ward Missionary', person_name: 'Brother Vale', status: 'approved', sustain_on: null },
+  { id: 'c1', need_id: 'n1', calling_title: null, person_name: 'Sister Nash', status: 'approved', sustain_on: null, set_apart_on: null },
+  { id: 'c2', need_id: null, calling_title: 'Ward Missionary', person_name: 'Brother Vale', status: 'approved', sustain_on: null, set_apart_on: null },
 ]
 
 describe('appointmentFor', () => {
