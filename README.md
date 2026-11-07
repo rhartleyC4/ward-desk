@@ -2,7 +2,7 @@
 
 A mobile-first web app (PWA) for managing ward administration in one place: callings (proposing names, discussion, appointments) and sacrament meeting planning (conducting assignments, speakers, talks).
 
-> Contains no member data in this repo. All data lives in Supabase. Keep this repo **private**.
+> Contains no member data in this repo. All data lives in Supabase. Never commit real member names or data.
 
 ## Modules
 
@@ -512,3 +512,9 @@ A section's kind can't be changed after it's added. Add a new section and remove
 ## iPhone users
 
 Push notifications require adding the app to the Home Screen first (iOS 16.4 or later): open in Safari, tap Share, then **Add to Home Screen**, then enable notifications from inside the app.
+
+## License and support
+
+Ward Desk is open source under the [Apache License 2.0](LICENSE). It is provided **as is**, with no warranty and no support. Issues and pull requests are welcome (see [CONTRIBUTING.md](CONTRIBUTING.md)), but nobody promises a reply, a fix or a release. Report security problems privately, as described in [SECURITY.md](SECURITY.md).
+
+Ward Desk is not affiliated with or endorsed by The Church of Jesus Christ of Latter-day Saints. Each ward that runs its own copy is responsible for its own deployment, its Supabase project and its member data. This repository contains none.
