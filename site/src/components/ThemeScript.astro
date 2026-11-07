@@ -1,0 +1,11 @@
+---
+// Same logic and storage key as Starlight's own theme provider, so one toggle drives both.
+---
+<script is:inline>
+  (() => {
+    let stored = null
+    try { stored = localStorage.getItem('starlight-theme') } catch {}
+    const theme = stored || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark')
+    document.documentElement.dataset.theme = theme === 'light' ? 'light' : 'dark'
+  })()
+</script>

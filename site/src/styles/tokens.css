@@ -1,0 +1,64 @@
+/*
+ * The only place colors are defined. Values mirror src/theme.ts in the app (harbor blue on cool greys).
+ * Light is the default; the inline theme script (ThemeScript.astro, and Starlight's own) sets
+ * data-theme on <html> from the saved choice or the device before first paint.
+ */
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --wd-bg: #f2f4f7;
+  --wd-paper: #ffffff;
+  --wd-text: #14213d;
+  --wd-text-2: #55607a;
+  --wd-primary: #2b5c9e;
+  --wd-secondary: #1d4479;
+  --wd-on-primary: #ffffff;
+  --wd-radius: 14px;
+  --wd-divider: color-mix(in srgb, var(--wd-text) 14%, transparent);
+  --wd-glass-bg: color-mix(in srgb, var(--wd-paper) 72%, transparent);
+  --wd-glass-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 8px 24px rgb(20 33 61 / 0.1);
+  --wd-device-body: #14213d;
+  --wd-font: 'Lexend Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --wd-bg: #0d1117;
+  --wd-paper: #161d29;
+  --wd-text: #eef2f8;
+  --wd-text-2: #a3adc2;
+  --wd-primary: #8ab4f8;
+  --wd-secondary: #bcd3fb;
+  --wd-on-primary: #0b1526;
+  --wd-glass-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 8px 24px rgb(0 0 0 / 0.45);
+  --wd-device-body: #2a3345;
+}
+
+/* Starlight's palette, rebuilt from the tokens above. Gray 1 is the strongest, 7 the faintest. */
+:root,
+:root[data-theme='light'],
+:root[data-theme='dark'] {
+  --sl-font: var(--wd-font);
+  --sl-color-accent: var(--wd-primary);
+  --sl-color-accent-high: var(--wd-secondary);
+  --sl-color-accent-low: color-mix(in srgb, var(--wd-primary) 18%, var(--wd-bg));
+  --sl-color-text-accent: var(--sl-color-accent-high);
+  --sl-color-text-invert: var(--wd-on-primary);
+  --sl-color-bg-accent: var(--wd-primary);
+  --sl-color-white: var(--wd-text);
+  --sl-color-gray-1: var(--wd-text);
+  --sl-color-gray-2: color-mix(in srgb, var(--wd-text) 88%, var(--wd-bg));
+  --sl-color-gray-3: var(--wd-text-2);
+  --sl-color-gray-4: color-mix(in srgb, var(--wd-text-2) 65%, var(--wd-bg));
+  --sl-color-gray-5: color-mix(in srgb, var(--wd-text-2) 30%, var(--wd-bg));
+  --sl-color-gray-6: color-mix(in srgb, var(--wd-text-2) 14%, var(--wd-bg));
+  --sl-color-gray-7: var(--wd-bg);
+  --sl-color-black: var(--wd-bg);
+  --sl-color-bg: var(--wd-bg);
+  --sl-color-bg-nav: var(--wd-paper);
+  --sl-color-bg-sidebar: var(--wd-paper);
+  --sl-color-bg-inline-code: var(--sl-color-gray-6);
+  --sl-color-hairline: var(--wd-divider);
+  --sl-color-hairline-light: var(--wd-divider);
+  --sl-color-hairline-shade: var(--wd-divider);
+}

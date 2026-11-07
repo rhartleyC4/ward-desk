@@ -1,0 +1,11 @@
+/* Starlight tweaks on top of tokens.css. No colors here: use the --wd-* tokens. */
+.site-title { font-weight: 600; }
+header.header {
+  background-color: var(--wd-glass-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  box-shadow: var(--wd-glass-shadow);
+}
+@media (prefers-reduced-transparency: reduce) {
+  header.header { background-color: var(--wd-paper); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

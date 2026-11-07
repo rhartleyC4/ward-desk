@@ -1,0 +1,10 @@
+---
+import { getEntry, render } from 'astro:content'
+import Marketing from '../layouts/Marketing.astro'
+
+const entry = (await getEntry('legal', 'terms'))!
+const { Content } = await render(entry)
+---
+<Marketing title={entry.data.title} description={entry.data.description}>
+  <article class="narrow prose"><Content /></article>
+</Marketing>

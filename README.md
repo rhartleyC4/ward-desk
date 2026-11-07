@@ -322,6 +322,26 @@ Turn passkeys on in each Supabase project's Auth settings in the dashboard, with
 
 Locally, `supabase/config.toml` already turns them on for `localhost`. Open the app at `http://localhost:5173` (not `127.0.0.1`) to try them. Passkeys only work on HTTPS or localhost, so a phone on your local network can't test them; use staging. The allowlist still applies, since only someone already signed in can add a passkey.
 
+## Overview site
+
+`site/` is the public overview and documentation site for https://warddesk.app (Astro + Starlight, its own npm project). It is separate from the app and has its own `package-lock.json`.
+
+```bash
+source ~/.nvm/nvm.sh && nvm use
+npm --prefix site ci
+npm --prefix site run dev   # http://localhost:4321
+```
+
+Links (sign-in, demo, repository) live in `site/src/site.config.ts`. Screenshots go in `site/src/assets/screens/` and are shown with the `Screenshot` component. Legal pages are Markdown in `site/src/content/legal/`.
+
+One-time setup (a person does these in Cloudflare; CI does not):
+
+1. Create the Pages project: `npx wrangler pages project create ward-desk-site --production-branch main`
+2. Add the custom domains `warddesk.app` and `www.warddesk.app` to that project.
+3. In the `warddesk.app` zone, add a Redirect Rule: `www.warddesk.app/*` → `https://warddesk.app/${1}`, status 301.
+
+The `deploy-site` CI job then publishes `main` as the live site (the project's production branch) and any other branch as a preview, whenever `site/` changed, once `DEPLOY_ENABLED` is `true`.
+
 ## Backups and restore
 
 Every night `.github/workflows/backup.yml` dumps the production database, encrypts it, and stores it in Cloudflare R2, away from Supabase's own account and backups. The dump is piped straight into [age](https://age-encryption.org), so nothing unencrypted is written to disk or uploaded anywhere, Actions artifacts included. Only the public key is on GitHub. The private key lives only in your password manager.

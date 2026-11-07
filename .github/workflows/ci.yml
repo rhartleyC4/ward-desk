@@ -40,6 +40,7 @@ jobs:
     outputs:
       check: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.check == 'true' }}
       database: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.database == 'true' }}
+      site: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.site == 'true' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4.0.3
@@ -67,6 +68,11 @@ jobs:
               - 'src/lib/**'
               - 'supabase/**'
               - 'tests/integration/**'
+            # The overview and docs site (site/) is its own npm project.
+            site:
+              - 'site/**'
+              - '.nvmrc'
+              - '.github/workflows/**'
 
   check:
     name: Lint, typecheck, unit tests, build
@@ -123,6 +129,28 @@ jobs:
       - name: Stop Supabase
         if: always()
         run: npm run db:stop
+
+  site:
+    name: Overview site (check, build)
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: site
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - run: npm ci
+      - run: npx astro check
+      - run: npm run build
 
   # main deploys to the training site (staging); gp7 deploys to the real one (production).
   # Promote with `git push origin main:gp7`. Setup steps are in README.md under "Deploying".
@@ -200,6 +228,40 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         run: npx wrangler pages deploy dist --project-name "${{ vars.CLOUDFLARE_PAGES_PROJECT }}" --branch "${{ github.ref_name }}" --commit-hash "${{ github.sha }}"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+
+  # The overview site (warddesk.app). Pushes to main deploy its production (the Pages project's
+  # production branch is main); other branches deploy previews. Same DEPLOY_ENABLED switch as above.
+  deploy-site:
+    name: Deploy overview site (${{ github.ref_name == 'main' && 'production' || 'preview' }})
+    needs: [guard, site]
+    if: >-
+      always() && vars.DEPLOY_ENABLED == 'true' && github.event_name == 'push' &&
+      github.ref != 'refs/heads/gp7' &&
+      needs.guard.result == 'success' && needs.site.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: deploy-site-${{ github.ref_name }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - run: npm ci
+        working-directory: site
+      - run: npm run build
+        working-directory: site
+
+      - name: Deploy to Cloudflare Pages
+        run: npx wrangler pages deploy site/dist --project-name ward-desk-site --branch "${{ github.ref_name }}" --commit-hash "${{ github.sha }}"
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}

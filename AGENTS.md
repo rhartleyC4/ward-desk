@@ -39,7 +39,7 @@ Guidance for AI coding agents (and humans) working in this repo. See [README.md]
 
 Optional, but use one when the change is confined to an area:
 
-`sacrament`, `agenda`, `callings`, `requests` (requests between people and leaders' calling requests), `away`, `schedule`, `suggest`, `auth`, `notify` (push notifications and the job that sends them), `db` (migrations, RLS, seed), `ui` (theme, shared components), `pwa`, `deps`.
+`sacrament`, `agenda`, `callings`, `requests` (requests between people and leaders' calling requests), `away`, `schedule`, `suggest`, `auth`, `notify` (push notifications and the job that sends them), `site` (the overview and docs site in `site/`), `db` (migrations, RLS, seed), `ui` (theme, shared components), `pwa`, `deps`.
 
 ### Examples
 
@@ -92,6 +92,7 @@ CI (`.github/workflows/ci.yml`) runs on every push. Check it with `gh run list` 
 | `src/**` (UI, pages, components, tests) | runs | **runs** | skipped |
 | `src/lib/**` (queries, types, access, `supabase.ts`) | runs | **runs** | **runs** |
 | `supabase/**`, `tests/integration/**` | runs | skipped | **runs** |
+| `site/**` (overview and docs site) | runs | skipped | skipped (the `site` job runs: astro check, build) |
 | `supabase/functions/**` (the push Edge Function) | runs | **runs** | **runs** |
 | `package.json`, `package-lock.json`, `.nvmrc`, `tsconfig*.json`, `vite.config.ts`, `.oxlintrc.json`, `index.html`, `scripts/**`, `.github/workflows/**` | runs | **runs** | **runs** |
 
@@ -99,5 +100,7 @@ CI (`.github/workflows/ci.yml`) runs on every push. Check it with `gh run list` 
 - A commit that mixes docs and code runs whatever the code needs. A multi-commit push is judged on the whole push.
 - Skipped jobs show as "skipped" in the Actions tab. That is expected, not a failure.
 - To run everything on demand: `gh workflow run ci.yml`.
+- `.nvmrc` and `.github/workflows/**` also run the `site` job.
 - The `deploy` job runs after the checks on pushes to `main` (staging) and `gp7` (production), as long as nothing failed. It stays off until the `DEPLOY_ENABLED` repo variable is `true`. It applies migrations, then redeploys the notify and push Edge Functions (with the deploy bot's `SUPABASE_ACCESS_TOKEN`; it warns and skips them if that secret is missing), then builds and uploads the frontend.
+- `deploy-site` publishes `site/` to the Cloudflare Pages project `ward-desk-site` under the same switch: `main` is that project's production branch (warddesk.app), other branches get previews. It only runs when the `site` job ran and passed.
 - When you add a new top-level folder or config file that affects the build or tests, add its path to the filters in the `changes` job, or CI will skip checks it should run. Keep this table in sync.

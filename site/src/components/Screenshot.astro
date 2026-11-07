@@ -1,0 +1,34 @@
+---
+// <Screenshot name="home" device="phone" alt="..." />
+// Looks for src/assets/screens/<name>-<device>-light.(png|jpg|webp) and -dark, and shows the one
+// matching the color scheme. The screenshot pipeline owns that folder; this only reads it.
+import { Image } from 'astro:assets'
+import DeviceFrame from './DeviceFrame.astro'
+
+interface Props {
+  name: string
+  /** Picks the frame and the file suffix: -phone or -desktop. */
+  device?: 'phone' | 'desktop'
+  alt: string
+  loading?: 'lazy' | 'eager'
+}
+const { name, device = 'phone', alt, loading = 'lazy' } = Astro.props
+
+const files = import.meta.glob<{ default: ImageMetadata }>('../assets/screens/*.{png,jpg,jpeg,webp}', { eager: true })
+const find = (mode: 'light' | 'dark') => {
+  const key = Object.keys(files).find((k) => k.replace(/\.[a-z]+$/, '').endsWith(`/${name}-${device}-${mode}`))
+  return key ? files[key].default : undefined
+}
+const light = find('light')
+const dark = find('dark') ?? light
+if (!light) throw new Error(`Screenshot: no src/assets/screens/${name}-${device}-light.* found`)
+const width = device === 'phone' ? 560 : 1400
+---
+<DeviceFrame kind={device === 'phone' ? 'phone' : 'browser'}>
+  <Image class="shot-light" src={light} alt={alt} width={width} {loading} />
+  <Image class="shot-dark" src={dark!} alt="" aria-hidden="true" width={width} {loading} />
+</DeviceFrame>
+
+<style is:global>
+  :root[data-theme='light'] .shot-dark, :root[data-theme='dark'] .shot-light { display: none; }
+</style>

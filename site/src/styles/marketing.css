@@ -1,0 +1,36 @@
+/* Styles for pages in the Marketing layout. Colors come from tokens.css only. */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--wd-font);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--wd-text);
+  background: var(--wd-bg);
+}
+a { color: var(--wd-primary); }
+.wrap { width: min(100% - 2rem, 72rem); margin-inline: auto; }
+.narrow { width: min(100% - 2rem, 44rem); margin-inline: auto; }
+main { flex: 1; padding-block: 2rem 4rem; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 0 1.25rem; border-radius: var(--wd-radius);
+  font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+  color: var(--wd-on-primary); background: var(--wd-primary); border: 1px solid var(--wd-primary);
+}
+.btn.secondary { color: var(--wd-primary); background: transparent; border-color: var(--wd-divider); }
+
+/* Markdown pages (privacy, terms) */
+.prose h1 { font-size: 1.75rem; line-height: 1.25; }
+.prose h2 { font-size: 1.25rem; margin-top: 2rem; }
+.prose h3 { font-size: 1.0625rem; }
+.prose p, .prose li { color: var(--wd-text); }
+.prose hr { border: 0; border-top: 1px solid var(--wd-divider); margin-block: 2rem; }
+.prose table { border-collapse: collapse; width: 100%; }
+.prose th, .prose td { border-bottom: 1px solid var(--wd-divider); padding: 0.5rem 0.375rem; text-align: left; }
+.prose blockquote { margin: 1rem 0; padding: 0.25rem 1rem; border-left: 3px solid var(--wd-primary); color: var(--wd-text-2); }
