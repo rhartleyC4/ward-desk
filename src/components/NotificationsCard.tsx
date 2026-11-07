@@ -7,6 +7,7 @@ import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
 import { currentDevice, installPlatform } from '../lib/install'
 import { pushAvailability, pushSupported, vapidPublicKey, type PushState } from '../lib/push'
+import { WARD_NAME } from '../lib/ward'
 import { ErrorNote, Muted, SectionCard } from './Layout'
 
 export type NotificationActions = {
@@ -19,9 +20,9 @@ export type NotificationActions = {
 
 const NOTES: Partial<Record<PushState, string>> = {
   unconfigured: 'Notifications aren’t set up on this site yet.',
-  unsupported: 'This browser can’t show notifications from Ward Desk.',
-  'needs-install': 'On iPhone and iPad, notifications only work from the Home Screen. Add Ward Desk to your Home Screen, open it from there, and turn this on.',
-  blocked: 'Notifications are blocked for Ward Desk in this browser. Allow them in the browser’s site settings, then come back here.',
+  unsupported: `This browser can’t show notifications from ${WARD_NAME}.`,
+  'needs-install': `On iPhone and iPad, notifications only work from the Home Screen. Add ${WARD_NAME} to your Home Screen, open it from there, and turn this on.`,
+  blocked: `Notifications are blocked for ${WARD_NAME} in this browser. Allow them in the browser’s site settings, then come back here.`,
 }
 
 function initialState(): PushState | 'loading' {

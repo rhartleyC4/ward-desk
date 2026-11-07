@@ -135,6 +135,7 @@ async function checkHosted() {
   const anonCheck = ghEnv.later() // filled in once the project's keys are read
   const cfOk = vars.CLOUDFLARE_PAGES_PROJECT === expected.pagesProject
   ghEnv.check(cfOk, `variable CLOUDFLARE_PAGES_PROJECT is ${expected.pagesProject}`, { detail: cfOk ? undefined : vars.CLOUDFLARE_PAGES_PROJECT ? `it is "${vars.CLOUDFLARE_PAGES_PROJECT}"` : 'not set', fix: fixGithub })
+  ghEnv.check(!!vars.WARD_NAME?.trim(), 'variable WARD_NAME', { detail: vars.WARD_NAME?.trim() || 'not set, so the app is called Ward Desk', fix: fixGithub })
   let tzOk = false
   try {
     tzOk = !!vars.WARD_TIME_ZONE && !!new Intl.DateTimeFormat('en', { timeZone: vars.WARD_TIME_ZONE })

@@ -3,15 +3,15 @@
 //   npm run setup
 //
 // Checks Node matches .nvmrc and Docker is running, installs packages, starts local Supabase
-// (or leaves it alone if it is already running), writes .env and supabase/functions/.env, and
-// ends with `npm run env:check -- local`. Running it again is safe.
+// (or leaves it alone if it is already running), asks for the ward name, writes .env and
+// supabase/functions/.env, and ends with `npm run env:check -- local`. Running it again is safe.
 //
 // The local Supabase stack is shared by every checkout and worktree on this machine. This never
 // resets it or regenerates database types, since it may hold migrations from other branches.
 
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
-import { fail, step } from './lib/cli.mjs'
+import { existsSync, readFileSync } from 'node:fs'
+import { ask, fail, step } from './lib/cli.mjs'
 
 const run = (command, args, { quiet = false } = {}) => spawnSync(command, args, { encoding: 'utf8', stdio: quiet ? ['ignore', 'pipe', 'pipe'] : 'inherit' })
 
@@ -39,8 +39,15 @@ if (status.status === 0) {
   fail('Local Supabase didn’t start. See the output above.')
 }
 
+step('Ward name')
+// Shown in the header and as the installed app's name. Enter keeps the current one.
+const envFile = new URL('../.env', import.meta.url)
+const currentName = (existsSync(envFile) ? readFileSync(envFile, 'utf8').match(/^VITE_WARD_NAME=(.*)$/m)?.[1]?.trim() : '') || 'Ward Desk'
+const wardName = (await ask(`  Ward name [${currentName}]: `)) || currentName
+console.log(`  ${wardName}`)
+
 step('Writing .env and supabase/functions/.env')
-if (run('npm', ['run', 'db:env', '--silent']).status !== 0) fail('npm run db:env failed.')
+if (spawnSync('npm', ['run', 'db:env', '--silent'], { stdio: 'inherit', env: { ...process.env, WARD_NAME: wardName } }).status !== 0) fail('npm run db:env failed.')
 
 step('Checking the result')
 const check = run('node', [new URL('./env-check.mjs', import.meta.url).pathname, 'local'])

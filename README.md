@@ -166,7 +166,7 @@ Requirements: Docker (OrbStack or Docker Desktop) for local Supabase, and [nvm](
 npm run setup
 ```
 
-It checks Node and Docker, runs `npm install`, starts local Supabase (which applies `supabase/migrations` and `supabase/seed.sql`), writes `.env` and `supabase/functions/.env`, and ends with `npm run env:check -- local`. Running it again is safe. Local Supabase is shared by every checkout and worktree on this machine, so if it's already running, `setup` leaves it as it is. Apply a new branch's migrations to it with `npx supabase migration up`.
+It checks Node and Docker, runs `npm install`, starts local Supabase (which applies `supabase/migrations` and `supabase/seed.sql`), asks for the ward name (shown in the header and as the installed app's name; Ward Desk if left blank), writes `.env` and `supabase/functions/.env`, and ends with `npm run env:check -- local`. Running it again is safe. Local Supabase is shared by every checkout and worktree on this machine, so if it's already running, `setup` leaves it as it is. Apply a new branch's migrations to it with `npx supabase migration up`.
 
 Then run `npm run dev` and open http://localhost:5173.
 
@@ -242,7 +242,7 @@ Where the settings live, for reference (`env:github` fills them):
 | Where | Secrets | Variables |
 |---|---|---|
 | Repository | `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_ACCOUNT_ID`, `NOTIFY_ENABLED`, `DEPLOY_ENABLED` |
-| Environment `staging` | `SUPABASE_DB_URL` (session pooler), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY`, `STAGING_ADMIN_EMAILS` |
+| Environment `staging` | `SUPABASE_DB_URL` (session pooler), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_NAME`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY`, `STAGING_ADMIN_EMAILS` |
 | Environment `production` | `SUPABASE_DB_URL`, `VAPID_PRIVATE_KEY` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk` and no `STAGING_ADMIN_EMAILS` |
 
 ### Google sign-in

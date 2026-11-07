@@ -180,6 +180,7 @@ jobs:
           VITE_SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
           VITE_WARD_TIME_ZONE: ${{ vars.WARD_TIME_ZONE }}
+          VITE_WARD_NAME: ${{ vars.WARD_NAME }}
           VITE_ENABLE_GOOGLE: ${{ vars.ENABLE_GOOGLE }}
           VITE_VAPID_PUBLIC_KEY: ${{ vars.VAPID_PUBLIC_KEY }}
 

@@ -7,7 +7,8 @@
 // It keeps everything that is already right and only sets what is missing or wrong:
 //   - SUPABASE_PROJECT_REF: asks which Supabase project, if it isn't set yet.
 //   - SUPABASE_ANON_KEY: the project's publishable key, read from Supabase.
-//   - CLOUDFLARE_PAGES_PROJECT, WARD_TIME_ZONE, ENABLE_GOOGLE (on if Google sign-in is on in Auth).
+//   - CLOUDFLARE_PAGES_PROJECT, WARD_NAME (asked for; the header and installed app's name),
+//     WARD_TIME_ZONE, ENABLE_GOOGLE (on if Google sign-in is on in Auth).
 //   - SUPABASE_DB_URL: asks for the database password and builds the session pooler URL, then tests
 //     it. If one is already set, it asks before replacing it.
 //   - VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY: makes a pair only when neither exists. Replacing a pair
@@ -138,6 +139,10 @@ if (!currentIsValid) setVar('SUPABASE_ANON_KEY', anonKey, vars.SUPABASE_ANON_KEY
 
 step('Build settings')
 if (vars.CLOUDFLARE_PAGES_PROJECT !== expected.pagesProject) setVar('CLOUDFLARE_PAGES_PROJECT', expected.pagesProject, vars.CLOUDFLARE_PAGES_PROJECT ? `was "${vars.CLOUDFLARE_PAGES_PROJECT}"` : 'missing')
+if (!vars.WARD_NAME?.trim()) {
+  const name = (await askFor('Ward name, shown in the header and as the installed app’s name [Ward Desk]: ')) || 'Ward Desk'
+  setVar('WARD_NAME', name, 'missing')
+}
 if (!validTimeZone(vars.WARD_TIME_ZONE)) {
   const zone = (await askFor('Ward time zone [America/Denver]: ')) || 'America/Denver'
   if (!validTimeZone(zone)) fail(`${zone} isn’t a time zone (like America/Denver). Nothing was changed.`)
@@ -245,7 +250,7 @@ for (const c of changes) {
 
 // --- Re-run the deploy ----------------------------------------------------------------------
 
-const buildVars = ['SUPABASE_PROJECT_REF', 'SUPABASE_ANON_KEY', 'WARD_TIME_ZONE', 'ENABLE_GOOGLE', 'VAPID_PUBLIC_KEY', 'CLOUDFLARE_PAGES_PROJECT', 'SUPABASE_DB_URL', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']
+const buildVars = ['SUPABASE_PROJECT_REF', 'SUPABASE_ANON_KEY', 'WARD_NAME', 'WARD_TIME_ZONE', 'ENABLE_GOOGLE', 'VAPID_PUBLIC_KEY', 'CLOUDFLARE_PAGES_PROJECT', 'SUPABASE_DB_URL', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']
 if (changes.some((c) => buildVars.includes(c.name))) {
   const branch = env === 'production' ? 'production' : 'main'
   const latest = parse(gh(['run', 'list', '--workflow', 'ci.yml', '--branch', branch, '--event', 'push', '--limit', '1', '--json', 'databaseId,displayTitle,status']), [])[0]

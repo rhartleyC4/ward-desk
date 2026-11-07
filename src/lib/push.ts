@@ -3,6 +3,7 @@
 // (public/push-handler.js).
 
 import type { InstallPlatform } from './install'
+import { WARD_NAME } from './ward'
 
 /** The VAPID public key for this environment. Without one the app can't subscribe. */
 export const vapidPublicKey = (): string => import.meta.env.VITE_VAPID_PUBLIC_KEY ?? ''
@@ -73,5 +74,5 @@ export async function subscribeDevice(): Promise<PushSubscription> {
 /** Shows a notification from this device alone, to check it can display one. Nothing is sent. */
 export async function showTestNotification(): Promise<void> {
   const reg = await registration()
-  await reg.showNotification('Ward Desk', { body: 'Notifications are working on this device.', icon: '/pwa-192.png', tag: 'test' })
+  await reg.showNotification(WARD_NAME, { body: 'Notifications are working on this device.', icon: '/pwa-192.png', tag: 'test' })
 }

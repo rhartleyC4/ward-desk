@@ -4,6 +4,7 @@
 import { canEditHours, type AppRole } from './access'
 import { keepsHours } from './availability'
 import type { Enums } from './database.types'
+import { WARD_NAME } from './ward'
 
 export type SetupStep = {
   id: 'hours' | 'passkey' | 'notifications'
@@ -39,7 +40,7 @@ export function setupSteps({ roles, office, hasHours, passkeys, notifications }:
   if (notifications !== null && roles.length > 0) {
     steps.push({
       id: 'notifications',
-      label: notifications === 'install' ? 'Add Ward Desk to your Home Screen' : 'Turn on notifications',
+      label: notifications === 'install' ? `Add ${WARD_NAME} to your Home Screen` : 'Turn on notifications',
       hint: notifications === 'install' ? 'iPhones only send notifications to Home Screen apps' : 'Requests, appointments and your day, as they happen',
       to: '/account',
       done: notifications === 'on',

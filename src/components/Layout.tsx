@@ -32,6 +32,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { isSettingsPage, navFor } from '../lib/access'
 import { initials } from '../lib/names'
 import { nextStep } from '../lib/setup'
+import { WARD_NAME } from '../lib/ward'
 import { InstallPrompt } from './InstallPrompt'
 import { PasskeyOffer } from './PasskeyOffer'
 import { SetupProvider, useSetupSteps } from './Setup'
@@ -110,7 +111,7 @@ function Shell() {
               {back.label}
             </Button>
           ) : (
-            <Typography sx={{ fontWeight: 700, display: { md: showTabs ? 'none' : 'block' } }}>Ward Desk</Typography>
+            <Typography sx={{ fontWeight: 700, display: { md: showTabs ? 'none' : 'block' } }}>{WARD_NAME}</Typography>
           )}
           {showTabs && (
             <Tabs value={current} variant="scrollable" scrollButtons={false} aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, flexGrow: 1, minHeight: 52 }}>
