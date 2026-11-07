@@ -6,7 +6,8 @@ import { AgendaView, type AgendaActions } from './AgendaView'
 
 function actions(): AgendaActions {
   return {
-    saveHeader: vi.fn(),
+    saveAssignments: vi.fn().mockResolvedValue(true),
+    recordAnswer: vi.fn().mockResolvedValue(true),
     addItem: vi.fn(),
     resolveItem: vi.fn(),
     setApart: vi.fn(),
@@ -53,6 +54,65 @@ describe('AgendaView', () => {
     expect(within(section(/Releases today/)).getByText('Sister Kemp, Sunday School')).toBeInTheDocument()
     expect(within(section(/Sustainings today/)).getByText('Sister Moss, RS Teacher')).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('Away today: Lane (Denver)')
+  })
+
+  it('shows who accepted each assignment and gives parts out from a list of leaders', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    render(<AgendaView template={wardCouncilTemplate} date="2026-11-01" data={agendaData()} actions={a} timeZone="America/Denver" />)
+
+    const header = screen.getByRole('heading', { name: 'Ward Council Agenda' }).closest('section') as HTMLElement
+    expect(header).toHaveTextContent('Opening prayer: Brother OrtizAccepted')
+    // The meeting has its own Closing prayer section, so the header leaves it out.
+    expect(header).not.toHaveTextContent('Closing prayer')
+    expect(screen.getByText('Closing prayer:').parentElement?.parentElement).toHaveTextContent('Closing prayer: Brother LaneWaiting for an answer')
+
+    await user.click(within(header).getByRole('button', { name: 'Edit assignments' }))
+    const form = within(header).getByRole('form', { name: 'Assignments' })
+    expect(within(form).getByRole('button', { name: 'Save' })).toBeDisabled()
+    expect(within(form).getByText('Typed in before: Handbook updates')).toBeInTheDocument()
+    await user.selectOptions(within(form).getByLabelText('Spiritual thought'), 'Bishop Avery')
+    await user.selectOptions(within(form).getByLabelText('Closing prayer'), 'No one yet')
+    await user.click(within(form).getByRole('button', { name: 'Save' }))
+    expect(a.saveAssignments).toHaveBeenCalledWith([
+      { part: 'spiritual_thought', to: 'b' },
+      { part: 'closing_prayer', to: null },
+    ])
+  })
+
+  it('keeps confirming by text or email out of the way until it’s opened', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    const data = agendaData()
+    data.assignments[0] = { ...data.assignments[0], answered_by: 'b' }
+    render(<AgendaView template={{ ...wardCouncilTemplate, start_time: '09:15:00' }} date="2026-11-08" data={data} actions={a} timeZone="America/Denver" me={{ id: 'b', name: 'Bishop Avery' }} />)
+
+    const header = screen.getByRole('heading', { name: 'Ward Council Agenda' }).closest('section') as HTMLElement
+    expect(header).toHaveTextContent('recorded by Bishop Avery')
+    expect(within(header).queryByRole('button', { name: 'They said yes' })).not.toBeInTheDocument()
+    await user.click(within(header).getByRole('button', { name: 'Not using the app? Confirm for them' }))
+
+    const lane = within(header).getByRole('article', { name: 'Closing prayer: Brother Lane' })
+    expect(within(lane).getByLabelText('Message')).toHaveValue(
+      "Hi Brother Lane, would you be willing to give the closing prayer in Ward Council on Sunday, November 8th at 9:15 AM? Please let me know either way, or if you'll be away that day.\n\nThanks!\nBishop Avery",
+    )
+    expect(within(lane).getByRole('link', { name: 'Text' })).toHaveAttribute('href', expect.stringMatching(/^sms:\?&body=Hi%20Brother%20Lane/))
+    expect(within(lane).getByRole('link', { name: 'Email' })).toHaveAttribute('href', expect.stringMatching(/^mailto:first@ward\.test\?subject=Ward%20Council%2C%20November%208th/))
+    await user.click(within(lane).getByRole('button', { name: 'They said yes' }))
+    expect(a.recordAnswer).toHaveBeenCalledWith('as2', 'accepted')
+
+    const ortiz = within(header).getByRole('article', { name: 'Opening prayer: Brother Ortiz' })
+    expect(within(ortiz).queryByRole('button', { name: 'They said yes' })).not.toBeInTheDocument()
+    await user.click(within(ortiz).getByRole('button', { name: 'They said no' }))
+    await user.type(within(ortiz).getByLabelText(/What they said/), 'Traveling')
+    await user.click(within(ortiz).getByRole('button', { name: 'Record no' }))
+    expect(a.recordAnswer).toHaveBeenCalledWith('as1', 'declined', 'Traveling')
+  })
+
+  it('offers no confirming when every part is your own', () => {
+    const data = agendaData({ assignments: [] })
+    render(<AgendaView template={wardCouncilTemplate} date="2026-11-08" data={data} actions={actions()} timeZone="America/Denver" me={{ id: 'b', name: 'Bishop Avery' }} />)
+    expect(screen.queryByRole('button', { name: /Confirm for them/ })).not.toBeInTheDocument()
   })
 
   it('adds and resolves discussion items', async () => {

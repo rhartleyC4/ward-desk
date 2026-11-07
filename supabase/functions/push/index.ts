@@ -1,5 +1,6 @@
-// Sends a push notification the moment a request is sent or answered, or a calling request is sent
-// or received. The app calls it right after making the change (pushAbout in src/lib/queries.ts):
+// Sends a push notification the moment a request is sent or answered, a calling request is sent
+// or received, or a meeting assignment is given out or answered. The app calls it right after
+// making the change (pushAbout in src/lib/queries.ts):
 //
 //   POST /functions/v1/push  { "event": "request_sent", "id": "<request id>" }
 //
@@ -15,7 +16,7 @@
 
 import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
 import webpush from 'npm:web-push@3.6.7'
-import { planPush, PUSH_EVENTS, type CallingRequestRow, type Office, type PushEvent, type RequestRow } from './plan.ts'
+import { planPush, PUSH_EVENTS, tableFor, type AssignmentRow, type CallingRequestRow, type Office, type PushEvent, type RequestRow } from './plan.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -52,14 +53,14 @@ Deno.serve(async (req) => {
 
   // The service role reads past RLS: a leader can't read calling_requests, but may announce their own.
   const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } })
-  const table = event.startsWith('calling_') ? 'calling_requests' : 'requests'
+  const table = tableFor(event)
   const [{ data: row }, { data: me }] = await Promise.all([
     admin.from(table).select('*').eq('id', id).maybeSingle(),
     admin.from('profiles').select('office').eq('id', auth.user.id).maybeSingle(),
   ])
   if (!row) return reply(404, { error: 'No such request' })
 
-  const plan = planPush(event, row as RequestRow | CallingRequestRow, auth.user.id, (me?.office ?? null) as Office, new Date())
+  const plan = planPush(event, row as RequestRow | CallingRequestRow | AssignmentRow, auth.user.id, (me?.office ?? null) as Office, new Date())
   if ('skip' in plan) return reply(200, { sent: 0, skipped: plan.skip })
 
   // Each kind of notification is named after its event, and anyone can turn one off.

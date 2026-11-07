@@ -11,6 +11,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { Link } from 'react-router'
+import type { MyAssignment } from '../lib/assignments'
 import { ORGANIZATIONS, type ListedCalling } from '../lib/callings'
 import { addDays, longDate, shortDate, type IsoDate } from '../lib/dates'
 import type { Candidate, Profile } from '../lib/queries'
@@ -40,6 +41,7 @@ import {
 import { nativeSelect } from '../theme'
 import { CallingField } from './CallingField'
 import { Muted, SectionCard, Side, Split } from './Layout'
+import { MyAssignments, type AnswerAssignment } from './MeetingAssignments'
 import { ActionButton, Choices, StepFrame } from './Steps'
 
 const nameOf = (id: string | null, people: Pick<Profile, 'id' | 'display_name'>[]) => people.find((p) => p.id === id)?.display_name ?? 'Someone'
@@ -162,13 +164,28 @@ export function SentRequest({ request: r, people, today, onTakeBack, busy }: { r
 export type NewRequestDraft = { to_id: string; title: string; details: string | null; due_on: IsoDate | null }
 
 /** Lists the bishopric, then ward leaders. */
-export function RecipientSelect({ recipients, value, onChange, label = 'Who is it for?' }: { recipients: Recipient[]; value: string; onChange: (id: string) => void; label?: string }) {
+export function RecipientSelect({
+  recipients,
+  value,
+  onChange,
+  label = 'Who is it for?',
+  noneLabel,
+  helperText,
+}: {
+  recipients: Recipient[]
+  value: string
+  onChange: (id: string) => void
+  label?: string
+  /** Lets the choice be left empty, showing this. Otherwise someone must be chosen. */
+  noneLabel?: string
+  helperText?: string
+}) {
   const bishopric = recipients.filter((r) => r.in_bishopric)
   const others = recipients.filter((r) => !r.in_bishopric)
   return (
-    <TextField select label={label} required value={value} onChange={(e) => onChange(e.target.value)} slotProps={nativeSelect}>
-      <option value="" disabled>
-        Choose someone
+    <TextField select label={label} required={!noneLabel} value={value} onChange={(e) => onChange(e.target.value)} helperText={helperText} slotProps={nativeSelect}>
+      <option value="" disabled={!noneLabel}>
+        {noneLabel ?? 'Choose someone'}
       </option>
       <optgroup label="Bishopric">
         {bishopric.map((p) => (
@@ -482,6 +499,8 @@ export type RequestsData = {
   candidates: Pick<Candidate, 'request_id' | 'person_name'>[]
   myCallingRequests: MyCallingRequest[]
   callings: ListedCalling[]
+  /** Prayers and spiritual thoughts this person was given. */
+  myAssignments: MyAssignment[]
 }
 
 export type RequestsActions = {
@@ -490,6 +509,7 @@ export type RequestsActions = {
   takeBack: (id: string) => void
   receive: (id: string) => void
   sendCallingRequest: (form: CallingRequestForm) => Promise<boolean>
+  answerAssignment: AnswerAssignment
 }
 
 /** Closed requests stay on the page this long, so people can see what was finished. */
@@ -549,6 +569,8 @@ export function RequestsView({
             </SectionCard>
           </Side>
         )}
+
+        <MyAssignments assignments={data.myAssignments} people={data.people} today={today} onAnswer={actions.answerAssignment} busy={busy} />
 
         <SectionCard title="For you">
           {waiting.length ? (

@@ -6,6 +6,7 @@ import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
+import Chip from '@mui/material/Chip'
 import CardContent from '@mui/material/CardContent'
 import IconButton from '@mui/material/IconButton'
 import List from '@mui/material/List'
@@ -31,16 +32,21 @@ import {
   unsortedSuggestions,
   upcomingMeetings,
 } from '../lib/agenda'
+import { ANSWER_COLORS, ANSWER_LABELS, assignmentChanges, byPart, MEETING_PARTS, PART_LABELS, type AssignmentChange, type MeetingPart } from '../lib/assignments'
 import { longDate, type IsoDate } from '../lib/dates'
 import type { AgendaData, AgendaSection, AgendaTemplate } from '../lib/queries'
 import { followUps, isOpen, requestStatusLine, type Request } from '../lib/requests'
 import { awayOn, eventsOn, formatTime, rotationDayLabel, rotationsDue } from '../lib/schedule'
+import { ConfirmAssignments, type RecordAnswer } from './ConfirmAssignments'
 import { RecipientSelect } from './Requests'
 import { CallingsManager, type CallingsActions } from './CallingsManager'
 import { Muted, SectionCard, Side, Split } from './Layout'
 
 export type AgendaActions = CallingsActions & {
-  saveHeader: (fields: { opening_prayer: string | null; spiritual_thought: string | null; closing_prayer: string | null }) => void
+  /** Gives the prayers and spiritual thought to people, who are asked to accept or decline. */
+  saveAssignments: (changes: AssignmentChange[]) => Promise<boolean>
+  /** Records someone's answer for them, after asking by text or email. */
+  recordAnswer: RecordAnswer
   addItem: (section: AgendaSection, body: string, eventDate: IsoDate | null) => void
   resolveItem: (id: string) => void
   addPrayerName: (name: string) => void
@@ -162,15 +168,44 @@ function ItemList({ date, data, section, actions }: { date: IsoDate; data: Agend
   )
 }
 
-function Header({ template, date, data, actions }: { template: AgendaTemplate; date: IsoDate; data: AgendaData; actions: AgendaActions }) {
+/** "Opening prayer: Sister Young [Accepted]", or the name typed in before people were picked from a list. */
+function AssignmentLine({ part, data }: { part: MeetingPart; data: AgendaData }) {
+  const a = byPart(data.assignments)[part]
+  const typed = data.agenda?.[part]
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.5 }}>
+      <Typography variant="body2" component="span">
+        <Box component="span" sx={{ color: 'text.secondary' }}>
+          {PART_LABELS[part]}:
+        </Box>{' '}
+        <Box component="span" sx={a?.status === 'declined' ? { textDecoration: 'line-through', color: 'text.secondary' } : undefined}>
+          {a ? fullName(a.assignee_id, data) : typed || '—'}
+        </Box>
+      </Typography>
+      {a && <Chip size="small" variant="outlined" color={ANSWER_COLORS[a.status]} label={ANSWER_LABELS[a.status]} />}
+      {a?.reply && (
+        <Typography variant="body2" component="span" sx={{ color: 'text.secondary' }}>
+          “{a.reply}”
+        </Typography>
+      )}
+      {a?.answered_by && a.answered_by !== a.assignee_id && a.status !== 'asked' && (
+        <Typography variant="body2" component="span" sx={{ color: 'text.secondary' }}>
+          recorded by {fullName(a.answered_by, data)}
+        </Typography>
+      )}
+    </Box>
+  )
+}
+
+function Header({ template, date, data, actions, me }: { template: AgendaTemplate; date: IsoDate; data: AgendaData; actions: AgendaActions; me: { id: string; name: string } }) {
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({
-    opening_prayer: data.agenda?.opening_prayer ?? '',
-    spiritual_thought: data.agenda?.spiritual_thought ?? '',
-    closing_prayer: data.agenda?.closing_prayer ?? '',
-  })
-  const n = (s: string) => (s.trim() ? s.trim() : null)
+  const current = byPart(data.assignments)
+  const startForm = () => Object.fromEntries(MEETING_PARTS.map((p) => [p, current[p]?.assignee_id ?? ''])) as Record<MeetingPart, string>
+  const [form, setForm] = useState(startForm)
   const events = eventsOn(date, data.events)
+  // The closing prayer shows in its own section when the meeting has one.
+  const shown = MEETING_PARTS.filter((p) => p !== 'closing_prayer' || !template.sections.some((s) => s.kind === 'closing_prayer'))
+  const changes = assignmentChanges(data.assignments, form)
 
   return (
     <Card component="section" sx={{ mb: 1.5 }}>
@@ -188,19 +223,31 @@ function Header({ template, date, data, actions }: { template: AgendaTemplate; d
         {editing ? (
           <Stack
             component="form"
+            aria-label="Assignments"
             spacing={1.5}
             sx={{ mt: 2 }}
             onSubmit={(e) => {
               e.preventDefault()
-              actions.saveHeader({ opening_prayer: n(form.opening_prayer), spiritual_thought: n(form.spiritual_thought), closing_prayer: n(form.closing_prayer) })
-              setEditing(false)
+              void actions.saveAssignments(changes).then((ok) => ok && setEditing(false))
             }}
           >
-            <TextField label="Opening prayer" value={form.opening_prayer} onChange={(e) => setForm({ ...form, opening_prayer: e.target.value })} />
-            <TextField label="Spiritual thought / handbook review" value={form.spiritual_thought} onChange={(e) => setForm({ ...form, spiritual_thought: e.target.value })} />
-            <TextField label="Closing prayer" value={form.closing_prayer} onChange={(e) => setForm({ ...form, closing_prayer: e.target.value })} />
+            {MEETING_PARTS.map((part) => {
+              const typed = !current[part] && data.agenda?.[part]
+              return (
+                <RecipientSelect
+                  key={part}
+                  label={PART_LABELS[part]}
+                  noneLabel="No one yet"
+                  recipients={data.assignees}
+                  value={form[part]}
+                  onChange={(id) => setForm({ ...form, [part]: id })}
+                  helperText={typed ? `Typed in before: ${typed}` : undefined}
+                />
+              )
+            })}
+            <Muted>Each person gets a notification asking them to accept or decline.</Muted>
             <Stack direction="row" spacing={1}>
-              <Button type="submit" variant="contained">
+              <Button type="submit" variant="contained" disabled={!changes.length}>
                 Save
               </Button>
               <Button onClick={() => setEditing(false)}>Cancel</Button>
@@ -208,20 +255,23 @@ function Header({ template, date, data, actions }: { template: AgendaTemplate; d
           </Stack>
         ) : (
           <>
-            <Typography variant="body2" sx={{ mt: 1.5 }}>
-              <Box component="span" sx={{ color: 'text.secondary' }}>
-                Opening prayer:
-              </Box>{' '}
-              {data.agenda?.opening_prayer || '—'}
-              <br />
-              <Box component="span" sx={{ color: 'text.secondary' }}>
-                Spiritual thought:
-              </Box>{' '}
-              {data.agenda?.spiritual_thought || '—'}
-            </Typography>
-            <Button size="small" startIcon={<EditIcon />} onClick={() => setEditing(true)} sx={{ mt: 1 }}>
+            <Stack spacing={0.75} sx={{ mt: 1.5 }}>
+              {shown.map((part) => (
+                <AssignmentLine key={part} part={part} data={data} />
+              ))}
+            </Stack>
+            <Button
+              size="small"
+              startIcon={<EditIcon />}
+              onClick={() => {
+                setForm(startForm())
+                setEditing(true)
+              }}
+              sx={{ mt: 1 }}
+            >
               Edit assignments
             </Button>
+            <ConfirmAssignments assignments={data.assignments} people={data.profiles} meeting={template.name} date={date} startTime={template.start_time} me={me} onRecord={actions.recordAnswer} />
           </>
         )}
       </CardContent>
@@ -398,12 +448,7 @@ function Section({
       return (
         <Card sx={{ mb: 1.5 }}>
           <CardContent sx={{ '&:last-child': { pb: 2 } }}>
-            <Typography variant="body2">
-              <Box component="span" sx={{ color: 'text.secondary' }}>
-                {section.title}:
-              </Box>{' '}
-              {data.agenda?.closing_prayer || '—'}
-            </Typography>
+            <AssignmentLine part="closing_prayer" data={data} />
           </CardContent>
         </Card>
       )
@@ -484,6 +529,7 @@ export function AgendaView({
   actions,
   timeZone,
   canEditCallings = false,
+  me = { id: '', name: '' },
 }: {
   template: AgendaTemplate
   date: IsoDate
@@ -492,12 +538,14 @@ export function AgendaView({
   timeZone: string
   /** Bishopric members work callings right on the agenda; anyone else sees the table. */
   canEditCallings?: boolean
+  /** Who is looking, to sign messages and skip their own assignments. */
+  me?: { id: string; name: string }
 }) {
   const away = awayOn(date, data.absences)
 
   return (
     <>
-      <Header key={`${template.id}-${data.agenda?.id ?? date}`} template={template} date={date} data={data} actions={actions} />
+      <Header key={`${template.id}-${data.agenda?.id ?? date}`} template={template} date={date} data={data} actions={actions} me={me} />
 
       {away.length > 0 && (
         <Alert severity="warning" role="status" sx={{ mb: 1.5 }}>

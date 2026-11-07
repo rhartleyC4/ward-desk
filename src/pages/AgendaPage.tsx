@@ -32,7 +32,26 @@ export function AgendaPage() {
   const run = (fn: () => Promise<void>) => save.act(fn).then((ok) => ok && reload())
 
   const actions: AgendaActions = {
-    saveHeader: (fields) => run(() => q.saveAgendaHeader(supabase, template.id, date, fields)),
+    saveAssignments: (changes) =>
+      save
+        .act(async () => {
+          const asked = await q.saveAssignments(supabase, template.id, date, changes)
+          for (const id of asked) void q.pushAbout(supabase, 'assignment_sent', id)
+        })
+        .then((ok) => {
+          if (ok) reload()
+          return ok
+        }),
+    recordAnswer: (id, status, reply) =>
+      save
+        .act(async () => {
+          await q.answerAssignment(supabase, id, status, reply)
+          void q.pushAbout(supabase, 'assignment_answered', id)
+        })
+        .then((ok) => {
+          if (ok) reload()
+          return ok
+        }),
     addItem: (section, body, eventDate) => run(() => q.addAgendaItem(supabase, section, body, eventDate)),
     resolveItem: (id) => run(() => q.resolveAgendaItem(supabase, id, date)),
     addPrayerName: (name) => run(() => q.addPrayerName(supabase, name)),
@@ -89,7 +108,7 @@ export function AgendaPage() {
         </Button>
       </Stack>
       <ErrorNote error={error ?? save.error} />
-      {data ? <AgendaView template={template} date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} canEditCallings={canSeeCallings(roles)} /> : !error && <Loading />}
+      {data ? <AgendaView template={template} date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} canEditCallings={canSeeCallings(roles)} me={{ id: profile?.id ?? '', name: profile?.display_name ?? '' }} /> : !error && <Loading />}
     </>
   )
 }

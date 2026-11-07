@@ -23,6 +23,8 @@ export type NotificationKind =
   | 'appointment_changed'
   | 'appointment_handed_over'
   | 'short_sunday'
+  | 'assignment_sent'
+  | 'assignment_answered'
 
 type Office = Enums<'bishopric_office'> | null
 
@@ -59,6 +61,8 @@ export const NOTIFICATIONS: NotificationInfo[] = [
   { kind: 'request_sent', group: 'Requests', label: 'New requests', hint: 'When someone in the bishopric asks you to do something', for: anyone },
   { kind: 'request_due', group: 'Requests', label: 'Due tomorrow', hint: 'The day before a request you haven’t finished is due', for: anyone },
   { kind: 'request_answered', group: 'Requests', label: 'Answers to your requests', hint: 'When someone sees, finishes or can’t do one', for: canSendRequests },
+  { kind: 'assignment_sent', group: 'Requests', label: 'Meeting assignments', hint: 'When you’re asked to give a prayer or the spiritual thought', for: anyone },
+  { kind: 'assignment_answered', group: 'Requests', label: 'Answers to meeting assignments', hint: 'When someone accepts or declines a prayer or spiritual thought', for: bishopric },
 
   { kind: 'calling_request_sent', group: 'Callings', label: 'New calling requests', hint: 'When a ward leader sends one to you', for: bishopric },
   { kind: 'callings_to_record', group: 'Callings', label: 'Callings to record', hint: 'Sunday afternoon, when callings were sustained or people released', for: (roles, office) => bishopric(roles) && office === 'ward_clerk' },

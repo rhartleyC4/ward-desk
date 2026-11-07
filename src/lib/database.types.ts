@@ -43,6 +43,44 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"agenda_assignments": {
+                  Row: {
+                    "answered_at": string | null,"answered_by": string | null,"assigned_by": string | null,"assignee_id": string,"created_at": string,"id": string,"meeting_date": string,"part": Database["public"]['Enums']["meeting_part"],"reply": string | null,"status": Database["public"]['Enums']["assignment_answer"],"template_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "answered_at"?: string | null,"answered_by"?: string | null,"assigned_by"?: string | null,"assignee_id": string,"created_at"?: string,"id"?: string,"meeting_date": string,"part": Database["public"]['Enums']["meeting_part"],"reply"?: string | null,"status"?: Database["public"]['Enums']["assignment_answer"],"template_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "answered_at"?: string | null,"answered_by"?: string | null,"assigned_by"?: string | null,"assignee_id"?: string,"created_at"?: string,"id"?: string,"meeting_date"?: string,"part"?: Database["public"]['Enums']["meeting_part"],"reply"?: string | null,"status"?: Database["public"]['Enums']["assignment_answer"],"template_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "agenda_assignments_answered_by_fkey"
+      columns: ["answered_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "agenda_assignments_assigned_by_fkey"
+      columns: ["assigned_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "agenda_assignments_assignee_id_fkey"
+      columns: ["assignee_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "agenda_assignments_template_id_fkey"
+      columns: ["template_id"]
+isOneToOne: false
+      referencedRelation: "agenda_templates"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"agenda_attendees": {
                   Row: {
                     "template_id": string,"user_id": string
@@ -839,12 +877,22 @@ isOneToOne: false
 "legacy_agenda_section":
 { Args: { "item_kind": Database["public"]['Enums']["agenda_item_kind"] }; Returns: string
                            },
+"meeting_assignees":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "display_name": string,"id": string,"in_bishopric": boolean,"office": Database["public"]['Enums']["bishopric_office"]
+            }[]
+                           },
 "merge_calling":
 { Args: { "keep_id": string,"stray_id": string }; Returns: undefined
                            },
 "my_calling_requests":
 { Args: Record<PropertyKey, never>; Returns: {
               "calling_title": string,"created_at": string,"id": string,"kind": Database["public"]['Enums']["calling_request_kind"],"names": (string)[],"needed_by": string,"notes": string,"organization": string,"received_at": string,"received_by_name": string,"release_name": string,"stage": string
+            }[]
+                           },
+"my_meeting_assignments":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "assigned_by": string,"created_at": string,"id": string,"meeting_date": string,"meeting_name": string,"part": Database["public"]['Enums']["meeting_part"],"reply": string,"start_time": string,"status": Database["public"]['Enums']["assignment_answer"]
             }[]
                            },
 "reorder_agenda_sections":
@@ -869,7 +917,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer"|"follow_ups","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"assistant_executive_secretary"|"ward_clerk","calling_request_kind": "fill"|"release"|"replace"|"suggest","candidate_status": "suggested"|"discussing"|"approved"|"accepted"|"declined"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","message_audience": "member"|"parent","message_kind": "offer"|"confirm"|"reminder"|"meeting","need_status": "open"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other","request_status": "sent"|"seen"|"done"|"declined"
+            "agenda_item_kind": "discussion"|"calendar"|"ordination"|"missionary","agenda_section_kind": "items"|"calendar"|"interviews"|"assignments"|"sacrament"|"callings"|"releases"|"sustainings"|"prayer_roll"|"closing_prayer"|"follow_ups","app_role": "admin"|"bishopric"|"scheduler"|"leader","assignment_answer": "asked"|"accepted"|"declined","assignment_status": "planned"|"invited"|"confirmed"|"declined","bishopric_office": "bishop"|"first_counselor"|"second_counselor"|"executive_secretary"|"assistant_executive_secretary"|"ward_clerk","calling_request_kind": "fill"|"release"|"replace"|"suggest","candidate_status": "suggested"|"discussing"|"approved"|"accepted"|"declined"|"set_apart","interview_purpose": "calling"|"temple_recommend"|"ppi"|"youth"|"tithing_declaration"|"advancement"|"other","interview_status": "scheduled"|"completed"|"cancelled","meeting_part": "opening_prayer"|"spiritual_thought"|"closing_prayer","meeting_type": "regular"|"fast_sunday"|"stake_conference"|"general_conference"|"ward_conference"|"special_program","message_audience": "member"|"parent","message_kind": "offer"|"confirm"|"reminder"|"meeting","need_status": "open"|"cancelled","program_item_kind": "talk"|"musical_number"|"intermediate_hymn"|"testimonies"|"other","request_status": "sent"|"seen"|"done"|"declined"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -989,7 +1037,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer", "follow_ups"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "assistant_executive_secretary", "ward_clerk"],"calling_request_kind": ["fill", "release", "replace", "suggest"],"candidate_status": ["suggested", "discussing", "approved", "accepted", "declined", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"message_audience": ["member", "parent"],"message_kind": ["offer", "confirm", "reminder", "meeting"],"need_status": ["open", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"],"request_status": ["sent", "seen", "done", "declined"]
+            "agenda_item_kind": ["discussion", "calendar", "ordination", "missionary"],"agenda_section_kind": ["items", "calendar", "interviews", "assignments", "sacrament", "callings", "releases", "sustainings", "prayer_roll", "closing_prayer", "follow_ups"],"app_role": ["admin", "bishopric", "scheduler", "leader"],"assignment_answer": ["asked", "accepted", "declined"],"assignment_status": ["planned", "invited", "confirmed", "declined"],"bishopric_office": ["bishop", "first_counselor", "second_counselor", "executive_secretary", "assistant_executive_secretary", "ward_clerk"],"calling_request_kind": ["fill", "release", "replace", "suggest"],"candidate_status": ["suggested", "discussing", "approved", "accepted", "declined", "set_apart"],"interview_purpose": ["calling", "temple_recommend", "ppi", "youth", "tithing_declaration", "advancement", "other"],"interview_status": ["scheduled", "completed", "cancelled"],"meeting_part": ["opening_prayer", "spiritual_thought", "closing_prayer"],"meeting_type": ["regular", "fast_sunday", "stake_conference", "general_conference", "ward_conference", "special_program"],"message_audience": ["member", "parent"],"message_kind": ["offer", "confirm", "reminder", "meeting"],"need_status": ["open", "cancelled"],"program_item_kind": ["talk", "musical_number", "intermediate_hymn", "testimonies", "other"],"request_status": ["sent", "seen", "done", "declined"]
           }
         }
 } as const

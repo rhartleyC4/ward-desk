@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { PUSH_EVENTS } from '../../supabase/functions/push/plan'
 // The latest migration to set which kinds notification_mutes accepts.
-import migration from '../../supabase/migrations/20261106212106_short_sunday_notifications.sql?raw'
+import migration from '../../supabase/migrations/20261107145553_meeting_assignments.sql?raw'
 import { NOTIFICATIONS, notificationsFor } from './notifications'
 
 const kinds = (roles: Parameters<typeof notificationsFor>[0], office: Parameters<typeof notificationsFor>[1]) =>
@@ -9,7 +9,7 @@ const kinds = (roles: Parameters<typeof notificationsFor>[0], office: Parameters
 
 describe('notificationsFor', () => {
   it('shows a ward leader only what can reach them', () => {
-    expect(kinds(['leader'], null)).toEqual(['request_sent', 'request_due', 'calling_request_received', 'calling_request_progress'])
+    expect(kinds(['leader'], null)).toEqual(['request_sent', 'request_due', 'assignment_sent', 'calling_request_received', 'calling_request_progress'])
   })
 
   it('shows a secretary the booking ones, not the leader ones', () => {

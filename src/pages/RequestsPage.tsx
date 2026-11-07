@@ -21,7 +21,7 @@ export function RequestsPage() {
 
   const { data, error, reload } = useAsync(async () => {
     const none = Promise.resolve([])
-    const [requests, people, recipients, callingRequests, callings, myCallingRequests, callingList] = await Promise.all([
+    const [requests, people, recipients, callingRequests, callings, myCallingRequests, callingList, myAssignments] = await Promise.all([
       q.loadRequests(supabase),
       q.loadProfiles(supabase),
       canSend ? q.loadRecipients(supabase) : none,
@@ -29,8 +29,9 @@ export function RequestsPage() {
       canSend ? q.loadCallings(supabase) : Promise.resolve({ candidates: [] }),
       canAsk ? q.loadMyCallingRequests(supabase) : none,
       canAsk ? q.loadCallingList(supabase) : none,
+      q.loadMyAssignments(supabase),
     ])
-    return { requests, people, recipients, callingRequests, candidates: callings.candidates, myCallingRequests, callings: callingList }
+    return { requests, people, recipients, callingRequests, candidates: callings.candidates, myCallingRequests, callings: callingList, myAssignments }
   }, [canSend, canAsk])
   const save = useAction()
 
@@ -62,6 +63,11 @@ export function RequestsPage() {
       void run(async () => {
         await q.receiveCallingRequest(supabase, id, userId)
         void q.pushAbout(supabase, 'calling_request_received', id)
+      }),
+    answerAssignment: (id, status, reply) =>
+      run(async () => {
+        await q.answerAssignment(supabase, id, status, reply)
+        void q.pushAbout(supabase, 'assignment_answered', id)
       }),
     sendCallingRequest: (form) =>
       run(async () => {

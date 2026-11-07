@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
+import type { MyAssignment } from '../lib/assignments'
 import type { CallingRequest, MyCallingRequest, Request } from '../lib/requests'
 import { RequestsView, type RequestsActions, type RequestsData } from './Requests'
 
@@ -43,11 +44,11 @@ const callingRequest: CallingRequest = {
 }
 
 function data(over: Partial<RequestsData> = {}): RequestsData {
-  return { requests: [], people, recipients: [], callingRequests: [], candidates: [], myCallingRequests: [], callings: [{ id: 'l1', title: 'Primary Teacher', organization: 'Primary' }], ...over }
+  return { requests: [], people, recipients: [], callingRequests: [], candidates: [], myCallingRequests: [], callings: [{ id: 'l1', title: 'Primary Teacher', organization: 'Primary' }], myAssignments: [], ...over }
 }
 
 function actions(): RequestsActions {
-  return { send: vi.fn().mockResolvedValue(true), answer: vi.fn().mockResolvedValue(true), takeBack: vi.fn(), receive: vi.fn(), sendCallingRequest: vi.fn().mockResolvedValue(true) }
+  return { send: vi.fn().mockResolvedValue(true), answer: vi.fn().mockResolvedValue(true), takeBack: vi.fn(), receive: vi.fn(), sendCallingRequest: vi.fn().mockResolvedValue(true), answerAssignment: vi.fn().mockResolvedValue(true) }
 }
 
 const view = (props: Partial<Parameters<typeof RequestsView>[0]>) =>
@@ -57,7 +58,44 @@ const view = (props: Partial<Parameters<typeof RequestsView>[0]>) =>
     </MemoryRouter>,
   )
 
+const assignment = (over: Partial<MyAssignment>): MyAssignment => ({
+  id: 'as1',
+  meeting_name: 'Ward Council',
+  meeting_date: '2026-11-08',
+  start_time: '09:15:00',
+  part: 'opening_prayer',
+  status: 'asked',
+  reply: null,
+  assigned_by: 'bishop',
+  created_at: ts,
+  ...over,
+})
+
 describe('RequestsView', () => {
+  it('lets the person given a prayer accept it, or decline it with a reason', async () => {
+    const a = actions()
+    view({ data: data({ myAssignments: [assignment({}), assignment({ id: 'as2', part: 'spiritual_thought', meeting_date: '2026-11-22', status: 'accepted' }), assignment({ id: 'old', meeting_date: '2026-11-01' })] }), actions: a })
+
+    const card = screen.getByRole('heading', { name: 'Meeting assignments' }).closest('section') as HTMLElement
+    expect(within(card).getAllByRole('article')).toHaveLength(2)
+    const prayer = within(card).getByRole('article', { name: 'Opening prayer, Ward Council' })
+    expect(prayer).toHaveTextContent('Ward Council · November 8th, 9:15 · from Bishop Avery')
+    await userEvent.click(within(prayer).getByRole('button', { name: 'Accept' }))
+    expect(a.answerAssignment).toHaveBeenCalledWith('as1', 'accepted')
+
+    const thought = within(card).getByRole('article', { name: 'Spiritual thought, Ward Council' })
+    expect(within(thought).queryByRole('button', { name: 'Accept' })).not.toBeInTheDocument()
+    await userEvent.click(within(thought).getByRole('button', { name: "I can't anymore" }))
+    await userEvent.type(within(thought).getByLabelText(/Let them know why/), 'Out of town')
+    await userEvent.click(within(thought).getByRole('button', { name: 'Decline' }))
+    expect(a.answerAssignment).toHaveBeenCalledWith('as2', 'declined', 'Out of town')
+  })
+
+  it('hides meeting assignments when there are none coming up', () => {
+    view({ data: data({ myAssignments: [assignment({ meeting_date: '2026-11-01' })] }) })
+    expect(screen.queryByRole('heading', { name: 'Meeting assignments' })).not.toBeInTheDocument()
+  })
+
   it('lets the person asked say they got it, then that it’s done with a note', async () => {
     const a = actions()
     view({ data: data({ requests: [request({})] }), actions: a, canSend: true })

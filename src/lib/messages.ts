@@ -180,8 +180,8 @@ export const emailSubject = (leader: string) => (leader.trim() ? `Appointment wi
 /** The subject for a meeting reminder: "Reminder: Ward Council". */
 export const meetingSubject = (meeting: string) => `Reminder: ${meeting.trim() || 'meeting'}`
 
-/** Like smsLink, but opens the mail app: a new email with the subject and text and no recipient. */
-export const emailLink = (subject: string, text: string) => `mailto:?subject=${mailtoEncode(subject)}&body=${mailtoEncode(text)}`
+/** Like smsLink, but opens the mail app: a new email with the subject and text, to no one unless an address is given. */
+export const emailLink = (subject: string, text: string, to = '') => `mailto:${encodeURI(to.trim())}?subject=${mailtoEncode(subject)}&body=${mailtoEncode(text)}`
 
 /** Who a message for this appointment goes to: a parent for a youth, otherwise the person. */
 export const audienceFor = (appointment: { is_youth: boolean }): MessageAudience => (appointment.is_youth ? 'parent' : 'member')

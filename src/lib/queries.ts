@@ -1,11 +1,12 @@
 // All database access goes through here. Every function takes the client as a parameter so
 // integration tests can call the exact same queries signed in as different roles.
 
+import type { AgendaAssignment, AssignmentAnswer, AssignmentChange, MyAssignment } from './assignments'
 import type { Block, DayChange, UsualHours } from './availability'
 import { tidyTitle, type ListedCalling } from './callings'
 import type { MessageTemplate } from './messages'
 import type { NotificationKind } from './notifications'
-import { addDays, upcomingSunday, type IsoDate } from './dates'
+import { addDays, todayIso, upcomingSunday, type IsoDate } from './dates'
 import type { ErrorReport } from './errorReport'
 import { toPasskeyError } from './passkeys'
 import type { CallingRequest, CallingRequestKind, MyCallingRequest, Recipient, Request, RequestStatus } from './requests'
@@ -429,15 +430,20 @@ export async function loadMyCallingRequests(client: Client): Promise<MyCallingRe
   return must(await client.rpc('my_calling_requests'))
 }
 
-/** Unread requests for this person, plus (bishopric) calling requests sent to them and not received. */
-export async function countWaiting(client: Client, userId: string, bishopric: boolean): Promise<number> {
-  const [requests, calling] = await Promise.all([
+/**
+ * Unread requests for this person, meeting assignments they haven't answered, plus (bishopric)
+ * calling requests sent to them and not received.
+ */
+export async function countWaiting(client: Client, userId: string, bishopric: boolean, today: IsoDate = todayIso()): Promise<number> {
+  const [requests, assignments, calling] = await Promise.all([
     client.from('requests').select('id', { count: 'exact', head: true }).eq('to_id', userId).eq('status', 'sent'),
+    client.from('agenda_assignments').select('id', { count: 'exact', head: true }).eq('assignee_id', userId).eq('status', 'asked').gte('meeting_date', today),
     bishopric ? client.from('calling_requests').select('id', { count: 'exact', head: true }).is('received_at', null).contains('routed_to', [userId]) : null,
   ])
   check(requests)
+  check(assignments)
   if (calling) check(calling)
-  return (requests.count ?? 0) + (calling?.count ?? 0)
+  return (requests.count ?? 0) + (assignments.count ?? 0) + (calling?.count ?? 0)
 }
 
 /** What to count on the tab bar, from who this person is. Each part is loaded only when they have that tab. */
@@ -492,7 +498,7 @@ export async function loadTabCounts(client: Client, who: TabCountsFor): Promise<
   return counts
 }
 
-export type PushEvent = 'request_sent' | 'request_answered' | 'calling_request_sent' | 'calling_request_received'
+export type PushEvent = 'request_sent' | 'request_answered' | 'calling_request_sent' | 'calling_request_received' | 'assignment_sent' | 'assignment_answered'
 
 /**
  * Asks the push function to notify whoever this change concerns. Best effort: a phone that misses
@@ -641,8 +647,10 @@ export async function loadOpenAgendaItems(client: Client, sectionIds: string[]):
 /** Everything one meeting's agenda pulls together. Sections the user can't see come back empty. */
 export async function loadAgenda(client: Client, template: AgendaTemplate, date: IsoDate) {
   const horizon = addDays(date, 9 * 7)
-  const [agenda, sacrament, callings, callingList, appointments, items, prayer, schedule, absences, profiles, bishopric, requests, callingRequests, recipients] = await Promise.all([
+  const [agenda, assignments, assignees, sacrament, callings, callingList, appointments, items, prayer, schedule, absences, profiles, bishopric, requests, callingRequests, recipients] = await Promise.all([
     client.from('agendas').select('*').eq('template_id', template.id).eq('meeting_date', date).maybeSingle(),
+    client.from('agenda_assignments').select('*').eq('template_id', template.id).eq('meeting_date', date),
+    loadAssignees(client),
     loadSacrament(client, date, horizon),
     loadCallings(client),
     loadCallingList(client),
@@ -664,6 +672,8 @@ export async function loadAgenda(client: Client, template: AgendaTemplate, date:
     callingRequests,
     recipients,
     agenda: maybe(agenda),
+    assignments: must(assignments) as AgendaAssignment[],
+    assignees,
     ...sacrament,
     ...callings,
     callingList,
@@ -686,6 +696,46 @@ export async function saveAgendaHeader(
   fields: Pick<TablesInsert<'agendas'>, 'opening_prayer' | 'spiritual_thought' | 'closing_prayer' | 'notes'>,
 ) {
   check(await client.from('agendas').upsert({ template_id: templateId, meeting_date: date, ...fields }, { onConflict: 'template_id,meeting_date' }))
+}
+
+// ---------------------------------------------------------------------------
+// Meeting assignments (prayers and the spiritual thought)
+// ---------------------------------------------------------------------------
+
+/** Everyone who can sign in, bishopric first, for the assignment picker. Empty for anyone who attends no meeting. */
+export async function loadAssignees(client: Client): Promise<Recipient[]> {
+  return must(await client.rpc('meeting_assignees'))
+}
+
+/**
+ * Gives each changed part to its new person, or takes it away. Returns the ids of the ones now
+ * waiting on someone's answer, so the caller can notify them.
+ */
+export async function saveAssignments(client: Client, templateId: string, date: IsoDate, changes: AssignmentChange[]): Promise<string[]> {
+  const asked: string[] = []
+  for (const { part, to } of changes) {
+    const match = { template_id: templateId, meeting_date: date, part }
+    if (!to) {
+      check(await client.from('agenda_assignments').delete().match(match))
+      continue
+    }
+    const existing = maybe<{ id: string }>(await client.from('agenda_assignments').select('id').match(match).maybeSingle())
+    const row = existing
+      ? must(await client.from('agenda_assignments').update({ assignee_id: to }).eq('id', existing.id).select('id, status').single())
+      : must(await client.from('agenda_assignments').insert({ ...match, assignee_id: to }).select('id, status').single())
+    if (row.status === 'asked') asked.push(row.id)
+  }
+  return asked
+}
+
+/** This person's own assignments, with each meeting's name and time. */
+export async function loadMyAssignments(client: Client): Promise<MyAssignment[]> {
+  return must(await client.rpc('my_meeting_assignments'))
+}
+
+/** The person asked accepts or declines, with an optional note. */
+export async function answerAssignment(client: Client, id: string, status: Exclude<AssignmentAnswer, 'asked'>, reply: string | null = null) {
+  check(await client.from('agenda_assignments').update({ status, reply: reply?.trim() || null }).eq('id', id))
 }
 
 export async function addAgendaItem(client: Client, section: Pick<AgendaSection, 'id' | 'kind'>, body: string, eventDate: IsoDate | null = null) {

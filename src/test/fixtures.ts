@@ -120,6 +120,11 @@ export function agendaData(overrides: Partial<AgendaData> = {}): AgendaData {
     requests: [],
     callingRequests: [],
     recipients: [],
+    assignments: [
+      { id: 'as1', template_id: 'bishopric', meeting_date: '2026-11-01', part: 'opening_prayer', assignee_id: 'o', assigned_by: 'b', status: 'accepted', reply: null, answered_at: ts, answered_by: 'o', created_at: ts, updated_at: ts },
+      { id: 'as2', template_id: 'bishopric', meeting_date: '2026-11-01', part: 'closing_prayer', assignee_id: 'l', assigned_by: 'b', status: 'asked', reply: null, answered_at: null, answered_by: null, created_at: ts, updated_at: ts },
+    ],
+    assignees: profiles.map((p) => ({ id: p.id, display_name: p.display_name ?? '', office: 'bishop' as const, in_bishopric: true })),
     ...overrides,
   }
 }

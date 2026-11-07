@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { canSendRequests } from '../lib/access'
+import { meetingLine, PART_LABELS, waitingAnswer } from '../lib/assignments'
 import { todayIso } from '../lib/dates'
 import * as q from '../lib/queries'
 import { callingRequestSummary, requestStatusLine, unreceived, waitingOn } from '../lib/requests'
@@ -17,8 +18,9 @@ import { useRefreshWaiting } from './WaitingCount'
 const SHOWN = 3
 
 /**
- * On Home: requests waiting on this person and calling requests sent to them, with Got it right
- * here so acknowledging one takes a single tap. Shows nothing when nothing is waiting.
+ * On Home: requests waiting on this person, meeting assignments to accept or decline, and calling
+ * requests sent to them, with the answer right here so it takes a single tap. Shows nothing when
+ * nothing is waiting.
  */
 export function RequestsOnHome() {
   const { profile, roles } = useAuth()
@@ -27,19 +29,25 @@ export function RequestsOnHome() {
   const refreshBadge = useRefreshWaiting()
   const { data, reload } = useAsync(
     async () => {
-      const [requests, callingRequests, people] = await Promise.all([q.loadRequests(supabase), bishopric ? q.loadCallingRequests(supabase) : Promise.resolve([]), q.loadProfiles(supabase)])
-      return { requests, callingRequests, people }
+      const [requests, callingRequests, people, assignments] = await Promise.all([
+        q.loadRequests(supabase),
+        bishopric ? q.loadCallingRequests(supabase) : Promise.resolve([]),
+        q.loadProfiles(supabase),
+        q.loadMyAssignments(supabase),
+      ])
+      return { requests, callingRequests, people, assignments }
     },
     [bishopric],
   )
   const save = useAction()
   if (!data) return null
 
+  const today = todayIso()
   const mine = waitingOn(userId, data.requests)
   const calling = unreceived(data.callingRequests, userId)
-  if (!mine.length && !calling.length) return null
+  const parts = waitingAnswer(data.assignments, today)
+  if (!mine.length && !calling.length && !parts.length) return null
 
-  const today = todayIso()
   const from = (id: string) => data.people.find((p) => p.id === id)?.display_name ?? 'Someone'
   const ack = (fn: () => Promise<void>) =>
     void save.act(fn).then((ok) => {
@@ -49,7 +57,24 @@ export function RequestsOnHome() {
       }
     })
 
-  const items = [
+  type Item = { id: string; title: string; line: string; onAck: (() => void) | null; ackLabel?: string; onDecline?: () => void }
+  const items: Item[] = [
+    ...parts.map((a) => ({
+      id: a.id,
+      title: PART_LABELS[a.part],
+      line: meetingLine(a),
+      ackLabel: 'Accept',
+      onAck: () =>
+        ack(async () => {
+          await q.answerAssignment(supabase, a.id, 'accepted')
+          void q.pushAbout(supabase, 'assignment_answered', a.id)
+        }),
+      onDecline: () =>
+        ack(async () => {
+          await q.answerAssignment(supabase, a.id, 'declined')
+          void q.pushAbout(supabase, 'assignment_answered', a.id)
+        }),
+    })),
     ...mine.map((r) => ({
       id: r.id,
       title: r.title,
@@ -85,9 +110,14 @@ export function RequestsOnHome() {
               <Typography sx={{ fontWeight: 600 }}>{i.title}</Typography>
               <Muted>{i.line}</Muted>
             </Box>
+            {i.onDecline && (
+              <Button disabled={save.busy} onClick={i.onDecline} aria-label={`Decline: ${i.title}`} sx={{ flexShrink: 0 }}>
+                Decline
+              </Button>
+            )}
             {i.onAck && (
-              <Button variant="outlined" startIcon={<CheckIcon />} disabled={save.busy} onClick={i.onAck} aria-label={`Got it: ${i.title}`} sx={{ flexShrink: 0 }}>
-                Got it
+              <Button variant="outlined" startIcon={<CheckIcon />} disabled={save.busy} onClick={i.onAck} aria-label={`${i.ackLabel ?? 'Got it'}: ${i.title}`} sx={{ flexShrink: 0 }}>
+                {i.ackLabel ?? 'Got it'}
               </Button>
             )}
           </Stack>

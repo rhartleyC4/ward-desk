@@ -130,7 +130,7 @@ npm run notify -- --tick --now 2026-11-08T11:00:00-07:00 --dry-run
 
 ### Instant notifications for requests
 
-When someone sends or answers a request, or sends or receives a calling request, the app calls the `push` Edge Function (`pushAbout` in `src/lib/queries.ts`). The function checks that the caller made that change in the last few minutes, records it in `push_events` so a repeat call sends nothing, and notifies the other person on each of their devices. Who gets what is in `supabase/functions/push/plan.ts`. The text names an office ("The bishop asked you to do something"), never a member or what was asked. If the function isn't deployed or fails, the request still goes through and shows in the app; only the notification is missed.
+When someone sends or answers a request, sends or receives a calling request, or gives out or answers a meeting assignment (a prayer or the spiritual thought on an agenda), the app calls the `push` Edge Function (`pushAbout` in `src/lib/queries.ts`). The function checks that the caller made that change in the last few minutes, records it in `push_events` so a repeat call sends nothing, and notifies the other person on each of their devices. Who gets what is in `supabase/functions/push/plan.ts`. The text names an office ("The bishop asked you to do something"), never a member or what was asked. If the function isn't deployed or fails, the request still goes through and shows in the app; only the notification is missed.
 
 **Locally:** `npm run db:env` also writes `supabase/functions/.env` with this machine's key pair. Serve the function with:
 
