@@ -26,8 +26,9 @@ import { CallingRequestRow } from './Requests'
 
 type Status = Enums<'candidate_status'>
 
-// The steps the bishopric picks from. The database keeps a few more: 'suggested' marks a leader's
-// suggestion not yet attached to a calling, and older rows may say sustained or set apart.
+// The steps the bishopric picks from once a name is approved; before that the row shows only an
+// Approve button. The database keeps a few more: 'suggested' marks a leader's suggestion not yet
+// attached to a calling, and older rows may say sustained or set apart.
 const STATUSES: { value: Status; label: string }[] = [
   { value: 'discussing', label: 'Considering' },
   { value: 'approved', label: 'Approved' },
@@ -47,6 +48,7 @@ const SHOWN_AS: Record<Status, Status> = {
 }
 
 const ACCEPTED: Status[] = ['accepted', 'sustained', 'set_apart']
+const UNAPPROVED: Status[] = ['suggested', 'discussing']
 
 const dateLabel = { inputLabel: { shrink: true } } as const
 
@@ -112,6 +114,11 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
   const open = appointment?.status === 'scheduled' ? appointment : undefined
   const showMeets = NEEDS_APPOINTMENT.includes(c.status) || !!open
   const showSustain = ACCEPTED.includes(c.status)
+  // The leader assigned to the calling's organization meets with them, unless someone already does.
+  const approve = () => {
+    const leader = open ? null : coveringLeader(organizationFor(c, data.needs, data.callingList), data.stewardships, data.bishopric.map((p) => p.id))
+    actions.approveCandidate(c, leader)
+  }
 
   return (
     // Name on its own line on phones, then status and the rest two to a row; one row from sm up.
@@ -132,27 +139,31 @@ function CandidateRow({ candidate: c, data, actions, timeZone }: { candidate: Ca
         </Box>
       </Grid>
       <Grid size={{ xs: 6, sm: 3 }}>
-        <TextField
-          select
-          label="Status"
-          slotProps={{ ...nativeSelect, htmlInput: { 'aria-label': `Status for ${c.person_name}` } }}
-          value={SHOWN_AS[c.status]}
-          onChange={(e) => {
-            const status = e.target.value as Status
-            if (status === 'accepted') actions.acceptCandidate(c)
-            else if (status === 'approved') {
-              // The leader assigned to the calling's organization meets with them, unless someone already does.
-              const leader = open ? null : coveringLeader(organizationFor(c, data.needs, data.callingList), data.stewardships, data.bishopric.map((p) => p.id))
-              actions.approveCandidate(c, leader)
-            } else actions.updateCandidate(c.id, { status })
-          }}
-        >
-          {STATUSES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </TextField>
+        {/* A name can't be accepted or declined until the bishopric approves it, so until then the only step is Approve. */}
+        {UNAPPROVED.includes(c.status) ? (
+          <Button variant="outlined" startIcon={<CheckIcon />} onClick={approve} aria-label={`Approve ${c.person_name}`} sx={{ minHeight: 40 }}>
+            Approve
+          </Button>
+        ) : (
+          <TextField
+            select
+            label="Status"
+            slotProps={{ ...nativeSelect, htmlInput: { 'aria-label': `Status for ${c.person_name}` } }}
+            value={SHOWN_AS[c.status]}
+            onChange={(e) => {
+              const status = e.target.value as Status
+              if (status === 'accepted') actions.acceptCandidate(c)
+              else if (status === 'approved') approve()
+              else actions.updateCandidate(c.id, { status })
+            }}
+          >
+            {STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </TextField>
+        )}
       </Grid>
       {showMeets && (
         <Grid size={{ xs: 6, sm: 3 }}>

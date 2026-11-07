@@ -51,7 +51,7 @@ describe('CallingsManager', () => {
     data.candidates[2] = { ...data.candidates[2], status: 'discussing' }
     render(<CallingsManager date="2026-10-25" data={data} actions={a} timeZone="America/Denver" />)
 
-    await user.selectOptions(screen.getByLabelText('Status for Sister Nash'), 'Approved')
+    await user.click(screen.getByRole('button', { name: 'Approve Sister Nash' }))
     expect(a.approveCandidate).toHaveBeenCalledWith(data.candidates[2], 'o')
     expect(a.updateCandidate).not.toHaveBeenCalled()
   })
@@ -63,8 +63,16 @@ describe('CallingsManager', () => {
     data.candidates[2] = { ...data.candidates[2], status: 'discussing' }
     render(<CallingsManager date="2026-10-25" data={data} actions={a} timeZone="America/Denver" />)
 
-    await user.selectOptions(screen.getByLabelText('Status for Sister Nash'), 'Approved')
+    await user.click(screen.getByRole('button', { name: 'Approve Sister Nash' }))
     expect(a.approveCandidate).toHaveBeenCalledWith(data.candidates[2], null)
+  })
+
+  it('offers only Approve while a name is being considered', () => {
+    const data = agendaData()
+    data.candidates[2] = { ...data.candidates[2], status: 'discussing' }
+    render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
+    expect(screen.getByRole('button', { name: 'Approve Sister Nash' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Status for Sister Nash')).not.toBeInTheDocument()
   })
 
   it('records an acceptance so it moves to Sustainings', async () => {
