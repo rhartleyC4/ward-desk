@@ -2,6 +2,7 @@
 // Each item is counted on one tab only, the one where it's dealt with, so the badges add up to
 // what's waiting. Pure so the unit tests can cover the rules; queries.ts loads the rows.
 
+import { nothingToPlan } from './agenda'
 import { splitAppointments, myLeaderIds, type Appointment, type SecretaryAssignment } from './appointments'
 import type { Enums, Tables } from './database.types'
 import type { IsoDate } from './dates'
@@ -47,8 +48,7 @@ type Sunday = Pick<Tables<'meetings'>, 'meeting_date' | 'meeting_type' | 'conduc
 /** For whoever plans sacrament meeting: what's missing for the coming Sunday (unplanned, no one conducting, or they're away). */
 export function sacramentCount(sunday: IsoDate, meeting: Sunday | undefined, absences: Tables<'absences'>[]): number {
   if (!meeting) return 1
-  // Conferences are run by the stake or the Church, so there's nothing for the ward to fill in.
-  if (meeting.meeting_type === 'stake_conference' || meeting.meeting_type === 'general_conference') return 0
+  if (nothingToPlan(meeting.meeting_type)) return 0
   if (!meeting.conducting_id) return 1
   return isAway(meeting.conducting_id, sunday, absences) ? 1 : 0
 }

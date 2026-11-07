@@ -38,10 +38,11 @@ describe('MeetingSummary', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Ortiz is away (Denver) this Sunday.')
   })
 
-  it('shows only the label for a conference Sunday', () => {
+  it('says there is nothing to plan on a conference Sunday', () => {
     const m = meeting('2027-03-07', { meeting_type: 'stake_conference' })
     render(<MeetingSummary date={m.meeting_date} meeting={m} items={[]} profiles={profiles} absences={[]} />)
     expect(screen.getByText('Stake Conference')).toBeInTheDocument()
+    expect(screen.getByText(/nothing to plan/)).toBeInTheDocument()
     expect(screen.queryByText(/Presiding/)).not.toBeInTheDocument()
   })
 })

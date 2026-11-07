@@ -21,6 +21,14 @@ const TYPE_LABELS: Record<Enums<'meeting_type'>, string> = {
   special_program: 'Special program',
 }
 
+/** Conferences are run by the stake or the Church, so the ward has nothing to plan for them. */
+export const NOTHING_TO_PLAN: Partial<Record<Enums<'meeting_type'>, string>> = {
+  stake_conference: 'Stake conference. The stake plans this meeting, so there is nothing to plan here.',
+  general_conference: 'General conference. There is no sacrament meeting to plan.',
+}
+
+export const nothingToPlan = (type: Enums<'meeting_type'>) => type in NOTHING_TO_PLAN
+
 export function personLabel(id: string | null, profiles: Profile[]): string {
   if (!id) return ''
   const p = profiles.find((x) => x.id === id)

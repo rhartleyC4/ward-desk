@@ -11,7 +11,8 @@ import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
-import { longDate } from '../lib/dates'
+import { NOTHING_TO_PLAN } from '../lib/agenda'
+import { longDate, weekday, weekOfMonth } from '../lib/dates'
 import type { Meeting, ProgramItem, ProgramItemDraft, Profile } from '../lib/queries'
 import { nativeSelect } from '../theme'
 
@@ -25,6 +26,9 @@ const emptyItem = (): ProgramItemDraft => ({ kind: 'talk', person_name: '', topi
 const toNumber = (v: string) => (v === '' ? null : Number(v))
 
 const half = { xs: 12, sm: 6, md: 4 }
+
+/** A new Sunday starts as Fast Sunday on the first Sunday of the month. Conferences that move it are picked by hand. */
+const defaultType = (date: string): Meeting['meeting_type'] => (weekday(date) === 0 && weekOfMonth(date) === 1 ? 'fast_sunday' : 'regular')
 
 export function MeetingEditor({
   date,
@@ -48,7 +52,7 @@ export function MeetingEditor({
 }) {
   const [m, setM] = useState<MeetingForm['meeting']>({
     meeting_date: date,
-    meeting_type: meeting?.meeting_type ?? 'regular',
+    meeting_type: meeting?.meeting_type ?? defaultType(date),
     title: meeting?.title ?? null,
     presiding: meeting?.presiding ?? null,
     conducting_id: meeting?.conducting_id ?? null,
@@ -79,6 +83,9 @@ export function MeetingEditor({
     onSave({ meeting: m, items: program.filter((p) => p.person_name || p.hymn_number || p.kind !== 'talk') })
   }
 
+  // Hidden, not cleared: switching back to a regular Sunday brings the plan back.
+  const noProgram = NOTHING_TO_PLAN[m.meeting_type]
+
   return (
     <Box component="form" onSubmit={submit} aria-label={`Edit ${longDate(date)}`}>
       {heading && (
@@ -102,110 +109,125 @@ export function MeetingEditor({
             <TextField label="Program title" value={m.title ?? ''} onChange={(e) => set('title', text(e.target.value))} />
           </Grid>
         )}
-        <Grid size={half}>
-          <TextField label="Presiding" value={m.presiding ?? ''} onChange={(e) => set('presiding', text(e.target.value))} />
-        </Grid>
-        <Grid size={half}>
-          <TextField select label="Conducting" slotProps={nativeSelect} value={m.conducting_id ?? ''} onChange={(e) => set('conducting_id', e.target.value || null)}>
-            <option value="">—</option>
-            {bishopric.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.display_name}
-              </option>
-            ))}
-          </TextField>
-        </Grid>
-        <Grid size={12}>
-          <Typography variant="caption" color="text.secondary">
-            Hymns
-          </Typography>
-        </Grid>
-        {(
-          [
-            ['opening_hymn', 'Opening'],
-            ['sacrament_hymn', 'Sacrament'],
-            ['closing_hymn', 'Closing'],
-          ] as const
-        ).map(([key, label]) => (
-          <Grid key={key} size={4} sx={{ mt: -1 }}>
-            <TextField
-              label={label}
-              inputMode="numeric"
-              slotProps={{ htmlInput: { 'aria-label': `${label} hymn` } }}
-              value={m[key] ?? ''}
-              onChange={(e) => set(key, toNumber(e.target.value))}
-            />
+        {noProgram && (
+          <Grid size={12}>
+            <Typography variant="body2" color="text.secondary">
+              {noProgram}
+            </Typography>
           </Grid>
-        ))}
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField label="Invocation" value={m.invocation ?? ''} onChange={(e) => set('invocation', text(e.target.value))} />
-        </Grid>
-        <Grid size={{ xs: 12, sm: 6 }}>
-          <TextField label="Benediction" value={m.benediction ?? ''} onChange={(e) => set('benediction', text(e.target.value))} />
-        </Grid>
+        )}
+        {!noProgram && (
+          <>
+          <Grid size={half}>
+            <TextField label="Presiding" value={m.presiding ?? ''} onChange={(e) => set('presiding', text(e.target.value))} />
+          </Grid>
+          <Grid size={half}>
+            <TextField select label="Conducting" slotProps={nativeSelect} value={m.conducting_id ?? ''} onChange={(e) => set('conducting_id', e.target.value || null)}>
+              <option value="">—</option>
+              {bishopric.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.display_name}
+                </option>
+              ))}
+            </TextField>
+          </Grid>
+          <Grid size={12}>
+            <Typography variant="caption" color="text.secondary">
+              Hymns
+            </Typography>
+          </Grid>
+          {(
+            [
+              ['opening_hymn', 'Opening'],
+              ['sacrament_hymn', 'Sacrament'],
+              ['closing_hymn', 'Closing'],
+            ] as const
+          ).map(([key, label]) => (
+            <Grid key={key} size={4} sx={{ mt: -1 }}>
+              <TextField
+                label={label}
+                inputMode="numeric"
+                slotProps={{ htmlInput: { 'aria-label': `${label} hymn` } }}
+                value={m[key] ?? ''}
+                onChange={(e) => set(key, toNumber(e.target.value))}
+              />
+            </Grid>
+          ))}
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField label="Invocation" value={m.invocation ?? ''} onChange={(e) => set('invocation', text(e.target.value))} />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField label="Benediction" value={m.benediction ?? ''} onChange={(e) => set('benediction', text(e.target.value))} />
+          </Grid>
+          </>
+        )}
       </Grid>
 
-      <Typography variant="h3" sx={{ mt: 3, mb: 1 }}>
-        Program
-      </Typography>
-      <Stack spacing={1}>
-        {program.map((p, i) => (
-          <Paper key={i} variant="outlined" data-program-item sx={{ p: 1.5 }}>
-            <Grid container spacing={1.5}>
-              <Grid size={half}>
-                <TextField select label="Item" slotProps={nativeSelect} value={p.kind} onChange={(e) => setItem(i, { kind: e.target.value as ProgramItem['kind'] })}>
-                  <option value="talk">Talk</option>
-                  <option value="musical_number">Musical number</option>
-                  <option value="intermediate_hymn">Intermediate hymn</option>
-                  <option value="testimonies">Testimonies</option>
-                  <option value="other">Other</option>
-                </TextField>
-              </Grid>
-              {p.kind === 'intermediate_hymn' ? (
+      {!noProgram && (
+        <>
+        <Typography variant="h3" sx={{ mt: 3, mb: 1 }}>
+          Program
+        </Typography>
+        <Stack spacing={1}>
+          {program.map((p, i) => (
+            <Paper key={i} variant="outlined" data-program-item sx={{ p: 1.5 }}>
+              <Grid container spacing={1.5}>
                 <Grid size={half}>
-                  <TextField label="Hymn" inputMode="numeric" value={p.hymn_number ?? ''} onChange={(e) => setItem(i, { hymn_number: toNumber(e.target.value) })} />
+                  <TextField select label="Item" slotProps={nativeSelect} value={p.kind} onChange={(e) => setItem(i, { kind: e.target.value as ProgramItem['kind'] })}>
+                    <option value="talk">Talk</option>
+                    <option value="musical_number">Musical number</option>
+                    <option value="intermediate_hymn">Intermediate hymn</option>
+                    <option value="testimonies">Testimonies</option>
+                    <option value="other">Other</option>
+                  </TextField>
                 </Grid>
-              ) : (
+                {p.kind === 'intermediate_hymn' ? (
+                  <Grid size={half}>
+                    <TextField label="Hymn" inputMode="numeric" value={p.hymn_number ?? ''} onChange={(e) => setItem(i, { hymn_number: toNumber(e.target.value) })} />
+                  </Grid>
+                ) : (
+                  <Grid size={half}>
+                    <TextField label={p.kind === 'talk' ? 'Speaker' : 'Who'} value={p.person_name ?? ''} onChange={(e) => setItem(i, { person_name: e.target.value })} />
+                  </Grid>
+                )}
+                {p.kind === 'talk' && (
+                  <>
+                    <Grid size={half}>
+                      <TextField label="Topic" value={p.topic ?? ''} onChange={(e) => setItem(i, { topic: e.target.value })} />
+                    </Grid>
+                    <Grid size={half}>
+                      <TextField select label="Status" slotProps={nativeSelect} value={p.status} onChange={(e) => setItem(i, { status: e.target.value as ProgramItem['status'] })}>
+                        <option value="planned">Idea</option>
+                        <option value="invited">Invited</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="declined">Declined</option>
+                      </TextField>
+                    </Grid>
+                  </>
+                )}
                 <Grid size={half}>
-                  <TextField label={p.kind === 'talk' ? 'Speaker' : 'Who'} value={p.person_name ?? ''} onChange={(e) => setItem(i, { person_name: e.target.value })} />
+                  <TextField label="Note" value={p.note ?? ''} onChange={(e) => setItem(i, { note: e.target.value })} placeholder="e.g. Stake" />
                 </Grid>
-              )}
-              {p.kind === 'talk' && (
-                <>
-                  <Grid size={half}>
-                    <TextField label="Topic" value={p.topic ?? ''} onChange={(e) => setItem(i, { topic: e.target.value })} />
-                  </Grid>
-                  <Grid size={half}>
-                    <TextField select label="Status" slotProps={nativeSelect} value={p.status} onChange={(e) => setItem(i, { status: e.target.value as ProgramItem['status'] })}>
-                      <option value="planned">Idea</option>
-                      <option value="invited">Invited</option>
-                      <option value="confirmed">Confirmed</option>
-                      <option value="declined">Declined</option>
-                    </TextField>
-                  </Grid>
-                </>
-              )}
-              <Grid size={half}>
-                <TextField label="Note" value={p.note ?? ''} onChange={(e) => setItem(i, { note: e.target.value })} placeholder="e.g. Stake" />
+                <Grid size={half} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <IconButton size="small" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up">
+                    <ArrowUpwardIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => move(i, 1)} disabled={i === program.length - 1} aria-label="Move down">
+                    <ArrowDownwardIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton size="small" onClick={() => setProgram((prev) => prev.filter((_, j) => j !== i))} aria-label="Remove">
+                    <DeleteOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </Grid>
               </Grid>
-              <Grid size={half} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <IconButton size="small" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up">
-                  <ArrowUpwardIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={() => move(i, 1)} disabled={i === program.length - 1} aria-label="Move down">
-                  <ArrowDownwardIcon fontSize="small" />
-                </IconButton>
-                <IconButton size="small" onClick={() => setProgram((prev) => prev.filter((_, j) => j !== i))} aria-label="Remove">
-                  <DeleteOutlinedIcon fontSize="small" />
-                </IconButton>
-              </Grid>
-            </Grid>
-          </Paper>
-        ))}
-      </Stack>
-      <Button startIcon={<AddIcon />} onClick={() => setProgram((prev) => [...prev, emptyItem()])} sx={{ mt: 1 }}>
-        Add program item
-      </Button>
+            </Paper>
+          ))}
+        </Stack>
+        <Button startIcon={<AddIcon />} onClick={() => setProgram((prev) => [...prev, emptyItem()])} sx={{ mt: 1 }}>
+          Add program item
+        </Button>
+        </>
+      )}
 
       <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
         <Button type="submit" variant="contained" disabled={busy}>

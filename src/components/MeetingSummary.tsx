@@ -3,7 +3,7 @@ import Box from '@mui/material/Box'
 import Chip from '@mui/material/Chip'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import { personLabel, programFor } from '../lib/agenda'
+import { NOTHING_TO_PLAN, personLabel, programFor } from '../lib/agenda'
 import { longDate } from '../lib/dates'
 import type { Absence, Meeting, ProgramItem, Profile } from '../lib/queries'
 import { isAway } from '../lib/schedule'
@@ -84,7 +84,7 @@ export function MeetingSummary({
   const away = isAway(meeting.conducting_id, date, absences)
   const conducting = personLabel(meeting.conducting_id, profiles)
   const program = programFor(meeting.id, items)
-  const noProgram = meeting.meeting_type === 'stake_conference' || meeting.meeting_type === 'general_conference'
+  const noProgram = NOTHING_TO_PLAN[meeting.meeting_type]
 
   return (
     <Stack spacing={1}>
@@ -94,12 +94,16 @@ export function MeetingSummary({
           {label && <Chip size="small" color="secondary" label={label} />}
         </Stack>
       )}
-      {away && (
+      {away && !noProgram && (
         <Alert severity="warning" role="status">
           {conducting} is away {away.location ? `(${away.location}) ` : ''}this Sunday.
         </Alert>
       )}
-      {!noProgram && (
+      {noProgram ? (
+        <Typography variant="body2" color="text.secondary">
+          {noProgram}
+        </Typography>
+      ) : (
         <>
           <Typography variant="body2">
             <Label>Presiding</Label> {meeting.presiding || '—'} · <Label>Conducting</Label> {conducting || '—'}

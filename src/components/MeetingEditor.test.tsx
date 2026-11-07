@@ -39,6 +39,39 @@ describe('MeetingEditor', () => {
     expect(onSave.mock.calls[0][0].items.map((i) => i.person_name)).toEqual(['Second', 'First'])
   })
 
+  it('starts a new first Sunday as Fast Sunday', () => {
+    render(<MeetingEditor date="2026-12-06" meeting={undefined} items={[]} bishopric={profiles} onSave={() => {}} onCancel={() => {}} />)
+    expect(screen.getByLabelText('Type')).toHaveValue('fast_sunday')
+  })
+
+  it('starts other new Sundays as regular', () => {
+    render(<MeetingEditor date="2026-12-13" meeting={undefined} items={[]} bishopric={profiles} onSave={() => {}} onCancel={() => {}} />)
+    expect(screen.getByLabelText('Type')).toHaveValue('regular')
+  })
+
+  it('keeps the saved type on a first Sunday', () => {
+    const m = { ...meeting('2027-04-04'), meeting_type: 'general_conference' as const }
+    render(<MeetingEditor date={m.meeting_date} meeting={m} items={[]} bishopric={profiles} onSave={() => {}} onCancel={() => {}} />)
+    expect(screen.getByLabelText('Type')).toHaveValue('general_conference')
+  })
+
+  it('hides the plan on a conference Sunday and brings it back for a regular one', async () => {
+    const user = userEvent.setup()
+    const onSave = vi.fn<(form: MeetingForm) => void>()
+    const m = { ...meeting('2027-04-04'), opening_hymn: 19 }
+    const items = [programItem(m.id, 1, { person_name: 'Sister Hale' })]
+    render(<MeetingEditor date={m.meeting_date} meeting={m} items={items} bishopric={profiles} onSave={onSave} onCancel={() => {}} />)
+
+    await user.selectOptions(screen.getByLabelText('Type'), 'general_conference')
+    expect(screen.getByText(/no sacrament meeting to plan/)).toBeInTheDocument()
+    for (const label of ['Presiding', 'Conducting', 'Opening hymn', 'Invocation']) expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Add program item' })).not.toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Type'), 'regular')
+    expect(screen.getByLabelText('Opening hymn')).toHaveValue('19')
+    expect(screen.getByDisplayValue('Sister Hale')).toBeInTheDocument()
+  })
+
   it('asks for a title on a special program', async () => {
     const user = userEvent.setup()
     render(<MeetingEditor date="2026-12-20" meeting={undefined} items={[]} bishopric={profiles} onSave={() => {}} onCancel={() => {}} />)
