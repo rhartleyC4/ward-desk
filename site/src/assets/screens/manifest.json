@@ -78,6 +78,28 @@
         "desktop-dark"
       ]
     },
+    "handover-bishop": {
+      "route": "/settings/handover",
+      "role": "Bishop (also a ward admin)",
+      "caption": "Change of bishopric starts with one question: who is the new bishop?",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "handover-leader": {
+      "route": "/settings/leader",
+      "role": "Bishop",
+      "caption": "Change a ward leader: pick the organization, then the new leader.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
     "home-bishop": {
       "route": "/home",
       "role": "Bishop",
@@ -115,6 +137,28 @@
       "route": "/home",
       "role": "Executive secretary",
       "caption": "The executive secretary's Home: who needs an appointment, open times and the week ahead.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "mentoring-bishop": {
+      "route": "/account",
+      "role": "Bishop",
+      "caption": "The new bishop sees who is helping, sets the last day, and decides whether they see callings.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "mentoring-mentor": {
+      "route": "/account",
+      "role": "Counselor",
+      "caption": "A mentor chooses whether to use Ward Desk as themselves or for the new bishop.",
       "variants": [
         "phone-light",
         "phone-dark",

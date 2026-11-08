@@ -23,6 +23,8 @@ The screens do also hide things you can't use, to keep them tidy. But that is on
 - **Who can sign in**, and anyone's roles, can be changed only by an admin. People can change their own name and nothing else about their profile: not their email, and not their position.
 - **Error reports** (technical problems from the app) can be read only by admins.
 
+- **Mentoring** is limited by the database: a mentor acts as the new bishop only until the last day, never as admin, and calling discussions stay hidden unless the new bishop allows them. See [Mentoring](/docs/leadership-changes/mentoring/).
+
 ## Tested, not just trusted
 
 Every rule has automated tests that sign in as each role and check what they can and can't read or change. A new table can't be added without its rules and tests.

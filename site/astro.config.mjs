@@ -25,6 +25,7 @@ export default defineConfig({
         { label: 'Appointments', collapsed: true, items: [{ autogenerate: { directory: 'docs/appointments' } }] },
         { label: 'Requests', collapsed: true, items: [{ autogenerate: { directory: 'docs/requests' } }] },
         { label: 'Settings', collapsed: true, items: [{ autogenerate: { directory: 'docs/settings' } }] },
+        { label: 'Leadership changes', collapsed: true, items: [{ autogenerate: { directory: 'docs/leadership-changes' } }] },
         { label: 'Roles & privacy', collapsed: true, items: [{ autogenerate: { directory: 'docs/roles-and-privacy' } }] },
         { label: 'Running it for your ward', collapsed: true, items: [{ autogenerate: { directory: 'docs/self-hosting' } }] },
         { label: 'Operations', collapsed: true, items: [{ autogenerate: { directory: 'docs/operations' } }] },

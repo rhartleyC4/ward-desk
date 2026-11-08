@@ -129,6 +129,19 @@ async function addExamples() {
   await sql`update public.calling_requests set received_by = ${bishop}, received_at = ${at(-2)}, created_at = ${at(-4)} where id = ${c.data as string}`
 }
 
+// A mentoring delegation for the mentoring shots: Brother Lane helps Bishop Avery. Removed afterwards.
+async function addDelegation() {
+  const id = async (email: string) => (await sql`select id from public.profiles where email = ${email}`)[0].id as string
+  const [mentor, forId] = await Promise.all([id('first@ward.test'), id('bishop@ward.test')])
+  await sql`delete from public.delegations where mentor_id = ${mentor} and ended_at is null`
+  await sql`insert into public.delegations (mentor_id, for_id, ends_at) values (${mentor}, ${forId}, now() + interval '4 weeks')`
+  return mentor
+}
+
+async function removeDelegation(mentor: string) {
+  await sql`delete from public.delegations where mentor_id = ${mentor}`
+}
+
 async function removeExamples(before: Awaited<ReturnType<typeof snapshot>>) {
   const after = await snapshot()
   const added = (t: keyof typeof before) => [...after[t]].filter((x) => !before[t].has(x))
@@ -218,8 +231,10 @@ async function main() {
   const app = await startApp()
   const before = await snapshot()
   let browser: Browser | undefined
+  let mentor: string | undefined
   try {
     await addExamples()
+    mentor = await addDelegation()
     const sessions = new Map<RoleName, { key: string; value: Stored }>()
     for (const role of new Set(shots.map((s) => s.role))) sessions.set(role, await signIn(ROLES[role].email))
     browser = await chromium.launch()
@@ -245,6 +260,7 @@ async function main() {
     if (skipped.length) console.warn(`\n${skipped.length} skipped:\n${skipped.join('\n')}`)
   } finally {
     await browser?.close()
+    if (mentor) await removeDelegation(mentor).catch((e) => console.error('Could not remove the delegation:', e))
     await removeExamples(before).catch((e) => console.error('Could not remove the example data:', e))
     await sql.end()
     app?.kill()

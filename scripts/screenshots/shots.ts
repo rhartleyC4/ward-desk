@@ -85,5 +85,9 @@ export const SHOTS: Shot[] = [
   { feature: 'settings-meetings', role: 'bishop', route: '/meetings', caption: 'Meetings: create an agenda, choose its sections and who attends.', waitFor: /Meetings/ },
   { feature: 'settings-calling-list', role: 'admin', route: '/calling-list', caption: "The calling list: the ward's callings and the organization each belongs to.", waitFor: /Add a calling/ },
   { feature: 'reminders', role: 'secretary', route: '/reminders?date=2026-11-02', caption: 'Reminders to send the day before, each with the message ready to copy, text or email.', waitFor: /Reminders for/ },
+  { feature: 'handover-bishop', role: 'admin', route: '/settings/handover', caption: 'Change of bishopric starts with one question: who is the new bishop?', waitFor: /Who's the new bishop/ },
+  { feature: 'handover-leader', role: 'bishop', route: '/settings/leader', caption: 'Change a ward leader: pick the organization, then the new leader.', waitFor: /Which organization/ },
+  { feature: 'mentoring-mentor', role: 'counselor', route: '/account', caption: 'A mentor chooses whether to use Ward Desk as themselves or for the new bishop.', waitFor: /Use Ward Desk as/ },
+  { feature: 'mentoring-bishop', role: 'bishop', route: '/account', caption: 'The new bishop sees who is helping, sets the last day, and decides whether they see callings.', waitFor: /Can see callings/, prepare: scrollToText(/Can use Ward Desk as you/) },
   { feature: 'settings-access', role: 'admin', route: '/access', caption: 'Who can sign in, with their roles and positions.', waitFor: /Bishop Avery|bishop@ward.test/ },
 ]
