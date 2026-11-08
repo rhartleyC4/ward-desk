@@ -122,6 +122,17 @@
         "desktop-dark"
       ]
     },
+    "reminders": {
+      "route": "/reminders?date=2026-11-02",
+      "role": "Executive secretary",
+      "caption": "Reminders to send the day before, each with the message ready to copy, text or email.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
     "requests-assignment": {
       "route": "/requests",
       "role": "Ward leader (Elders Quorum president)",
@@ -210,10 +221,32 @@
         "desktop-dark"
       ]
     },
+    "settings-account": {
+      "route": "/account",
+      "role": "Bishop",
+      "caption": "Your account: your name, Face ID or fingerprint sign-in, and notifications for this device.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
     "settings-away": {
       "route": "/away",
       "role": "Counselor",
       "caption": "Dates you'll be away are taken out of your appointment hours.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-calling-list": {
+      "route": "/calling-list",
+      "role": "Bishop (also a ward admin)",
+      "caption": "The calling list: the ward's callings and the organization each belongs to.",
       "variants": [
         "phone-light",
         "phone-dark",
@@ -236,6 +269,28 @@
       "route": "/settings/lengths",
       "role": "Bishop",
       "caption": "Usual lengths: how long each kind of interview takes.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-meetings": {
+      "route": "/meetings",
+      "role": "Bishop",
+      "caption": "Meetings: create an agenda, choose its sections and who attends.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-messages": {
+      "route": "/settings/messages",
+      "role": "Executive secretary",
+      "caption": "Message templates the secretaries use to offer and confirm times.",
       "variants": [
         "phone-light",
         "phone-dark",
