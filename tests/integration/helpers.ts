@@ -24,9 +24,10 @@ function localEnv() {
   return cached
 }
 
-export function anonClient(): Client {
+/** A signed-out client; headers go with every request (x-acting-as, for a mentor). */
+export function anonClient(headers: Record<string, string> = {}): Client {
   const { url, anonKey } = localEnv()
-  return createClient<Database>(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  return createClient<Database>(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers } })
 }
 
 export type SeedUser = 'bishop' | 'first' | 'second' | 'secretary' | 'assistant' | 'clerk' | 'leader' | 'eqpres' | 'rspres' | 'ywpres' | 'primarypres' | 'mission' | 'temple' | 'activities'
