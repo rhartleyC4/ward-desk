@@ -19,9 +19,9 @@ const {
   title,
   description = 'Ward administration in one place: agendas, callings, sacrament meeting, appointments and requests.',
   image = '/og.png',
-  imageAlt = 'Ward Desk: ward business, all in one calm place. A phone showing the app.',
+  imageAlt = 'Ward Desk: ward business, all in one place. A phone showing the app.',
 } = Astro.props
-const pageTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME}: ward business, all in one calm place`
+const pageTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME}: ward business, all in one place`
 const canonical = new URL(Astro.url.pathname, Astro.site)
 const imageUrl = new URL(image, Astro.site)
 ---
