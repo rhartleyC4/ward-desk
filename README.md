@@ -194,14 +194,14 @@ There are two hosted copies of the app. Each has its own Supabase project and Cl
 | | Training site (staging) | Real site (production) |
 |---|---|---|
 | URL | https://demo.warddesk.app | https://gp7.warddesk.app |
-| Deploys from | `main`, after CI passes | `production`, after CI passes |
+| Deploys from | `main`, after CI passes | `gp7`, after CI passes |
 | Data | Invented practice data from `supabase/seed.sql` | Real ward data. Never copy it to staging |
 | Extras | "Training site" banner, practice-account sign-in | None |
 
 **Promoting** sends the code and migrations from staging to production. Data is never copied. After trying a change on staging:
 
 ```bash
-git push origin main:production
+git push origin main:gp7
 ```
 
 The deploy job refuses any `production` commit that isn't already on `main`. Each deploy applies migrations (`supabase db push`) and then publishes the frontend, so **a migration must keep working with the frontend that is still live**. Add columns before using them, and remove them only after nothing uses them.
@@ -222,7 +222,7 @@ A few steps need a person in a dashboard. Do these first:
    npx wrangler pages project create ward-desk-staging --production-branch main
    ```
    ```bash
-   npx wrangler pages project create ward-desk --production-branch production
+   npx wrangler pages project create ward-desk --production-branch gp7
    ```
    Under Custom domains, add `demo.warddesk.app` to the staging project and `gp7.warddesk.app` to the other. Create a custom API token (or an account-owned token under Manage Account → Account API Tokens, which survives a handoff). Give it only **Account → Cloudflare Pages → Edit** on your account, with no zone permissions and no IP filtering.
 5. **Google Cloud** (optional, can wait): see "Google sign-in" below.
@@ -230,9 +230,9 @@ A few steps need a person in a dashboard. Do these first:
 
 Then sign in to both CLIs once on your machine: `gh auth login` and `npx supabase login`, with your own account. Run each command for staging first, then production:
 
-1. **`npm run env:github -- staging`** fills the GitHub environment, and any repository settings that are missing. It asks which Supabase project to use, reads the anon key from it, asks for the database password to build the session pooler URL (and tests it), asks for the deploy bot's access token (and checks it can see the project), sets the Pages project, ward name, time zone and Google flag, and makes a VAPID key pair if there isn't one. For production it also limits deploys to the `production` branch. It shows the changes and asks first, and prints a new VAPID private key once, for your password manager. `--dry-run` only shows what it would change.
+1. **`npm run env:github -- staging`** fills the GitHub environment, and any repository settings that are missing. It asks which Supabase project to use, reads the anon key from it, asks for the database password to build the session pooler URL (and tests it), asks for the deploy bot's access token (and checks it can see the project), sets the Pages project, ward name, time zone and Google flag, and makes a VAPID key pair if there isn't one. For production it also limits deploys to the `gp7` branch. It shows the changes and asks first, and prints a new VAPID private key once, for your password manager. `--dry-run` only shows what it would change.
 2. **`npm run env:auth -- staging`** applies the Auth settings in `[remotes.staging]` of `supabase/config.toml`: site URL, redirect URLs, Resend SMTP and Google. It asks for the project's Resend key and the Google client secret (leave one blank to keep what's set), shows `supabase config diff`, and asks before `supabase config push`. `--diff` only shows the differences. `config push` sends every setting the file declares, so the remotes blocks restate the live values. Edit them there, never in the dashboard.
-3. **Deploy.** The first time, once both environments are filled, turn deploys on with `gh variable set DEPLOY_ENABLED --body true`. Then push to `main` for staging and run "Reset training site" once, since `db push` doesn't load the seed. For production, promote with `git push origin main:production`.
+3. **Deploy.** The first time, once both environments are filled, turn deploys on with `gh variable set DEPLOY_ENABLED --body true`. Then push to `main` for staging and run "Reset training site" once, since `db push` doesn't load the seed. For production, promote with `git push origin main:gp7`.
 4. **`npm run notify:setup -- staging`** deploys the notification functions and starts the schedule, once that environment's migrations have run. After that, each deploy redeploys the functions right after the migrations, so they never run against a schema they weren't written for. See "Notifications" below.
 5. **`npm run alerts:setup -- staging`** turns on alert emails: it asks where to send them and for that project's Resend key, then sends a test email. See "Health checks and alerts" below.
 6. **`npm run admin:add -- staging you@example.com`**, before your first sign-in, since sign-in is refused for any email not on the allowlist. On production it adds you to the allowlist as admin and bishopric. On staging it also saves you in the `STAGING_ADMIN_EMAILS` variable, so training-site resets keep you.

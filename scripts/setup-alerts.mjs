@@ -47,7 +47,7 @@ const ready = runSql(
   remote,
   { readOnly: true },
 )[0]
-if (!ready?.ready) fail(`The health check migration isn't on ${env} yet. Deploy it first (${env === 'production' ? 'git push origin main:production' : 'push to main'}).`)
+if (!ready?.ready) fail(`The health check migration isn't on ${env} yet. Deploy it first (${env === 'production' ? 'git push origin main:gp7' : 'push to main'}).`)
 
 let gitEmail = ''
 try {

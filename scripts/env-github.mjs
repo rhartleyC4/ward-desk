@@ -20,7 +20,7 @@
 //     BACKUP_R2_ENDPOINT, BACKUP_R2_ACCESS_KEY_ID, BACKUP_R2_SECRET_ACCESS_KEY, and
 //     BACKUP_DB_URL_<ENV>, a copy of SUPABASE_DB_URL that the nightly backup on main can read.
 //     BACKUP_ENABLED is left for you to turn on.
-//   - production only: deploys limited to the production branch.
+//   - production only: deploys limited to the gp7 branch.
 // It shows the list of changes and asks before making them, then offers to re-run the latest
 // deploy, since the app reads the variables at build time. A new VAPID private key is printed once
 // at the end for your password manager.
@@ -222,8 +222,8 @@ if (env === 'production') {
   step('Deployment branches')
   const branches = envInfo ? parse(ghRead(['api', 'repos/{owner}/{repo}/environments/production/deployment-branch-policies']), {}).branch_policies ?? [] : []
   const policy = envInfo?.deployment_branch_policy
-  branchRule = !(policy?.custom_branch_policies && branches.length === 1 && branches[0].name === 'production')
-  console.log(branchRule ? `  Will allow deploys only from the production branch (now: ${branches.map((b) => b.name).join(', ') || 'any branch'}).` : '  Only the production branch can deploy.')
+  branchRule = !(policy?.custom_branch_policies && branches.length === 1 && branches[0].name === expected.branch)
+  console.log(branchRule ? `  Will allow deploys only from the ${expected.branch} branch (now: ${branches.map((b) => b.name).join(', ') || 'any branch'}).` : `  Only the ${expected.branch} branch can deploy.`)
 }
 
 // --- Confirm and apply -----------------------------------------------------------------
@@ -240,7 +240,7 @@ for (const c of changes) {
   const shown = c.kind === 'secret' ? '(hidden)' : c.name === 'SUPABASE_ANON_KEY' ? `${c.value.slice(0, 16)}…` : c.value.length > 40 ? `${c.value.slice(0, 20)}…` : c.value
   console.log(`  ${where} ${c.kind} ${c.name} = ${shown}  (${c.why})`)
 }
-if (branchRule) console.log('  limit deploys to the production branch')
+if (branchRule) console.log(`  limit deploys to the ${expected.branch} branch`)
 
 if (dryRun) {
   console.log('\nDry run: nothing was changed.')
@@ -255,9 +255,9 @@ if (!envInfo || branchRule) {
 }
 if (branchRule) {
   const existing = parse(ghRead(['api', 'repos/{owner}/{repo}/environments/production/deployment-branch-policies']), {}).branch_policies ?? []
-  for (const b of existing.filter((b) => b.name !== 'production')) ghOrFail(['api', '-X', 'DELETE', `repos/{owner}/{repo}/environments/production/deployment-branch-policies/${b.id}`])
-  if (!existing.some((b) => b.name === 'production')) ghOrFail(['api', '-X', 'POST', 'repos/{owner}/{repo}/environments/production/deployment-branch-policies', '-f', 'name=production', '-f', 'type=branch'])
-  console.log('  ✓ deploys limited to the production branch')
+  for (const b of existing.filter((b) => b.name !== expected.branch)) ghOrFail(['api', '-X', 'DELETE', `repos/{owner}/{repo}/environments/production/deployment-branch-policies/${b.id}`])
+  if (!existing.some((b) => b.name === expected.branch)) ghOrFail(['api', '-X', 'POST', 'repos/{owner}/{repo}/environments/production/deployment-branch-policies', '-f', `name=${expected.branch}`, '-f', 'type=branch'])
+  console.log(`  ✓ deploys limited to the ${expected.branch} branch`)
 }
 for (const c of changes) {
   const target = c.scope === 'repo' ? [] : ['--env', env]
@@ -270,10 +270,10 @@ for (const c of changes) {
 
 const buildVars = ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_PROJECT_REF', 'SUPABASE_ANON_KEY', 'WARD_NAME', 'WARD_TIME_ZONE', 'ENABLE_GOOGLE', 'VAPID_PUBLIC_KEY', 'CLOUDFLARE_PAGES_PROJECT', 'SUPABASE_DB_URL', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']
 if (changes.some((c) => buildVars.includes(c.name))) {
-  const branch = env === 'production' ? 'production' : 'main'
+  const branch = expected.branch
   const latest = parse(gh(['run', 'list', '--workflow', 'ci.yml', '--branch', branch, '--event', 'push', '--limit', '1', '--json', 'databaseId,displayTitle,status']), [])[0]
   if (!latest) {
-    console.log(`\n  No deploy has run from ${branch} yet. ${env === 'production' ? 'Promote with git push origin main:production' : 'Push to main'} to deploy with these settings.`)
+    console.log(`\n  No deploy has run from ${branch} yet. ${env === 'production' ? 'Promote with git push origin main:gp7' : 'Push to main'} to deploy with these settings.`)
   } else if (latest.status !== 'completed') {
     console.log(`\n  A deploy from ${branch} is running now ("${latest.displayTitle}"). Re-run it once it finishes, so the build picks these up.`)
   } else if (/^y(es)?$/i.test(await ask(`\nThe app reads these when it’s built. Re-run the latest ${env} deploy ("${latest.displayTitle}")? [y/N] `))) {

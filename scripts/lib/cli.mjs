@@ -13,9 +13,10 @@ import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)
 
+// branch: the git branch that deploys there (ci.yml). Promote to production with git push origin main:gp7.
 export const ENVIRONMENTS = {
-  staging: { url: 'https://demo.warddesk.app', pagesProject: 'ward-desk-staging' },
-  production: { url: 'https://gp7.warddesk.app', pagesProject: 'ward-desk' },
+  staging: { url: 'https://demo.warddesk.app', pagesProject: 'ward-desk-staging', branch: 'main' },
+  production: { url: 'https://gp7.warddesk.app', pagesProject: 'ward-desk', branch: 'gp7' },
 }
 
 export const step = (text) => console.log(`\n▸ ${text}`)

@@ -156,8 +156,8 @@ async function checkHosted() {
   if (env === 'production') {
     const policy = json(envOut.stdout, {}).deployment_branch_policy
     const branches = json(policiesOut?.stdout ?? '', {}).branch_policies ?? []
-    const onlyProduction = !!policy?.custom_branch_policies && branches.length === 1 && branches[0].name === 'production' && (branches[0].type ?? 'branch') === 'branch'
-    ghEnv.check(onlyProduction, 'deploys only from the production branch', { detail: onlyProduction ? undefined : policy ? `allowed: ${branches.map((b) => b.name).join(', ') || (policy.protected_branches ? 'protected branches' : 'any branch')}` : 'any branch', fix: fixGithub })
+    const onlyProduction = !!policy?.custom_branch_policies && branches.length === 1 && branches[0].name === expected.branch && (branches[0].type ?? 'branch') === 'branch'
+    ghEnv.check(onlyProduction, `deploys only from the ${expected.branch} branch`, { detail: onlyProduction ? undefined : policy ? `allowed: ${branches.map((b) => b.name).join(', ') || (policy.protected_branches ? 'protected branches' : 'any branch')}` : 'any branch', fix: fixGithub })
   }
 
   if (!ref) {
@@ -225,7 +225,7 @@ async function checkHosted() {
     db.check(false, 'the database can be queried', { detail: dbOut.error, fix: `npx supabase login, and check ${env} has had a deploy` })
   } else {
     const row = dbOut.rows[0] ?? {}
-    db.check(!!row.has_schema, 'migrations have been applied', { detail: row.has_schema ? undefined : 'no app tables yet', fix: env === 'production' ? 'git push origin main:production (the deploy applies them)' : 'push to main (the deploy applies them)' })
+    db.check(!!row.has_schema, 'migrations have been applied', { detail: row.has_schema ? undefined : 'no app tables yet', fix: env === 'production' ? 'git push origin main:gp7 (the deploy applies them)' : 'push to main (the deploy applies them)' })
     const vault = parseArray(row.vault)
     // Only production is backed up nightly; staging backups are manual runs.
     if (env === 'production') {

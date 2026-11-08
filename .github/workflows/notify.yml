@@ -36,11 +36,11 @@ concurrency:
 
 jobs:
   send:
-    name: Send for ${{ github.ref_name == 'production' && 'production' || 'staging' }}
-    if: vars.NOTIFY_ENABLED == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/production')
+    name: Send for ${{ github.ref_name == 'gp7' && 'production' || 'staging' }}
+    if: vars.NOTIFY_ENABLED == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/gp7')
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
+    environment: ${{ github.ref_name == 'gp7' && 'production' || 'staging' }}
     steps:
       - uses: actions/checkout@v7
 

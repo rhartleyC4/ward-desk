@@ -12,7 +12,7 @@ name: Database backup
 #   secrets   BACKUP_R2_ACCESS_KEY_ID, BACKUP_R2_SECRET_ACCESS_KEY,
 #             BACKUP_DB_URL_PRODUCTION (and BACKUP_DB_URL_STAGING for staging backups)
 # These are repository secrets, not the environments' SUPABASE_DB_URL: the production environment
-# only allows the production branch, and scheduled runs start from main.
+# only allows the gp7 branch, and scheduled runs start from main.
 #
 # Off until the BACKUP_ENABLED repo variable is 'true'. Retention is done by R2 lifecycle rules:
 # daily/ objects expire after 31 days, monthly/ after 366.

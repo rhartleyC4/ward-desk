@@ -31,7 +31,7 @@ console.log(`  Project ${ref}`)
 
 step('Checking the allowlist')
 const [state] = runSql(`select to_regclass('public.allowlist') is not null as has_schema`, remote, { readOnly: true })
-if (!state?.has_schema) fail(`The ${env} database has no allowlist yet, because its migrations haven’t run. ${env === 'production' ? 'Promote first (git push origin main:production)' : 'Push to main first'}, then run this again.`)
+if (!state?.has_schema) fail(`The ${env} database has no allowlist yet, because its migrations haven’t run. ${env === 'production' ? 'Promote first (git push origin main:gp7)' : 'Push to main first'}, then run this again.`)
 const [current] = runSql(`select initial_roles::text as roles from public.allowlist where email = ${quote(email)}`, remote, { readOnly: true })
 console.log(current ? `  Already on it, with roles ${current.roles}` : '  Not on it yet')
 
