@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canAskForCallings, canSendRequests, homeFor, isSettingsPage, navFor, settingsFor } from './access'
+import { backFor, canAskForCallings, canSendRequests, homeFor, isSettingsPage, navFor, settingsFor } from './access'
 
 const labels = (roles: Parameters<typeof navFor>[0], templates: unknown[] = []) => navFor(roles, templates).map((l) => l.label)
 const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
@@ -96,5 +96,33 @@ describe('homeFor', () => {
     expect(homeFor(['bishopric'], bishopric, 'ward_clerk')).toBe('/agenda')
     expect(labels(['bishopric'], bishopric)).not.toContain('Home')
     expect(navFor(['leader'], [], 'executive_secretary').map((l) => l.label)).not.toContain('Home')
+  })
+})
+
+describe('backFor', () => {
+  const leader = navFor(['leader'])
+  const bishopricTabs = navFor(['bishopric'], bishopric)
+
+  it('goes back to Settings from a page opened there', () => {
+    expect(backFor('/away', bishopricTabs)).toEqual({ to: '/settings', label: 'Settings' })
+    expect(backFor('/settings', bishopricTabs)).toBeNull()
+    expect(backFor('/agenda', bishopricTabs)).toBeNull()
+  })
+
+  it('leaves out the button back to Settings when its list is beside the page', () => {
+    expect(backFor('/away', bishopricTabs, { settingsBeside: true })).toBeNull()
+  })
+
+  it('goes wherever sent the person here', () => {
+    expect(backFor('/away', bishopricTabs, { sent: { to: '/home', label: 'Home' } })).toEqual({ to: '/home', label: 'Home' })
+  })
+
+  it('leads someone with one tab back to it, since they have no tab bar', () => {
+    expect(leader.map((l) => l.label)).toEqual(['Requests'])
+    expect(backFor('/settings', leader)).toEqual({ to: '/requests', label: 'Requests' })
+    expect(backFor('/account', leader, { settingsBeside: true })).toEqual({ to: '/requests', label: 'Requests' })
+    expect(backFor('/account', leader)).toEqual({ to: '/settings', label: 'Settings' })
+    expect(backFor('/requests', leader)).toBeNull()
+    expect(backFor('/requests/123', leader)).toBeNull()
   })
 })

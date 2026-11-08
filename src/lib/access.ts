@@ -103,6 +103,19 @@ export const SETTINGS_PAGES = ['/account', '/away', '/hours', '/schedule', '/mee
 
 export const isSettingsPage = (pathname: string) => pathname === '/settings' || SETTINGS_PAGES.some((p) => (p.endsWith('/') ? pathname.startsWith(p) : pathname === p))
 
+/**
+ * Where the top-left back button goes: wherever sent us here, else Settings for a page opened from
+ * it. With the Settings list showing beside the page (settingsBeside), a button back to it would go
+ * nowhere new. Someone with a single tab has no tab bar, so off that tab the button leads back to it.
+ */
+export function backFor(pathname: string, links: NavLink[], { sent, settingsBeside = false }: { sent?: NavLink | null; settingsBeside?: boolean } = {}): NavLink | null {
+  const back = sent ?? (pathname !== '/settings' && isSettingsPage(pathname) ? { to: '/settings', label: 'Settings' } : null)
+  if (back && !(settingsBeside && back.to === '/settings')) return back
+  const [only] = links
+  const onIt = !!only && (pathname === only.to || pathname.startsWith(`${only.to}/`))
+  return links.length === 1 && !onIt ? only : null
+}
+
 const keepsHoursOffice = (office: Office) => !!office && LEADER_OFFICES.includes(office)
 
 /** Where to land after sign-in. A bishop or counselor who hasn't set appointment hours is asked to first. */

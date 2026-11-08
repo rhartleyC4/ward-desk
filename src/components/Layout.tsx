@@ -29,7 +29,7 @@ import { Children, isValidElement, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { ErrorBoundary } from './ErrorBoundary'
-import { isSettingsPage, navFor } from '../lib/access'
+import { backFor, isSettingsPage, navFor, type NavLink as Link } from '../lib/access'
 import { initials } from '../lib/names'
 import { nextStep } from '../lib/setup'
 import { WARD_NAME } from '../lib/ward'
@@ -47,15 +47,6 @@ const TAB_ICONS: Record<string, ReactNode> = {
   '/requests': <AssignmentOutlinedIcon />,
 }
 
-type Back = { to: string; label: string }
-
-/** Where the top-left back button goes: wherever sent us here, else Settings for a page opened from it. */
-function backFor(pathname: string, state: unknown): Back | null {
-  const sent = (state as { back?: Back } | null)?.back
-  if (sent) return sent
-  if (pathname !== '/settings' && isSettingsPage(pathname)) return { to: '/settings', label: 'Settings' }
-  return null
-}
 
 export function Layout() {
   return (
@@ -74,9 +65,7 @@ function Shell() {
   const links = navFor(roles, templates, office)
   const current = links.find((l) => pathname === l.to || pathname.startsWith(`${l.to}/`))?.to ?? false
   const split = useSettingsSplit()
-  const sentBack = backFor(pathname, state)
-  // With the Settings list showing beside the page, a button back to it would go nowhere new.
-  const back = split && sentBack?.to === '/settings' ? null : sentBack
+  const back = backFor(pathname, links, { sent: (state as { back?: Link } | null)?.back, settingsBeside: split })
   const showTabs = links.length > 1
   const settings = isSettingsPage(pathname)
   // Dashboards spread into columns on a wide screen. Settings shows its list beside the page, and forms
