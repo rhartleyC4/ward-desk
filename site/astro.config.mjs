@@ -27,6 +27,7 @@ export default defineConfig({
         { label: 'Settings', collapsed: true, items: [{ autogenerate: { directory: 'docs/settings' } }] },
         { label: 'Roles & privacy', collapsed: true, items: [{ autogenerate: { directory: 'docs/roles-and-privacy' } }] },
         { label: 'Running it for your ward', collapsed: true, items: [{ autogenerate: { directory: 'docs/self-hosting' } }] },
+        { label: 'Operations', collapsed: true, items: [{ autogenerate: { directory: 'docs/operations' } }] },
       ],
     }),
   ],
