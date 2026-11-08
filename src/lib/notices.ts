@@ -5,6 +5,9 @@
 // Notifications show on lock screens, so they never name the person meeting or say what an
 // appointment is for. They say which leader, when, and how many.
 //
+// A change a mentor made for the new bishop counts as the bishop's, so he isn't skipped as the
+// one who made it: he's told his mentor changed something (mentor_change below).
+//
 // Away dates that leave a Sunday with only one of the bishop and counselors, or none, also tell the
 // rest of the bishopric (short_sunday), by office and date only.
 
@@ -26,6 +29,8 @@ export type OutboxRow = {
   id: number
   event: OutboxEvent
   actor_id: string | null
+  /** Who really made the change: a mentor, when it differs from actor_id. Missing on old rows. */
+  acted_by?: string | null
   interview_id: string | null
   absence_id: string | null
   leader_id: string | null
@@ -132,6 +137,15 @@ export function planNotices(rows: OutboxRow[], ctx: NoticeContext): Notice[] {
   const sundaysTold = new Set<IsoDate>()
 
   for (const row of rows) {
+    if (row.acted_by && row.actor_id && row.acted_by !== row.actor_id) {
+      items.push({
+        to: row.actor_id,
+        kind: 'appointment_changed',
+        text: row.event === 'away' ? 'Your mentor changed your away dates.' : 'Your mentor changed an appointment for you.',
+        rowId: row.id,
+        title: ['Your mentor helped', 'Your mentor helped'],
+      })
+    }
     if (!row.leader_id || !isLeader(row.leader_id)) continue
     const leader = officeName(office(row.leader_id))
     const current = appointment(row.interview_id)

@@ -128,3 +128,11 @@ export function planPush(event: PushEvent, row: RequestRow | CallingRequestRow |
     }
   }
 }
+
+/** What the new bishop is told when his mentor did something for him. General, like the rest. */
+export const mentorMessage = (message: PushMessage): PushMessage => ({
+  title: 'Your mentor helped',
+  body: 'Your mentor made a change for you in Ward Desk. Open it to see.',
+  url: message.url,
+  tag: `${message.tag}-mentor`,
+})

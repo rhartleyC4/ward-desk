@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { planPush, tableFor, type AssignmentRow, type CallingRequestRow, type RequestRow } from './plan.ts'
+import { mentorMessage, planPush, tableFor, type AssignmentRow, type CallingRequestRow, type RequestRow } from './plan.ts'
 
 const now = new Date('2026-11-04T18:00:00Z')
 const justNow = '2026-11-04T17:58:00Z'
@@ -88,5 +88,12 @@ describe('planPush', () => {
     expect(tableFor('request_sent')).toBe('requests')
     expect(tableFor('calling_request_sent')).toBe('calling_requests')
     expect(tableFor('assignment_answered')).toBe('agenda_assignments')
+  })
+})
+
+describe('mentorMessage', () => {
+  it('tells the new bishop in general words, on the same page', () => {
+    const m = mentorMessage({ title: 'New request', body: 'x', url: '/requests', tag: 'request-r1' })
+    expect(m).toEqual({ title: 'Your mentor helped', body: 'Your mentor made a change for you in Ward Desk. Open it to see.', url: '/requests', tag: 'request-r1-mentor' })
   })
 })

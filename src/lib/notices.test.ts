@@ -236,3 +236,16 @@ describe('scheduled messages', () => {
     expect(progressMessage('00000000-0000-0000-0000-000000000000', 'finished').tag.length).toBeLessThanOrEqual(32)
   })
 })
+
+describe('changes a mentor made', () => {
+  it('tells the person he acted for, as well as everyone else as usual', () => {
+    const notices = planNotices([row('added', { actor_id: 'bishop', acted_by: 'mentor' })], ctx({ appointments: [appt()] }))
+    expect(notices.map((n) => n.to).sort()).toEqual(['bishop', 'exec'])
+    expect(notices.find((n) => n.to === 'bishop')!.message).toMatchObject({ title: 'Your mentor helped', body: 'Your mentor changed an appointment for you.' })
+    expect(notices.some((n) => n.to === 'mentor')).toBe(false)
+  })
+
+  it('says nothing extra when the person made it themselves', () => {
+    expect(planNotices([row('added', { actor_id: 'bishop', acted_by: 'bishop' })], ctx({ appointments: [appt()] })).map((n) => n.to)).toEqual(['exec'])
+  })
+})

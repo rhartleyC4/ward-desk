@@ -10,17 +10,21 @@
 //
 // Nobody gets a kind they turned off (notification_mutes; the kinds are the event names).
 //
+// A mentor acting for the new bishop sends the x-acting-as header (see acting_as() in the
+// database). The change counts as the new bishop's, so it's announced as his, and he's told too,
+// since he didn't make it himself. The mentor's own devices are never sent the bishop's news.
+//
 // Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT (supabase secrets set ...).
 // Supabase provides SUPABASE_URL, SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY. Deploying is
 // manual; see "Instant notifications" in README.md.
 
-import { createClient } from 'npm:@supabase/supabase-js@2.118.0'
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.118.0'
 import webpush from 'npm:web-push@3.6.7'
-import { planPush, PUSH_EVENTS, tableFor, type AssignmentRow, type CallingRequestRow, type Office, type PushEvent, type RequestRow } from './plan.ts'
+import { mentorMessage, planPush, PUSH_EVENTS, tableFor, type PushMessage, type AssignmentRow, type CallingRequestRow, type Office, type PushEvent, type RequestRow } from './plan.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-acting-as',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
@@ -54,13 +58,15 @@ Deno.serve(async (req) => {
   // The service role reads past RLS: a leader can't read calling_requests, but may announce their own.
   const admin = createClient(env('SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } })
   const table = tableFor(event)
+  const callerId = await actingAs(admin, auth.user.id, req.headers.get('x-acting-as'))
+  const mentored = callerId !== auth.user.id
   const [{ data: row }, { data: me }] = await Promise.all([
     admin.from(table).select('*').eq('id', id).maybeSingle(),
-    admin.from('profiles').select('office').eq('id', auth.user.id).maybeSingle(),
+    admin.from('profiles').select('office').eq('id', callerId).maybeSingle(),
   ])
   if (!row) return reply(404, { error: 'No such request' })
 
-  const plan = planPush(event, row as RequestRow | CallingRequestRow | AssignmentRow, auth.user.id, (me?.office ?? null) as Office, new Date())
+  const plan = planPush(event, row as RequestRow | CallingRequestRow | AssignmentRow, callerId, (me?.office ?? null) as Office, new Date())
   if ('skip' in plan) return reply(200, { sent: 0, skipped: plan.skip })
 
   // Each kind of notification is named after its event, and anyone can turn one off.
@@ -72,13 +78,34 @@ Deno.serve(async (req) => {
   const { error: claimed } = await admin.from('push_events').insert({ key: plan.key })
   if (claimed) return reply(200, { sent: 0, skipped: claimed.code === '23505' ? 'already sent' : claimed.message })
 
-  const { data: devices } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').in('user_id', to)
   webpush.setVapidDetails(env('VAPID_SUBJECT') || 'mailto:noreply@warddesk.app', publicKey, privateKey)
+  const result = await sendTo(admin, to, plan.message)
 
+  // The new bishop hears what his mentor did for him, once.
+  if (mentored) {
+    const { error: told } = await admin.from('push_events').insert({ key: `${plan.key}:mentor` })
+    if (!told) await sendTo(admin, [callerId], mentorMessage(plan.message))
+  }
+  return reply(200, result)
+})
+
+/** Who the caller acts as: the person named by x-acting-as while an open delegation allows it. */
+async function actingAs(admin: SupabaseClient, userId: string, wanted: string | null): Promise<string> {
+  if (!wanted || wanted === userId) return userId
+  const now = new Date().toISOString()
+  const [{ data: delegation }, { data: role }] = await Promise.all([
+    admin.from('delegations').select('id').eq('mentor_id', userId).eq('for_id', wanted).is('ended_at', null).lte('starts_at', now).gt('ends_at', now).maybeSingle(),
+    admin.from('roles').select('role').eq('user_id', wanted).eq('role', 'bishopric').maybeSingle(),
+  ])
+  return delegation && role ? wanted : userId
+}
+
+async function sendTo(admin: SupabaseClient, to: string[], message: PushMessage) {
+  const { data: devices } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').in('user_id', to)
   let sent = 0
   for (const d of devices ?? []) {
     try {
-      await webpush.sendNotification({ endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth } }, JSON.stringify(plan.message), {
+      await webpush.sendNotification({ endpoint: d.endpoint, keys: { p256dh: d.p256dh, auth: d.auth } }, JSON.stringify(message), {
         TTL: 24 * 60 * 60,
         urgency: 'normal',
         // No topic: the push service caps it at 32 characters, shorter than these tags. The tag
@@ -92,5 +119,5 @@ Deno.serve(async (req) => {
       else console.error(`push failed (${status ?? 'no status'}): ${(e as Error).message}`)
     }
   }
-  return reply(200, { sent, devices: devices?.length ?? 0 })
-})
+  return { sent, devices: devices?.length ?? 0 }
+}
