@@ -9,3 +9,6 @@ header.header {
 @media (prefers-reduced-transparency: reduce) {
   header.header { background-color: var(--wd-paper); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* Wide tables scroll sideways inside the column instead of being clipped on a phone. */
+.sl-markdown-content table { display: block; max-width: 100%; overflow-x: auto; }
