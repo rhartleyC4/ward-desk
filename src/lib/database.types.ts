@@ -375,14 +375,14 @@ isOneToOne: false
                   ]
                 },"client_errors": {
                   Row: {
-                    "app_version": string | null,"created_at": string,"id": number,"message": string,"route": string | null,"source": string | null,"stack": string | null,"user_agent": string | null,"user_id": string | null
+                    "app_version": string | null,"browser": string | null,"created_at": string,"id": number,"message": string,"route": string | null,"signed_in": boolean,"source": string | null,"stack": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "app_version"?: string | null,"created_at"?: string,"id"?: never,"message": string,"route"?: string | null,"source"?: string | null,"stack"?: string | null,"user_agent"?: string | null,"user_id"?: string | null
+                    "app_version"?: string | null,"browser"?: string | null,"created_at"?: string,"id"?: never,"message": string,"route"?: string | null,"signed_in"?: boolean,"source"?: string | null,"stack"?: string | null
                   }
                   Update: {
-                    "app_version"?: string | null,"created_at"?: string,"id"?: never,"message"?: string,"route"?: string | null,"source"?: string | null,"stack"?: string | null,"user_agent"?: string | null,"user_id"?: string | null
+                    "app_version"?: string | null,"browser"?: string | null,"created_at"?: string,"id"?: never,"message"?: string,"route"?: string | null,"signed_in"?: boolean,"source"?: string | null,"stack"?: string | null
                   }
                   Relationships: [
                     
@@ -838,6 +838,9 @@ isOneToOne: false
 "bishopric_template":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
+"browser_family":
+{ Args: { "user_agent": string }; Returns: string
+                           },
 "call_notify":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
@@ -926,6 +929,9 @@ isOneToOne: false
                            },
 "save_push_subscription":
 { Args: { "sub_auth": string,"sub_endpoint": string,"sub_p256dh": string }; Returns: undefined
+                           },
+"scrub_error_text":
+{ Args: { "t": string }; Returns: string
                            },
 "send_alert":
 { Args: { "body": string,"subject": string }; Returns: number

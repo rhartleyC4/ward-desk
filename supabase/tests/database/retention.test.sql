@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(61);
+select plan(62);
 
 -- A stable id for each test row, from a label.
 create function pg_temp.k(label text) returns uuid language sql immutable as $$
@@ -245,7 +245,16 @@ insert into public.push_events (key, created_at) values
   (format('calling:%s:stage:finished', pg_temp.k('suggest in')), now() - interval '2 years'),
   (format('calling:%s:stage:finished', pg_temp.k('suggest out')), now() - interval '2 years');
 
+insert into public.client_errors (message, route, created_at) values
+  ('kept', '/retention-in', now() - interval '30 days' + interval '1 hour'),
+  ('gone', '/retention-out', now() - interval '30 days' - interval '1 hour');
+
 select lives_ok($$ select public.health_check() $$, 'the hourly check runs');
+select is(
+  (select array_agg(route order by route) from public.client_errors where route like '/retention-%'),
+  array['/retention-in'],
+  'an error report from 30 days ago stays, an older one is deleted'
+);
 select is(
   (select array_agg(for_date order by for_date) from public.notification_log where user_id = pg_temp.uid('bishop@ward.test') and for_date in (current_date - 29, current_date - 30)),
   array[current_date - 29],

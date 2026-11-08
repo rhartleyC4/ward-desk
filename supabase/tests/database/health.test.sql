@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(25);
+select plan(29);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -46,16 +46,56 @@ select throws_ok($$ insert into public.client_errors (message) values ('made up'
 select pg_temp.act_as('bishop@ward.test');
 select is((select count(*)::int from public.client_errors), 2, 'an admin can read them');
 select is(
-  (select user_id from public.client_errors where route = '/'),
-  null,
-  'an error from the sign-in page has no person'
+  (select signed_in from public.client_errors where route = '/'),
+  false,
+  'an error from the sign-in page says no one was signed in'
 );
 select pg_temp.as_owner();
 select is(
-  (select (user_id = (select id from auth.users where email = 'leader@ward.test'), char_length(message), char_length(stack))::text from public.client_errors where route = '/agenda'),
+  (select (signed_in, char_length(message), char_length(stack))::text from public.client_errors where route = '/agenda'),
   '(t,500,4000)',
-  'an error is tied to who hit it, and long text is cut short'
+  'an error says someone was signed in, not who, and long text is cut short'
 );
+select hasnt_column('public', 'client_errors', 'user_id', 'nothing records who hit an error');
+
+-- An older app sends its full user agent and unscrubbed text.
+select pg_temp.act_as('leader@ward.test');
+select public.report_client_error(
+  'No request "Visit Sister Ames" for ames@example.com, call (555) 123-4567',
+  E'Error: can''t load ''Ames''\n    at f (index.js:1:23456)',
+  '/requests', 'old1234',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1',
+  'error'
+);
+select pg_temp.as_owner();
+select is(
+  (select row(message, stack, browser)::text from public.client_errors where route = '/requests'),
+  row('No request … for …, call …', E'Error: can''t load …\n    at f (index.js:1:23456)', 'Safari 18 iOS')::text,
+  'quotes, emails and phone numbers are scrubbed, and only the browser family is kept'
+);
+
+-- The same answers as browserFamily() in src/lib/errorReport.ts.
+select is(
+  array(select public.browser_family(ua) from unnest(array[
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.6778.73 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/26.0 Chrome/122.0.0.0 Mobile Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0',
+    'Chrome 131 Android',
+    'Test browser',
+    null
+  ]) with ordinality as a(ua, n) order by n),
+  array['Safari 17 iOS', 'Chrome 131 iOS', 'Samsung Internet 26 Android', 'Edge 131 Windows', 'Safari 18 macOS', 'Firefox 133 Linux', 'Chrome 131 Android', 'Other', 'Other'],
+  'the browser family is worked out like the app does, and a current app''s is kept as sent'
+);
+select is(
+  public.scrub_error_text('Record 000-1234-5678 at index.js:12:345678, status 404, by first.last+ward@example.co.uk'),
+  'Record … at index.js:12:345678, status 404, by …',
+  'line numbers and short numbers stay'
+);
+delete from public.client_errors where route = '/requests';
 
 select pg_temp.act_as('bishop@ward.test');
 select throws_ok($$ select public.health_check() $$, '42501', null, 'only the database runs the health check');
