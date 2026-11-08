@@ -4,7 +4,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(55);
+select plan(61);
 
 -- A stable id for each test row, from a label.
 create function pg_temp.k(label text) returns uuid language sql immutable as $$
@@ -231,6 +231,32 @@ select ok(exists (select 1 from auth.users where email = 'leader@ward.test'), 's
 
 select is((select (counts ->> 'accounts')::int from result), 1, 'the run says how many of each it deleted');
 select is((select schedule from cron.job where jobname = 'purge'), '23 9 * * *', 'it runs every day');
+
+-- ---------------------------------------------------------------------------
+-- Delivery logs: the hourly health check deletes them after 30 days
+-- ---------------------------------------------------------------------------
+
+insert into public.notification_log (user_id, kind, for_date, sent_at) values
+  (pg_temp.uid('bishop@ward.test'), 'day_summary', current_date - 29, now() - interval '30 days' + interval '1 hour'),
+  (pg_temp.uid('bishop@ward.test'), 'day_summary', current_date - 30, now() - interval '30 days' - interval '1 hour');
+insert into public.push_events (key, created_at) values
+  ('request:log-in:seen', now() - interval '30 days' + interval '1 hour'),
+  ('request:log-out:seen', now() - interval '30 days' - interval '1 hour'),
+  (format('calling:%s:stage:finished', pg_temp.k('suggest in')), now() - interval '2 years'),
+  (format('calling:%s:stage:finished', pg_temp.k('suggest out')), now() - interval '2 years');
+
+select lives_ok($$ select public.health_check() $$, 'the hourly check runs');
+select is(
+  (select array_agg(for_date order by for_date) from public.notification_log where user_id = pg_temp.uid('bishop@ward.test') and for_date in (current_date - 29, current_date - 30)),
+  array[current_date - 29],
+  'a notification logged 30 days ago stays, an older one is deleted'
+);
+select ok(exists (select 1 from public.push_events where key = 'request:log-in:seen'), 'a push sent 30 days ago stays');
+select ok(not exists (select 1 from public.push_events where key = 'request:log-out:seen'), 'an older one is deleted');
+select ok(exists (select 1 from public.push_events where key = format('calling:%s:stage:finished', pg_temp.k('suggest in'))),
+  'a calling request''s progress stays recorded while the request exists, so the leader isn''t told twice');
+select ok(not exists (select 1 from public.push_events where key = format('calling:%s:stage:finished', pg_temp.k('suggest out'))),
+  'and goes once the request is deleted');
 
 select finish();
 rollback;

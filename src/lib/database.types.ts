@@ -907,6 +907,9 @@ isOneToOne: false
               "assigned_by": string,"created_at": string,"id": string,"meeting_date": string,"meeting_name": string,"part": Database["public"]['Enums']["meeting_part"],"reply": string,"start_time": string,"status": Database["public"]['Enums']["assignment_answer"]
             }[]
                            },
+"prune_logs":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "purge_old_records":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },

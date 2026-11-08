@@ -434,6 +434,7 @@ Kept by the hourly `health_check()` instead:
 
 | Records | Rule |
 |---|---|
+| Notification and push delivery logs (`notification_log`, `push_events`) | deleted after 30 days (a calling request's progress record stays while the request does, so the leader isn't told twice) |
 | Calls to the notify function (`notify_calls`) | deleted after 7 days |
 | Error reports from the app (`client_errors`) | deleted after 90 days |
 
