@@ -176,6 +176,10 @@ After changing the schema, add a new migration (`npx supabase migration new <nam
 
 Never commit `.env`. `.env.example` lists what goes in it. The hosted environments keep their settings in GitHub and Supabase instead, set by the commands under "Deploying".
 
+## Site screenshots
+
+`npm run screenshots` captures the app's screens from the seed data for the public site; see [scripts/screenshots/README.md](scripts/screenshots/README.md).
+
 ## Tests
 
 | Command | What it covers | Needs local Supabase |
