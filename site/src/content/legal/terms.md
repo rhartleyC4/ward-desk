@@ -1,7 +1,7 @@
 ---
 title: Terms of Service
 description: The terms for using Ward Desk, a free service provided as is.
-lastUpdated: 2026-11-06
+lastUpdated: 2026-11-08
 ---
 
 <!-- DRAFT for the owner's review. Not legal advice. Have it checked before publishing, especially the warranty, liability and governing-law sections. -->
@@ -20,7 +20,7 @@ The Church's name and any other trademarks mentioned belong to their owners and 
 
 ## Who can use it
 
-Access is by invitation only. A ward administrator adds you, and can remove you. You must be a ward leader or otherwise invited for ward business, and an adult.
+Access is by invitation only. A ward administrator, or the bishopric during a change of leadership, adds you, and either can remove you. You must be a ward leader or otherwise invited for ward business, and an adult.
 
 ## The demo
 
@@ -32,7 +32,8 @@ When you use Ward Desk, you agree to:
 
 - **Use it only for your ward's business.**
 - **Keep confidential things confidential.** Calling discussions, appointments and anything else you see because of your role are private. Don't copy, screenshot or share them outside the people who are meant to know.
-- **Keep your account to yourself.** Don't share your sign-in, email link or device passkey, and don't let others use the app as you.
+- **Keep your account to yourself.** Don't share your sign-in, email link or device passkey, and don't let others use the app as you. The only way to act for someone else is the app's mentoring feature after a change of bishopric.
+- **Mentor in good faith.** If you mentor a new bishop, your actions are recorded as his. Act only as he would want, use the access only to help him, and stop when he asks or when the mentoring period ends.
 - **Enter only what's needed.** Keep notes short and factual. Don't enter sensitive personal details that the work doesn't require.
 - **Not misuse the service.** Don't try to get around access rules, read data you're not meant to see, overload the service, or interfere with it.
 - **Follow Church guidance and the law** that applies to you when handling members' information.
@@ -45,7 +46,7 @@ In particular:
 
 - **No support.** I may help when I can, but I have no obligation to answer questions, fix problems or add features.
 - **No uptime promise.** The service may be slow, unavailable or changed at any time.
-- **No guarantee against data loss.** I make backups, but they may fail or be incomplete. **Keep your own records** of anything you can't afford to lose, and keep using official Church systems for official records.
+- **No guarantee against data loss.** I make backups, but they may fail or be incomplete. Old records are also deleted on purpose after set periods (see the [Privacy Policy](/privacy/)). **Keep your own records** of anything you can't afford to lose, and keep using official Church systems for official records.
 - **Check what matters.** Dates, times, reminders and notifications may be wrong or late. Don't rely on the app alone for anything important.
 
 ## Limitation of liability

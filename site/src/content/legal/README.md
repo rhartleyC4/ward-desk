@@ -8,10 +8,8 @@
 |---|---|
 | privacy.md, terms.md | `privacy@warddesk.app`: create the mailbox (or alias) or replace it |
 | privacy.md, "Service providers" | `[REGION]`: the production Supabase project's region |
-| privacy.md, "This website" | Confirm warddesk.app still has no analytics or cookies once the site is finished |
-| privacy.md, "How long data is kept" | Comment about `notification_log` / `push_events` having no automatic deletion: remove once fixed, or keep the wording |
+| privacy.md, "How long data is kept" | Comment that `delegations`, `handovers` and `handover_seats` have no automatic deletion: remove once a purge rule exists, or keep the wording |
 | terms.md, "Governing law" | `[STATE]` (and county if wanted) |
-| terms.md, "Privacy" | Confirm the `/legal/privacy` link path |
 
 ## Claims and where they come from
 
@@ -29,14 +27,15 @@
 | Claim | Source |
 |---|---|
 | Invite-only via allowlist; unlisted emails refused | `supabase/migrations/20261101000000_initial_schema.sql` (`handle_new_user`) |
-| Removing an address removes roles (and office) | `20261103034916_allowlist_office.sql` (`sync_allowlist_roles`) |
+| Removing an address removes roles (and office); allowlist linked to the account by profile id | `20261108034742_profile_edits_and_allowlist_link.sql` (`sync_allowlist_roles`) |
 | Profile keeps email and name (from Google `full_name`, else part of the email) | `20261101000000_initial_schema.sql` (`profiles`, `handle_new_user`) |
-| Office stored on the profile | `20261102050216_add_bishopric_office.sql` |
+| Office and organization stored on the profile | `20261102050216_add_bishopric_office.sql`, `20261108060300_leader_organizations.sql` |
 | Google sign-in uses only openid, email, profile scopes | README.md "Google sign-in" |
 | Passkeys held by Supabase Auth | README.md "Face ID and fingerprint sign-in", `src/lib/passkeys.ts` |
 | Sessions, IP, browser in sign-in records | Supabase Auth's own `auth` schema (`auth.sessions`, audit log); backed up per README.md "Backups and restore" |
-| No self-service name edit (ask admin) | No profile update in `src/lib/queries.ts` for the user's own name; RLS would allow it (`users update own profile`) |
-| No self-service account deletion | Nothing in `src/` or migrations deletes `auth.users` |
+| People can change their own name, nothing else; nobody signed in changes an email | `20261108034742_profile_edits_and_allowlist_link.sql`; Account page (commit 4b24790) |
+| Admins delete accounts (not their own); profile and personal rows go; requests and other records stay as "Former member" | `20261108035016_delete_account.sql` (`delete_account`, `delete_person`) |
+| Accounts deleted 180 days after losing every role (`profiles.removed_at`) | `20261108035016_delete_account.sql`, `20261108041724_purge_old_records.sql` |
 
 ### What's stored about members
 
@@ -63,6 +62,25 @@
 | Meeting assignments: attendees and the person asked; accept/decline with optional reply | `supabase/migrations/20261107145553_meeting_assignments.sql` |
 | Error reports: admins only | `20261106222524_health_checks.sql` |
 
+### Leadership changes and mentoring
+
+| Claim | Source |
+|---|---|
+| Bishop (or admin) runs a bishopric handover; anyone in the bishopric (or admin) changes an organization leader | `20261108060400_leadership_changes.sql` (`run_handover`, `change_leader`) |
+| Open work moves to successors; closed and past records stay | `20261108060400_leadership_changes.sql` (`move_leadership_work`) |
+| Bishopric can add newcomers to the allowlist during a change | `20261108060400_leadership_changes.sql` |
+| Mentoring up to 12 weeks; new bishop can extend, end, allow callings | `20261108060000_mentoring_delegations.sql` (`delegations_length`, column grants) |
+| Mentor's actions recorded as the new bishop; only bishopric role carries over, never admin | `20261108060000_mentoring_delegations.sql` (`acting_as`), `20261108060100_record_acting_person.sql` |
+| Calling discussions hidden from a mentor unless allowed | `20261108060200_mentor_callings.sql` (`can_see_callings`) |
+| New bishop notified of mentor's appointment and away-date changes | `20261108060100_record_acting_person.sql` (`acted_by`), `src/lib/notices.ts` (`mentor_change`) |
+| Handover records readable by bishopric and admins; delegations by mentor and mentored | RLS in the two migrations above |
+
+### This website (warddesk.app)
+
+| Claim | Source |
+|---|---|
+| No analytics, cookies or outside resources; theme choice in localStorage | No external `src`/`href` or analytics in `site/src`; `site/src/components/ThemeScript.astro`, `ThemeToggle.astro` |
+
 ### Notifications and email
 
 | Claim | Source |
@@ -79,10 +97,11 @@
 
 | Claim | Source |
 |---|---|
-| Error reports: message, route without query, version, user agent, user id; deleted after 90 days | `src/lib/errorReport.ts`, `20261106231416_health_check_backups.sql` (`health_check`) |
+| Error reports: scrubbed message and stack, route without query, version, browser family/version/OS, signed in or not (no user id); deleted after 30 days | `src/lib/errorReport.ts` (`scrubText`), `20261108042339_anonymous_error_reports.sql` (`scrub_error_text`, `prune_logs`) |
 | Outbox rows deleted 7 days after claimed | `scripts/notify/notices.ts` |
-| `notification_log` and `push_events` kept indefinitely | No delete anywhere (`20261105014049_day_summary_notifications.sql`, `20261105035300_push_events.sql`) |
-| Ward records kept until deleted | No retention job on content tables |
+| `notification_log` and `push_events` deleted after 30 days | `20261108042115_delivery_log_retention.sql` (`prune_logs`) |
+| Every keep period in the privacy policy's table; open work never purged | `20261108041724_purge_old_records.sql` (header table, `purge_old_records`), README.md "Data retention" |
+| Handovers and delegations: no purge; names set null / rows cascade when an account is deleted | `20261108060000_mentoring_delegations.sql`, `20261108060400_leadership_changes.sql` |
 
 ### Backups
 
@@ -90,7 +109,7 @@
 |---|---|
 | Nightly, age-encrypted, stored in Cloudflare R2; only owner holds the private key | `.github/workflows/backup.yml`, README.md "Backups and restore" |
 | Includes `public`, `auth` rows, migrations | `.github/workflows/backup.yml` |
-| Dailies 31 days, monthlies 366 days | README.md "Backups and restore" (R2 lifecycle rules, set by hand in Cloudflare) |
+| Dailies 30 days, monthlies 90 days | `scripts/lib/backup-retention.mjs`, applied by `npm run backup:lifecycle`, checked by `env:check` (commit ff337d8) |
 | Nothing unencrypted stored on GitHub | `.github/workflows/backup.yml` (no artifacts; local file removed) |
 
 ### Device storage

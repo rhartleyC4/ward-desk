@@ -1,7 +1,7 @@
 ---
 title: Privacy Policy
 description: What Ward Desk stores, who can see it, where it lives and how long it is kept.
-lastUpdated: 2026-11-06
+lastUpdated: 2026-11-08
 ---
 
 <!-- DRAFT for the owner's review. Not legal advice. Have it checked before publishing. Every factual claim is listed with its source in README.md in this folder. -->
@@ -30,7 +30,7 @@ Ward Desk is open source, so other wards can run their own copy. If you use a co
 
 ## This website
 
-warddesk.app (the overview and docs) does not use analytics, tracking or advertising, and sets no cookies. <!-- CHECK before publishing: still true of the finished site? --> Like any website, the hosting provider (Cloudflare) briefly processes your IP address and browser details to deliver pages and block attacks.
+warddesk.app (the overview and docs) does not use analytics, tracking or advertising, sets no cookies and loads nothing from other sites. It remembers your light or dark mode choice in your browser's storage. Like any website, the hosting provider (Cloudflare) briefly processes your IP address and browser details to deliver pages and block attacks.
 
 ## The demo
 
@@ -40,7 +40,7 @@ warddesk.app (the overview and docs) does not use analytics, tracking or adverti
 
 ## Invite-only
 
-Nobody can sign up. An administrator in your ward adds your email address to an invite list, and only listed addresses can sign in. Removing your address takes away your access.
+Nobody can sign up. An administrator in your ward adds your email address to an invite list, and only listed addresses can sign in. The bishopric can also add new leaders when leadership changes (see "Leadership changes and mentoring"). Removing your address takes away your access.
 
 ## What the app stores and why
 
@@ -49,9 +49,10 @@ The app stores only what the ward's leaders need to do their work.
 **About you, as a user**
 
 - **Your email address and name**, to sign you in and show who did what. If you sign in with Google, Google gives the app your name and email address.
-- **Your role and position** (for example, bishopric or ward leader, and an office such as first counselor), to decide what you can see and do.
+- **Your role and position** (for example, bishopric or ward leader, an office such as first counselor, or the organization you lead, such as Primary), to decide what you can see and do and where requests go.
 - **Sign-in records** kept by our sign-in provider: sessions, the passkeys you add for Face ID or fingerprint sign-in (the public part only; your fingerprint or face never leaves your device), and technical details such as IP address and browser.
 - **Your notification settings and devices**: which notifications you turned off, and for each device where you turned notifications on, the address the browser's push service gave it.
+- **Leadership changes you're part of**: who left and who took each office or organization, and when, and any mentoring arrangement (see below).
 - **Your away dates** and, if you are the bishop or a counselor, your **appointment hours**.
 - **Your work in the app**: requests you send or answer and your replies, meeting assignments (such as a prayer) you accept or decline and any reason you give, agenda items you add, appointments you book or report on, and similar records.
 
@@ -79,8 +80,22 @@ Access is enforced by rules in the database itself, not only by what the screens
 - **Meeting assignments** (who gives a prayer or spiritual thought, and their answer) are visible to that meeting's attendees and the person asked.
 - **Sacrament meeting plans, away dates and the standing schedule** are visible to everyone with access to the app.
 - **Error reports** are visible only to administrators.
+- **Records of leadership changes** are visible to the bishopric and administrators. A mentoring arrangement is visible to the mentor and the person mentored.
 
 Administrators can manage who has access. I, as the person who runs the service, can technically access the database to keep it running, fix problems and restore backups. I do not look at ward records unless that is needed for those purposes.
+
+## Leadership changes and mentoring
+
+When the bishopric changes, the bishop records who now holds each office. When an organization (such as Primary) gets a new leader, anyone in the bishopric can record it. Open work, such as open requests, booked appointments and assignments, moves from the person leaving to the person taking over. Closed and past records stay as they were.
+
+After a change of bishopric, the outgoing bishop may keep access for a limited time (at most 12 weeks) to help the new bishop. During that time:
+
+- he sees what the new bishop sees, except **calling discussions, which stay hidden unless the new bishop allows them**
+- **everything he does is recorded as the new bishop**, so ward records show the new bishop's name, not his
+- the new bishop is notified when his mentor changes appointments or away dates, and can end the arrangement at any time
+- he never gets administrator access through it
+
+Anyone released from every position loses access at once (apart from a mentor during his mentoring period).
 
 ## Notifications
 
@@ -94,7 +109,7 @@ Sign-in links and occasional service alerts are sent by email. Sign-in emails go
 
 ## Error reports
 
-When the app hits an error, it records the error message, the page address (without anything after a "?"), the app version, your browser type and, if you are signed in, your user ID. It never records what was on the page. Error reports are deleted automatically after **90 days**.
+When the app hits an error, it records the error message, the page address (without anything after a "?"), the app version, your browser name and version and your device's system (for example "Safari 18 iOS"), and whether someone was signed in. It does **not** record who you are or what was on the page. Before a report is saved, anything in quotes, email addresses and long numbers are removed from it. Error reports are deleted automatically after **30 days**.
 
 ## Service providers and where data is stored
 
@@ -115,15 +130,32 @@ I do not sell personal information, share it for advertising, or use it to train
 
 ## How long data is kept
 
-- **Ward records** (agendas, callings, appointments, requests, sacrament plans) are kept until someone in the ward deletes them, so past meetings can be looked back on. Leaders should delete records that are no longer needed, such as calling discussions once a decision is final.
-- **Error reports**: 90 days.
-- **Notification bookkeeping**: change notices waiting to be sent are deleted 7 days after they are sent. A log of which day-ahead and reminder notifications went to whom is kept so none is sent twice. <!-- OWNER: no automatic deletion yet for notification_log or push_events. See README.md. -->
-- **Device push addresses** are deleted when the push service says the device is gone, or when you turn notifications off.
-- **Accounts:** removing someone from the invite list ends their access right away. Their name stays on records they took part in, so the ward's history makes sense. To have your account and sign-in details deleted, ask (see "Your choices and rights").
+Old records are deleted automatically every day. Nothing still open is deleted: a calling still being filled, an appointment not yet held, an open request, someone still on the prayer roll or an unfinished agenda item all stay.
+
+| Records | Kept |
+|---|---|
+| Declined names for a calling; callings no longer needed | 90 days after the decision |
+| Finished callings, their names and calling requests | notes cleared after 90 days; deleted 1 year after the calling is finished |
+| Calling requests not tied to a calling | notes cleared after 90 days; deleted after 1 year, once finished |
+| Appointments | notes cleared 90 days after the appointment; deleted after 1 year |
+| Requests, done or declined | 1 year after they were closed |
+| Prayer roll names | 90 days after being taken off |
+| Meeting assignments and the answers to them | 90 days after the meeting |
+| Meeting reminders sent | 90 days after the meeting |
+| Resolved agenda items | 2 years after being resolved |
+| Sacrament meetings and their programs | 3 years after the meeting |
+| Away dates | 1 year after the last day away |
+| Error reports | 30 days |
+| Notification logs (what was sent, so nothing is sent twice) | 30 days; change notices 7 days after sending |
+| Device push addresses | until you turn notifications off or the push service says the device is gone |
+
+Records of leadership changes (who left and who took each position) are kept; when an account is deleted, its name is removed from them. A mentoring arrangement is deleted along with either person's account. <!-- OWNER: no automatic deletion for delegations, handovers or handover_seats yet. See README.md. -->
+
+**Accounts.** Removing someone from the invite list ends their access right away. An account is **deleted automatically 180 days after its owner loses every role**, and an administrator can delete one sooner. Deleting an account removes the profile, sign-in details, roles, devices, notification settings, away dates and appointment hours. Ward records the person took part in stay, with their name replaced by "Former member".
 
 ## Backups
 
-Every night the database is copied, encrypted, and stored in Cloudflare R2, separately from the main database. Only I hold the key to decrypt it. Daily backups are deleted after **31 days**, and one backup per month is kept for **366 days**. This means something deleted from the app can remain in an encrypted backup for up to about a year, until that backup expires. Backups are only used to recover from a failure.
+Every night the database is copied, encrypted, and stored in Cloudflare R2, separately from the main database. Only I hold the key to decrypt it. Daily backups are deleted after **30 days**, and one backup per month is kept for **90 days**. This means something deleted from the app can remain in an encrypted backup for up to about **3 months**, until that backup expires. Backups are only used to recover from a failure.
 
 ## Cookies and storage on your device
 
@@ -147,7 +179,8 @@ If you believe a child's information should be removed, contact your ward's bish
 
 You can:
 
-- see the information about you in the app, and ask your ward's administrator to correct your name or role
+- see the information about you in the app, and change your own name on your Account page
+- ask your ward's administrator to correct your role or position, or to delete your account
 - turn any kind of notification off, on each device or for all of them
 - remove your passkeys and devices from your Account page
 - ask for a copy of your information, or for it to be corrected or deleted
