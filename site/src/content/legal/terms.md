@@ -82,7 +82,7 @@ How personal information is handled is explained in the [Privacy Policy](/privac
 
 ## Governing law
 
-These terms are governed by the laws of the State of [STATE], United States, without regard to its conflict-of-law rules. Any dispute will be handled in the courts located in [STATE]. <!-- PLACEHOLDER: fill in the owner's state, and the county if wanted. -->
+These terms are governed by the laws of the State of Utah, United States, without regard to its conflict-of-law rules. Any dispute will be handled in the courts located in Utah.
 
 ## General
 
