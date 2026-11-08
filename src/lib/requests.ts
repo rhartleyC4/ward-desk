@@ -17,6 +17,9 @@ export type CallingStage = 'sent' | 'received' | 'in_progress' | 'finished'
 /** The local day a timestamp falls on, the same way todayIso() reads today. */
 export const dayOf = (timestamp: string): IsoDate => todayIso(new Date(timestamp))
 
+/** Shown in place of someone whose account was deleted: their requests stay with the sender id or recipient id blank. */
+export const FORMER_MEMBER = 'Former member'
+
 export const isOpen = (r: Pick<Request, 'status'>) => r.status === 'sent' || r.status === 'seen'
 
 /** What the person asked does next, for the buttons and the sender's view. */

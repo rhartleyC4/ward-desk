@@ -31,6 +31,11 @@ describe('planPush', () => {
     expect(planPush('calling_request_received', calling({ received_by: 'second', received_at: justNow }), 'first', 'first_counselor', now)).toHaveProperty('skip')
   })
 
+  it('tells no one whose account was deleted', () => {
+    expect(planPush('request_answered', request({ status: 'done', from_id: null }), 'sec', null, now)).toHaveProperty('skip')
+    expect(planPush('calling_request_received', calling({ requested_by: null, received_by: 'second', received_at: justNow }), 'second', null, now)).toHaveProperty('skip')
+  })
+
   it('ignores old changes and the wrong status', () => {
     expect(planPush('request_sent', request({ updated_at: longAgo }), 'bishop', 'bishop', now)).toHaveProperty('skip')
     expect(planPush('request_sent', request({ status: 'seen' }), 'bishop', 'bishop', now)).toHaveProperty('skip')

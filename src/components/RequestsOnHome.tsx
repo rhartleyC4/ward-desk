@@ -9,7 +9,7 @@ import { canSendRequests } from '../lib/access'
 import { meetingLine, PART_LABELS, waitingAnswer } from '../lib/assignments'
 import { todayIso } from '../lib/dates'
 import * as q from '../lib/queries'
-import { callingRequestSummary, requestStatusLine, unreceived, waitingOn } from '../lib/requests'
+import { FORMER_MEMBER, callingRequestSummary, requestStatusLine, unreceived, waitingOn } from '../lib/requests'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 import { ErrorNote, Muted, SectionCard } from './Layout'
@@ -48,7 +48,7 @@ export function RequestsOnHome() {
   const parts = waitingAnswer(data.assignments, today)
   if (!mine.length && !calling.length && !parts.length) return null
 
-  const from = (id: string) => data.people.find((p) => p.id === id)?.display_name ?? 'Someone'
+  const from = (id: string | null) => (id === null ? FORMER_MEMBER : (data.people.find((p) => p.id === id)?.display_name ?? 'Someone'))
   const ack = (fn: () => Promise<void>) =>
     void save.act(fn).then((ok) => {
       if (ok) {

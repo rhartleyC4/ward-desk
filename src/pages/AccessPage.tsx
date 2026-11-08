@@ -2,6 +2,11 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Chip from '@mui/material/Chip'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
@@ -12,7 +17,8 @@ import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import type { AppRole } from '../lib/access'
 import type { Enums } from '../lib/database.types'
-import { addInvite, loadAccess, removeInvite, updateInvite, type InviteAccess } from '../lib/queries'
+import { longDate, todayIso } from '../lib/dates'
+import { addInvite, deleteAccount, loadAccess, removeInvite, updateInvite, type Account, type InviteAccess } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 import { nativeSelect } from '../theme'
@@ -88,6 +94,31 @@ function AccessFields({ who, access, onChange, locked }: { who: string; access: 
   )
 }
 
+/** Asks before deleting an account, saying what goes and what stays. */
+function DeleteAccountDialog({ account, busy, error, onCancel, onDelete }: { account: Account | null; busy: boolean; error: string | null; onCancel: () => void; onDelete: (id: string) => void }) {
+  const name = account?.display_name || account?.email
+  return (
+    <Dialog open={!!account} onClose={onCancel} aria-labelledby="delete-account-title">
+      <DialogTitle id="delete-account-title">Delete account?</DialogTitle>
+      <DialogContent>
+        <DialogContentText sx={{ mb: 1.5 }}>
+          This deletes {name}&rsquo;s sign-in, profile, away dates, appointment hours and notification settings, and takes {account?.email} off the list.
+        </DialogContentText>
+        <DialogContentText>
+          Requests and calling requests they were part of stay, showing &ldquo;Former member&rdquo;. This can't be undone.
+        </DialogContentText>
+        <ErrorNote error={error} />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onCancel}>Cancel</Button>
+        <Button color="error" variant="contained" disabled={busy} onClick={() => account && onDelete(account.id)}>
+          Delete account
+        </Button>
+      </DialogActions>
+    </Dialog>
+  )
+}
+
 const friendly = (message: string) => (/duplicate key/i.test(message) ? 'That email can already sign in.' : message)
 
 /** Admins decide which emails may sign in, and each person's roles and bishopric position. */
@@ -97,6 +128,7 @@ export function AccessPage() {
   const save = useAction()
   const [email, setEmail] = useState('')
   const [access, setAccess] = useState<InviteAccess>(NOBODY)
+  const [deleting, setDeleting] = useState<Account | null>(null)
 
   if (error) return <ErrorNote error={error} />
   if (!data) return <Loading />
@@ -122,7 +154,18 @@ export function AccessPage() {
   }
 
   const isMe = (inviteEmail: string) => inviteEmail.toLowerCase() === profile?.email.toLowerCase()
-  const nameFor = (inviteEmail: string) => data.profiles.find((p) => p.email.toLowerCase() === inviteEmail.toLowerCase())?.display_name
+  const accountOf = (id: string | null) => data.accounts.find((a) => a.id === id)
+  const linked = new Set(data.invites.map((i) => i.profile_id))
+  const removed = data.accounts.filter((a) => !linked.has(a.id))
+
+  const confirmDelete = async (id: string) => {
+    if (await run(() => deleteAccount(supabase, id))) setDeleting(null)
+  }
+  const deleteButton = (account: Account) => (
+    <Button size="small" color="error" sx={{ mt: 1, ml: -0.5 }} aria-label={`Delete account for ${account.email}`} disabled={save.busy} onClick={() => setDeleting(account)}>
+      Delete account
+    </Button>
+  )
 
   return (
     <>
@@ -152,13 +195,14 @@ export function AccessPage() {
       <SectionCard title={`Who can sign in (${data.invites.length})`}>
         <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />} spacing={1.5}>
           {data.invites.map((invite) => {
-            const name = nameFor(invite.email)
+            const account = accountOf(invite.profile_id)
+            const name = account?.display_name
             const me = isMe(invite.email)
             return (
               <Stack key={invite.email} direction="row" sx={{ alignItems: 'flex-start', gap: 1 }}>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                   <Typography sx={{ overflowWrap: 'anywhere' }}>{invite.email}</Typography>
-                  <Muted>{name ? `${name}${me ? ' (you)' : ''}` : "Hasn't signed in yet"}</Muted>
+                  <Muted>{account ? `${name || 'Signed in'}${me ? ' (you)' : ''}` : "Hasn't signed in yet"}</Muted>
                   <Box sx={{ mt: 1 }}>
                     <AccessFields
                       who={invite.email}
@@ -167,6 +211,7 @@ export function AccessPage() {
                       onChange={(next) => run(() => updateInvite(supabase, invite.email, next))}
                     />
                   </Box>
+                  {account && !me && deleteButton(account)}
                 </Box>
                 <Tooltip title={me ? "You can't remove yourself" : 'Remove'}>
                   <span>
@@ -175,7 +220,7 @@ export function AccessPage() {
                       aria-label={`Remove ${invite.email}`}
                       disabled={me || save.busy}
                       onClick={() => {
-                        if (window.confirm(`Remove ${invite.email}? They won't be able to use the app until they're added again.`))
+                        if (window.confirm(`Remove ${invite.email}? They won't be able to use the app until they're added again. Their account stays until you delete it.`))
                           run(() => removeInvite(supabase, invite.email))
                       }}
                     >
@@ -188,6 +233,28 @@ export function AccessPage() {
           })}
         </Stack>
       </SectionCard>
+
+      {removed.length > 0 && (
+        <SectionCard title={`Removed, account kept (${removed.length})`}>
+          <Box sx={{ mb: 1.5 }}>
+            <Muted>These people can't use the app anymore, but their account and personal records are still here. Delete an account when it's no longer needed.</Muted>
+          </Box>
+          <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />} spacing={1.5}>
+            {removed.map((account) => (
+              <Box key={account.id}>
+                <Typography sx={{ overflowWrap: 'anywhere' }}>{account.display_name || account.email}</Typography>
+                <Muted>
+                  {account.email}
+                  {account.removed_at && ` · removed ${longDate(todayIso(new Date(account.removed_at)))}`}
+                </Muted>
+                <Box>{deleteButton(account)}</Box>
+              </Box>
+            ))}
+          </Stack>
+        </SectionCard>
+      )}
+
+      <DeleteAccountDialog account={deleting} busy={save.busy} error={save.error} onCancel={() => setDeleting(null)} onDelete={(id) => void confirmDelete(id)} />
     </>
   )
 }

@@ -13,9 +13,9 @@ export const tableFor = (event: PushEvent) => (event.startsWith('calling_') ? 'c
 
 export type Office = 'bishop' | 'first_counselor' | 'second_counselor' | 'executive_secretary' | 'assistant_executive_secretary' | 'ward_clerk' | null
 
-export type RequestRow = { id: string; from_id: string; to_id: string; status: 'sent' | 'seen' | 'done' | 'declined'; updated_at: string }
+export type RequestRow = { id: string; from_id: string | null; to_id: string | null; status: 'sent' | 'seen' | 'done' | 'declined'; updated_at: string }
 export type AssignmentRow = { id: string; assignee_id: string; assigned_by: string | null; answered_by: string | null; status: 'asked' | 'accepted' | 'declined'; updated_at: string }
-export type CallingRequestRow = { id: string; requested_by: string; routed_to: string[]; received_by: string | null; received_at: string | null; created_at: string }
+export type CallingRequestRow = { id: string; requested_by: string | null; routed_to: string[]; received_by: string | null; received_at: string | null; created_at: string }
 
 export type PushMessage = { title: string; body: string; url: string; tag: string }
 export type PushPlan = { key: string; to: string[]; message: PushMessage } | { skip: string }
@@ -52,6 +52,7 @@ export function planPush(event: PushEvent, row: RequestRow | CallingRequestRow |
       const r = row as RequestRow
       if (r.from_id !== callerId) return { skip: 'only the sender announces a request' }
       if (r.status !== 'sent' || !fresh(r.updated_at, now)) return { skip: 'not newly sent' }
+      if (!r.to_id) return { skip: 'the person asked is no longer a member' }
       return {
         // Keyed by recipient, so handing it to someone new tells them too.
         key: `request:${r.id}:sent:${r.to_id}`,
@@ -63,6 +64,7 @@ export function planPush(event: PushEvent, row: RequestRow | CallingRequestRow |
       const r = row as RequestRow
       if (r.to_id !== callerId) return { skip: 'only the person asked answers' }
       if (r.status === 'sent' || !fresh(r.updated_at, now)) return { skip: 'not newly answered' }
+      if (!r.from_id) return { skip: 'the sender is no longer a member' }
       return {
         key: `request:${r.id}:${r.status}`,
         to: [r.from_id],
@@ -83,6 +85,7 @@ export function planPush(event: PushEvent, row: RequestRow | CallingRequestRow |
       const r = row as CallingRequestRow
       if (r.received_by !== callerId) return { skip: 'only whoever received it announces it' }
       if (!fresh(r.received_at, now)) return { skip: 'not newly received' }
+      if (!r.requested_by) return { skip: 'the leader who asked is no longer a member' }
       return {
         key: `calling:${r.id}:received`,
         to: [r.requested_by],

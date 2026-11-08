@@ -846,16 +846,28 @@ export async function removeAttendee(client: Client, templateId: string, userId:
 // Sign-in access (admins only)
 // ---------------------------------------------------------------------------
 
-export type Invite = Pick<Tables<'allowlist'>, 'email' | 'initial_roles' | 'initial_office' | 'created_at'>
+export type Invite = Pick<Tables<'allowlist'>, 'email' | 'initial_roles' | 'initial_office' | 'created_at' | 'profile_id'>
 export type InviteAccess = Pick<Invite, 'initial_roles' | 'initial_office'>
+export type Account = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' | 'removed_at'>
 
-/** Everyone allowed to sign in, with the profile of those who already have. */
+/**
+ * Everyone allowed to sign in, and every account. An account no entry links to belongs to someone
+ * who was taken off the list; it stays until it's deleted.
+ */
 export async function loadAccess(client: Client) {
-  const [invites, profiles] = await Promise.all([
-    client.from('allowlist').select('email, initial_roles, initial_office, created_at').order('email'),
-    loadProfiles(client),
+  const [invites, accounts] = await Promise.all([
+    client.from('allowlist').select('email, initial_roles, initial_office, created_at, profile_id').order('email'),
+    client.from('profiles').select('id, email, display_name, removed_at').order('display_name'),
   ])
-  return { invites: must(invites) as Invite[], profiles }
+  return { invites: must(invites) as Invite[], accounts: must(accounts) as Account[] }
+}
+
+/**
+ * Deletes someone else's account and takes their email off the list (admins only). Their personal
+ * records go with it; requests they were part of stay, showing "Former member".
+ */
+export async function deleteAccount(client: Client, personId: string) {
+  check(await client.rpc('delete_account', { person: personId }))
 }
 
 export async function addInvite(client: Client, email: string, access: InviteAccess) {

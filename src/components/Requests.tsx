@@ -20,6 +20,7 @@ import {
   CALLING_REQUEST_KINDS,
   callingRequestSummary,
   dayOf,
+  FORMER_MEMBER,
   isOpen,
   isOverlooked,
   needsRelease,
@@ -44,7 +45,8 @@ import { Muted, SectionCard, Side, Split } from './Layout'
 import { MyAssignments, type AnswerAssignment } from './MeetingAssignments'
 import { ActionButton, Choices, StepFrame } from './Steps'
 
-const nameOf = (id: string | null, people: Pick<Profile, 'id' | 'display_name'>[]) => people.find((p) => p.id === id)?.display_name ?? 'Someone'
+const nameOf = (id: string | null, people: Pick<Profile, 'id' | 'display_name'>[]) =>
+  id === null ? FORMER_MEMBER : (people.find((p) => p.id === id)?.display_name ?? 'Someone')
 const dateLabel = { inputLabel: { shrink: true } } as const
 
 // ---------------------------------------------------------------------------

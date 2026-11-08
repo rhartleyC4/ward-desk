@@ -111,6 +111,13 @@ describe('RequestsView', () => {
     expect(a.answer).toHaveBeenCalledWith('r1', 'done', 'Called them')
   })
 
+  it('shows a deleted account as a former member', () => {
+    view({ data: data({ requests: [request({ from_id: null })], callingRequests: [{ ...callingRequest, requested_by: null }] }), canSend: true })
+    const card = screen.getByRole('article', { name: 'Call the Lees' })
+    expect(within(card).getByText('From Former member · Not seen yet')).toBeInTheDocument()
+    expect(screen.getByText(/^From Former member \(Primary\)/)).toBeInTheDocument()
+  })
+
   it('shows the sender where each request stands, and flags one still unread', () => {
     view({
       userId: 'bishop',

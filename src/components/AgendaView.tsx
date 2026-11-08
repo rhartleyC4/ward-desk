@@ -35,7 +35,7 @@ import {
 import { ANSWER_COLORS, ANSWER_LABELS, assignmentChanges, byPart, MEETING_PARTS, PART_LABELS, type AssignmentChange, type MeetingPart } from '../lib/assignments'
 import { longDate, type IsoDate } from '../lib/dates'
 import type { AgendaData, AgendaSection, AgendaTemplate } from '../lib/queries'
-import { followUps, isOpen, requestStatusLine, type Request } from '../lib/requests'
+import { FORMER_MEMBER, followUps, isOpen, requestStatusLine, type Request } from '../lib/requests'
 import { awayOn, eventsOn, formatTime, rotationDayLabel, rotationsDue } from '../lib/schedule'
 import { ConfirmAssignments, type RecordAnswer } from './ConfirmAssignments'
 import { RecipientSelect } from './Requests'
@@ -56,7 +56,8 @@ export type AgendaActions = CallingsActions & {
 }
 
 /** A person's full name, for sentences like "Bishop Avery asked Brother Lane". */
-const fullName = (id: string, data: AgendaData) => data.profiles.find((p) => p.id === id)?.display_name || personLabel(id, data.profiles) || 'someone'
+const fullName = (id: string | null, data: AgendaData) =>
+  id === null ? FORMER_MEMBER : data.profiles.find((p) => p.id === id)?.display_name || personLabel(id, data.profiles) || 'someone'
 
 /** Who an item was handed to, and where that stands. */
 function assignmentLine(itemId: string, data: AgendaData, today: IsoDate): string | null {

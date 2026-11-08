@@ -4,7 +4,7 @@
 
 import { callingsNeeded, openItems, personLabel, releasesOn, sacramentLine, sustainingsOn, upcomingMeetings } from '../../src/lib/agenda'
 import { addDays, longDate, shortDate, upcomingSunday, weekday, type IsoDate } from '../../src/lib/dates'
-import { followUps, requestStatusLine, type Request } from '../../src/lib/requests'
+import { FORMER_MEMBER, followUps, requestStatusLine, type Request } from '../../src/lib/requests'
 import { formatTime, hasDay, meetsOn, nextMeeting, rotationDayLabel, rotationsDue, type RecurringEvent, type Rotation } from '../../src/lib/schedule'
 import type { Enums } from '../../src/lib/database.types'
 import { columnLetter, parseMonthDay, type Cell } from '../import-sheets/parse'
@@ -326,7 +326,8 @@ export function agendaTab(template: ExportTemplate, date: IsoDate, data: ExportD
   ]
   const header = (title: string) => rows.push([{ value: `${title}:`, bold: true, fill }, ...Array.from({ length: 4 }, () => ({ value: null, fill }))])
   const lines = (items: string[]) => items.forEach((s) => rows.push([text(s)]))
-  const fullName = (id: string) => data.profiles.find((p) => p.id === id)?.display_name || personLabel(id, data.profiles) || 'someone'
+  const fullName = (id: string | null) =>
+    id === null ? FORMER_MEMBER : data.profiles.find((p) => p.id === id)?.display_name || personLabel(id, data.profiles) || 'someone'
 
   for (const section of [...template.sections].sort((a, b) => a.position - b.position)) {
     switch (section.kind) {

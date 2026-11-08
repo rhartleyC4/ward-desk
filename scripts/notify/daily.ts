@@ -68,7 +68,7 @@ export async function sendDaily({ sql, now, timeZone, send, dryRun = false, only
 
   if (dueWindow) {
     const due = await sql<{ to_id: string; count: number }[]>`
-      select to_id, count(*)::int as count from public.requests where due_on = ${tomorrow} and status in ('sent', 'seen') group by to_id`
+      select to_id, count(*)::int as count from public.requests where due_on = ${tomorrow} and status in ('sent', 'seen') and to_id is not null group by to_id`
     for (const d of due) {
       if (sent.has(`${d.to_id}:request_due`)) continue
       const message = requestsDueMessage(tomorrow, d.count)
@@ -102,7 +102,7 @@ export async function sendDaily({ sql, now, timeZone, send, dryRun = false, only
     const moved = await sql<{ id: string; requested_by: string; stage: RequestStage }[]>`
       select r.id, r.requested_by, s.stage from public.calling_requests r
       cross join lateral (select public.calling_request_stage(r.id) as stage) s
-      where s.stage in ('in_progress', 'finished')
+      where s.stage in ('in_progress', 'finished') and r.requested_by is not null
         and not exists (select 1 from public.push_events e where e.key = format('calling:%s:stage:%s', r.id, s.stage))`
     for (const r of moved) {
       // Finishing also covers having started, so a request that went straight to finished tells once.

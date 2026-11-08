@@ -1,13 +1,14 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import { addInvite, loadAccess, loadBishopric, removeInvite, updateInvite } from '../../src/lib/queries'
-import { signIn } from './helpers'
+import { addInvite, deleteAccount, loadAccess, loadBishopric, removeInvite, updateInvite } from '../../src/lib/queries'
+import { anonClient, signIn } from './helpers'
 
 const EMAIL = `it-${Date.now()}@ward.test`
+const GONE = `it-gone-${Date.now()}@ward.test`
 
 describe('sign-in access', () => {
   afterAll(async () => {
     const admin = await signIn('bishop')
-    await admin.from('allowlist').delete().eq('email', EMAIL)
+    await admin.from('allowlist').delete().in('email', [EMAIL, GONE])
   })
 
   it('lets an admin add, change and remove an email', async () => {
@@ -51,5 +52,28 @@ describe('sign-in access', () => {
       await updateInvite(admin, 'first@ward.test', { initial_roles: ['bishopric'], initial_office: 'first_counselor' })
     }
     expect(await position()).toEqual(['bishop@ward.test', 'first@ward.test', 'second@ward.test'])
+  })
+  it('lets an admin delete someone else\'s account, which also takes the email off the list', async () => {
+    const admin = await signIn('bishop')
+    await addInvite(admin, GONE, { initial_roles: ['leader'], initial_office: null })
+    const { data, error } = await anonClient().auth.signUp({ email: GONE, password: 'integration-only-1' })
+    expect(error).toBeNull()
+    const id = data.user!.id
+    expect((await loadAccess(admin)).invites.find((i) => i.email === GONE)?.profile_id).toBe(id)
+
+    await expect(deleteAccount(await signIn('first'), id)).rejects.toThrow(/Only an admin/)
+    await expect(deleteAccount(admin, admin.userId)).rejects.toThrow(/your own account/)
+
+    await deleteAccount(admin, id)
+    const after = await loadAccess(admin)
+    expect(after.accounts.map((a) => a.id)).not.toContain(id)
+    expect(after.invites.map((i) => i.email)).not.toContain(GONE)
+  })
+
+  it('keeps an account taken off the list, marked as removed', async () => {
+    const admin = await signIn('bishop')
+    const { accounts } = await loadAccess(admin)
+    const lane = accounts.find((a) => a.email === 'first@ward.test')!
+    expect(lane.removed_at).toBeNull()
   })
 })

@@ -16,7 +16,7 @@ import { awaitingSettingApart, needsToDiscuss, unsortedSuggestions } from '../li
 import { coveringLeader, organizationFor, type ListedCalling } from '../lib/callings'
 import { appointmentFor, NEEDS_APPOINTMENT, whenLabel } from '../lib/appointments'
 import { longDate, type IsoDate } from '../lib/dates'
-import { unreceived, type CallingRequest } from '../lib/requests'
+import { FORMER_MEMBER, unreceived, type CallingRequest } from '../lib/requests'
 import type { Enums, TablesUpdate } from '../lib/database.types'
 import type { Appointment, CallingNeed, Candidate, Profile } from '../lib/queries'
 import { nativeSelect } from '../theme'
@@ -83,7 +83,7 @@ function RequestedBy({ need, data }: { need: CallingNeed; data: CallingsData }) 
   const r = data.callingRequests.find((x) => x.need_id === need.id)
   if (!r) return null
   const parts = [
-    `Asked for by ${nameIn(r.requested_by, data)}${r.organization ? ` (${r.organization})` : ''}`,
+    `Asked for by ${r.requested_by === null ? FORMER_MEMBER : nameIn(r.requested_by, data)}${r.organization ? ` (${r.organization})` : ''}`,
     r.kind === 'release' && 'release only, no one new',
     r.needed_by && `needed by ${longDate(r.needed_by)}`,
     r.received_at ? `received by ${nameIn(r.received_by, data)}` : 'not marked received yet',

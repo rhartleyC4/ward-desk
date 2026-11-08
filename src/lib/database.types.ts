@@ -329,14 +329,14 @@ isOneToOne: false
                   ]
                 },"calling_requests": {
                   Row: {
-                    "calling_title": string,"created_at": string,"id": string,"kind": Database["public"]['Enums']["calling_request_kind"],"need_id": string | null,"needed_by": string | null,"notes": string | null,"organization": string | null,"received_at": string | null,"received_by": string | null,"release_name": string | null,"requested_by": string,"routed_to": (string)[]
+                    "calling_title": string,"created_at": string,"id": string,"kind": Database["public"]['Enums']["calling_request_kind"],"need_id": string | null,"needed_by": string | null,"notes": string | null,"organization": string | null,"received_at": string | null,"received_by": string | null,"release_name": string | null,"requested_by": string | null,"routed_to": (string)[]
                   }
                   ComputedFields: never
                   Insert: {
-                    "calling_title": string,"created_at"?: string,"id"?: string,"kind": Database["public"]['Enums']["calling_request_kind"],"need_id"?: string | null,"needed_by"?: string | null,"notes"?: string | null,"organization"?: string | null,"received_at"?: string | null,"received_by"?: string | null,"release_name"?: string | null,"requested_by"?: string,"routed_to"?: (string)[]
+                    "calling_title": string,"created_at"?: string,"id"?: string,"kind": Database["public"]['Enums']["calling_request_kind"],"need_id"?: string | null,"needed_by"?: string | null,"notes"?: string | null,"organization"?: string | null,"received_at"?: string | null,"received_by"?: string | null,"release_name"?: string | null,"requested_by"?: string | null,"routed_to"?: (string)[]
                   }
                   Update: {
-                    "calling_title"?: string,"created_at"?: string,"id"?: string,"kind"?: Database["public"]['Enums']["calling_request_kind"],"need_id"?: string | null,"needed_by"?: string | null,"notes"?: string | null,"organization"?: string | null,"received_at"?: string | null,"received_by"?: string | null,"release_name"?: string | null,"requested_by"?: string,"routed_to"?: (string)[]
+                    "calling_title"?: string,"created_at"?: string,"id"?: string,"kind"?: Database["public"]['Enums']["calling_request_kind"],"need_id"?: string | null,"needed_by"?: string | null,"notes"?: string | null,"organization"?: string | null,"received_at"?: string | null,"received_by"?: string | null,"release_name"?: string | null,"requested_by"?: string | null,"routed_to"?: (string)[]
                   }
                   Relationships: [
                     {
@@ -613,14 +613,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"display_name": string | null,"email": string,"id": string,"office": Database["public"]['Enums']["bishopric_office"] | null,"short_name": string | null
+                    "created_at": string,"display_name": string | null,"email": string,"id": string,"office": Database["public"]['Enums']["bishopric_office"] | null,"removed_at": string | null,"short_name": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"display_name"?: string | null,"email": string,"id": string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"short_name"?: string | null
+                    "created_at"?: string,"display_name"?: string | null,"email": string,"id": string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"removed_at"?: string | null,"short_name"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"display_name"?: string | null,"email"?: string,"id"?: string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"short_name"?: string | null
+                    "created_at"?: string,"display_name"?: string | null,"email"?: string,"id"?: string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"removed_at"?: string | null,"short_name"?: string | null
                   }
                   Relationships: [
                     
@@ -707,14 +707,14 @@ isOneToOne: false
                   ]
                 },"requests": {
                   Row: {
-                    "agenda_item_id": string | null,"closed_at": string | null,"created_at": string,"details": string | null,"due_on": string | null,"from_id": string,"id": string,"reply": string | null,"seen_at": string | null,"status": Database["public"]['Enums']["request_status"],"title": string,"to_id": string,"updated_at": string
+                    "agenda_item_id": string | null,"closed_at": string | null,"created_at": string,"details": string | null,"due_on": string | null,"from_id": string | null,"id": string,"reply": string | null,"seen_at": string | null,"status": Database["public"]['Enums']["request_status"],"title": string,"to_id": string | null,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "agenda_item_id"?: string | null,"closed_at"?: string | null,"created_at"?: string,"details"?: string | null,"due_on"?: string | null,"from_id"?: string,"id"?: string,"reply"?: string | null,"seen_at"?: string | null,"status"?: Database["public"]['Enums']["request_status"],"title": string,"to_id": string,"updated_at"?: string
+                    "agenda_item_id"?: string | null,"closed_at"?: string | null,"created_at"?: string,"details"?: string | null,"due_on"?: string | null,"from_id"?: string | null,"id"?: string,"reply"?: string | null,"seen_at"?: string | null,"status"?: Database["public"]['Enums']["request_status"],"title": string,"to_id"?: string | null,"updated_at"?: string
                   }
                   Update: {
-                    "agenda_item_id"?: string | null,"closed_at"?: string | null,"created_at"?: string,"details"?: string | null,"due_on"?: string | null,"from_id"?: string,"id"?: string,"reply"?: string | null,"seen_at"?: string | null,"status"?: Database["public"]['Enums']["request_status"],"title"?: string,"to_id"?: string,"updated_at"?: string
+                    "agenda_item_id"?: string | null,"closed_at"?: string | null,"created_at"?: string,"details"?: string | null,"due_on"?: string | null,"from_id"?: string | null,"id"?: string,"reply"?: string | null,"seen_at"?: string | null,"status"?: Database["public"]['Enums']["request_status"],"title"?: string,"to_id"?: string | null,"updated_at"?: string
                   }
                   Relationships: [
                     {
@@ -853,11 +853,17 @@ isOneToOne: false
 "can_use_prayer_roll":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"delete_account":
+{ Args: { "person": string }; Returns: undefined
+                           },
 "delete_agenda_section":
 { Args: { "section": string }; Returns: undefined
                            },
 "delete_agenda_template":
 { Args: { "template": string }; Returns: undefined
+                           },
+"delete_person":
+{ Args: { "person": string }; Returns: undefined
                            },
 "has_a_role":
 { Args: { "person": string }; Returns: boolean
