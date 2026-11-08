@@ -1,0 +1,280 @@
+{
+  "capturedFor": "2026-11-01T14:30:00.000Z",
+  "features": {
+    "agenda-bishopric": {
+      "route": "/agenda/bishopric",
+      "role": "Bishop",
+      "caption": "The bishopric meeting agenda with every section ready to fill in.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "agenda-bishopric-assignments": {
+      "route": "/agenda/bishopric/2026-11-08",
+      "role": "Executive secretary",
+      "caption": "Prayers and the spiritual thought go to someone picked from a list, who accepts or declines.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "agenda-bishopric-callings": {
+      "route": "/agenda/bishopric",
+      "role": "Bishop",
+      "caption": "Callings are worked on the bishopric agenda: needs, names and where each stands.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "agenda-ward-council": {
+      "route": "/agenda/ward-council",
+      "role": "Bishop",
+      "caption": "Ward council agenda, with a section for each organization.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "agenda-ward-council-leader": {
+      "route": "/agenda/ward-council",
+      "role": "Ward leader (Elders Quorum president)",
+      "caption": "Called leaders who attend ward council see only that agenda.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "appointments": {
+      "route": "/appointments",
+      "role": "Executive secretary",
+      "caption": "Appointments: who still needs a time, and what is booked.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "appointments-booking": {
+      "route": "/appointments",
+      "role": "Executive secretary",
+      "caption": "Booking an appointment for a leader.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "home-bishop": {
+      "route": "/home",
+      "role": "Bishop",
+      "caption": "The bishop's Home: the day's appointments, quick actions and the week ahead.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "home-counselor": {
+      "route": "/home",
+      "role": "Counselor",
+      "caption": "A counselor's Home: their own interviews and what is waiting for them.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "home-leader": {
+      "route": "/requests",
+      "role": "Ward leader (Elders Quorum president)",
+      "caption": "A called leader starts on Requests, where they see what the bishopric has asked and can ask for calling changes.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "home-secretary": {
+      "route": "/home",
+      "role": "Executive secretary",
+      "caption": "The executive secretary's Home: who needs an appointment, open times and the week ahead.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "requests-assignment": {
+      "route": "/requests",
+      "role": "Ward leader (Elders Quorum president)",
+      "caption": "Asked to give a prayer or the spiritual thought: accept, or decline and say why.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "requests-calling": {
+      "route": "/requests?new=calling",
+      "role": "Ward leader (Elders Quorum president)",
+      "caption": "A ward leader asking the bishopric to fill or change a calling.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "requests-calling-tracking": {
+      "route": "/requests",
+      "role": "Ward leader (Elders Quorum president)",
+      "caption": "A leader follows each calling request: sent, received, being worked on, finished.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "requests-received": {
+      "route": "/requests",
+      "role": "Executive secretary",
+      "caption": "A request you were sent: tap Got it to say you have seen it, or It’s done when finished.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "requests-sent": {
+      "route": "/requests",
+      "role": "Bishop",
+      "caption": "Requests you've sent, and whether each has been seen or finished.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "sacrament": {
+      "route": "/sacrament",
+      "role": "Bishop",
+      "caption": "Sacrament meeting planning: upcoming Sundays, speakers and hymns.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings": {
+      "route": "/settings",
+      "role": "Bishop",
+      "caption": "Settings, grouped by what each person can change.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-access": {
+      "route": "/access",
+      "role": "Bishop (also a ward admin)",
+      "caption": "Who can sign in, with their roles and positions.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-away": {
+      "route": "/away",
+      "role": "Counselor",
+      "caption": "Dates you'll be away are taken out of your appointment hours.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-hours": {
+      "route": "/hours",
+      "role": "Counselor",
+      "caption": "Appointment hours: when a leader can meet, which secretaries book from.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-lengths": {
+      "route": "/settings/lengths",
+      "role": "Bishop",
+      "caption": "Usual lengths: how long each kind of interview takes.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-notifications": {
+      "route": "/account",
+      "role": "Bishop",
+      "caption": "Choose which notifications this device gets: tomorrow’s summary, how did today go, and more.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-schedule": {
+      "route": "/schedule",
+      "role": "Bishop",
+      "caption": "The standing schedule: regular meetings, rotations and assignments.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
+    "settings-who-books": {
+      "route": "/settings/who-books",
+      "role": "Bishop",
+      "caption": "Who books for whom: which secretary schedules each leader.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    }
+  }
+}
