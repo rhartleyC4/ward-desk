@@ -1,6 +1,6 @@
 import FingerprintIcon from '@mui/icons-material/Fingerprint'
 import Alert from '@mui/material/Alert'
-import Autocomplete from '@mui/material/Autocomplete'
+import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
@@ -18,23 +18,31 @@ import { PasskeyCancelled, passkeysSupported, rememberPasskeyChoice } from '../l
 import { signInWithPasskey } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 
-// The seeded accounts in supabase/seed.sql. Keep the two in sync.
+// The seeded accounts in supabase/seed.sql, with their names there. Keep the two in sync.
 const PRACTICE_ACCOUNTS = [
-  { email: 'bishop@ward.test', role: 'Bishop (admin)' },
-  { email: 'first@ward.test', role: '1st counselor' },
-  { email: 'second@ward.test', role: '2nd counselor' },
-  { email: 'secretary@ward.test', role: 'Executive secretary' },
-  { email: 'assistant@ward.test', role: 'Assistant executive secretary' },
-  { email: 'clerk@ward.test', role: 'Ward clerk' },
-  { email: 'eqpres@ward.test', role: 'Elders Quorum president' },
-  { email: 'rspres@ward.test', role: 'Relief Society president' },
-  { email: 'ywpres@ward.test', role: 'Young Women president' },
-  { email: 'primarypres@ward.test', role: 'Primary president' },
-  { email: 'mission@ward.test', role: 'Ward mission leader' },
-  { email: 'temple@ward.test', role: 'Temple and family history leader' },
-  { email: 'activities@ward.test', role: 'Activities committee chair' },
-  { email: 'leader@ward.test', role: 'Other called leader' },
+  { email: 'bishop@ward.test', name: 'Bishop Avery', role: 'Bishop (admin)' },
+  { email: 'first@ward.test', name: 'Brother Lane', role: '1st counselor' },
+  { email: 'second@ward.test', name: 'Brother Ortiz', role: '2nd counselor' },
+  { email: 'secretary@ward.test', name: 'Brother Quinn', role: 'Executive secretary' },
+  { email: 'assistant@ward.test', name: 'Brother Tate', role: 'Assistant executive secretary' },
+  { email: 'clerk@ward.test', name: 'Brother Pike', role: 'Ward clerk' },
+  { email: 'eqpres@ward.test', name: 'Brother Hollis', role: 'Elders Quorum president' },
+  { email: 'rspres@ward.test', name: 'Sister Young', role: 'Relief Society president' },
+  { email: 'ywpres@ward.test', name: 'Sister Vance', role: 'Young Women president' },
+  { email: 'primarypres@ward.test', name: 'Sister Ellis', role: 'Primary president' },
+  { email: 'mission@ward.test', name: 'Brother Navarro', role: 'Ward mission leader' },
+  { email: 'temple@ward.test', name: 'Sister Whitfield', role: 'Temple and family history leader' },
+  { email: 'activities@ward.test', name: 'Sister Okafor', role: 'Activities committee chair' },
+  { email: 'leader@ward.test', name: 'Sister Reyes', role: 'Other called leader' },
 ]
+
+/** "Sister Reyes · Other called leader", shown under a practice account's email. */
+function practiceDetail(email: string) {
+  const account = PRACTICE_ACCOUNTS.find((a) => a.email === email)
+  return account ? `${account.name} · ${account.role}` : ''
+}
+
+const findAccount = createFilterOptions<string>({ stringify: (email) => `${email} ${practiceDetail(email)}` })
 
 export function LoginPage() {
   const [email, setEmail] = useState('')
@@ -110,6 +118,8 @@ export function LoginPage() {
                   freeSolo
                   openOnFocus
                   options={PRACTICE_ACCOUNTS.map((a) => a.email)}
+                  // Typing a name or role finds the account too, not only its email.
+                  filterOptions={findAccount}
                   inputValue={email}
                   onInputChange={(_, value) => setEmail(value)}
                   renderOption={({ key, ...props }, option) => (
@@ -117,7 +127,7 @@ export function LoginPage() {
                       <Box>
                         <Typography variant="body2">{option}</Typography>
                         <Typography variant="caption" color="text.secondary">
-                          {PRACTICE_ACCOUNTS.find((a) => a.email === option)?.role}
+                          {practiceDetail(option)}
                         </Typography>
                       </Box>
                     </li>
