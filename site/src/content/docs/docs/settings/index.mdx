@@ -1,6 +1,47 @@
 ---
-title: Settings
-description: Settings in Ward Desk.
+title: "Settings"
+description: "Where the things you set up once live, and who sees which settings."
+sidebar:
+  order: 1
 ---
+import Screenshot from '../../../../components/Screenshot.astro'
 
-> TODO: document Settings.
+Open **Settings** from your initials at the top right. It holds everything you set up once, so the tab bar can stay short. You only see the settings your role can change.
+
+## What you can do
+
+- Change your name, set up Face ID and choose your notifications.
+- Choose light or dark mode.
+- Set your away dates and appointment hours.
+- (Bishopric and admins) Manage agendas, the standing schedule and who can sign in.
+
+<Screenshot name="settings" device="phone" alt="The Settings screen on a phone, grouped into You, Appointments, Meetings and Ward." />
+
+## Who sees which settings
+
+| Group | Setting | Who sees it |
+|---|---|---|
+| **Your account** | [Your account](/docs/settings/your-account/) and [Notifications](/docs/settings/notifications/) | Everyone with a role |
+| **You** | [Dates I'll be away](/docs/settings/dates-away/) | Everyone except called leaders |
+| **Appointments** | [Appointment hours](/docs/settings/appointment-hours/) | Bishopric and admins |
+| | [Usual lengths](/docs/settings/usual-lengths/) | Bishopric |
+| | [Message templates](/docs/settings/message-templates/) | Bishopric |
+| | [Who books for whom](/docs/settings/who-books-for-whom/) | Bishopric who can manage meetings |
+| **Meetings** | [Agendas](/docs/settings/agendas/) | Bishopric and admins |
+| | [Standing schedule](/docs/settings/standing-schedule/) | Everyone except called leaders |
+| | [Calling list](/docs/settings/calling-list/) | Admins |
+| **Ward** | [Who can sign in](/docs/settings/who-can-sign-in/) | Admins |
+
+At the very top, a **Finish setting up** checklist shows until the one-time steps for you are done. See [Finish setting up](/docs/getting-started/finish-setting-up/).
+
+## Appearance
+
+Under Settings, **Appearance** is **Match device** by default, so Ward Desk follows your phone's light or dark mode. Change it to **Light** or **Dark** to stay in one. The sign-in screen also has a light/dark toggle.
+
+## Sign out
+
+**Sign out** is the last row of Settings.
+
+## Who can see this
+
+Settings only change your own information, or things your role is allowed to run for the ward. What each role can change is enforced by the database, not just hidden on screen. See [Roles & privacy](/docs/roles-and-privacy/).

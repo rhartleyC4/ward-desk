@@ -1,0 +1,39 @@
+---
+title: "Message templates"
+description: "Edit the texts and emails secretaries send to offer, confirm and remind."
+sidebar:
+  order: 7
+---
+import Screenshot from '../../../../components/Screenshot.astro'
+
+Secretaries write a message by choosing a template. The templates are shared by the bishopric.
+
+## What you can do
+
+- Edit the wording of offers, confirmations and reminders.
+- Write separate versions for a parent (youth interviews).
+- Insert variables like the person's first name and the times.
+
+<Screenshot name="settings-messages" device="phone" alt="The list of message templates shared by the bishopric." />
+
+## Edit or add a template
+
+1. Open **Settings**, then **Message templates**.
+2. Tap **Edit** on a template, or add a new one.
+3. Give it a **Name**, pick what it is **Used for**, and who it is **Sent** to (the person, or a parent).
+4. Type the **Text**. Tap a variable chip to insert it: for example `{first_name}`, `{leader}`, `{length}`, `{times}` and `{time}`.
+5. Check the **Preview**, then **Save**.
+
+For a word that changes with the number of times, use braces with a bar: `{this time|one of these times}` uses the first part when one time is offered and the second when there are several. A single time is written without a bullet.
+
+Meeting reminders can use `{meeting}` and `{when}`, and a meeting's reminder can name who has the prayers and spiritual thought with `{opening_prayer}`, `{spiritual_thought}`, `{closing_prayer}` or `{assignments}`.
+
+For a parent's version, `{parent_name}` greets the parent and `{first_name}` is the youth's.
+
+:::caution
+Keep templates general. A message shouldn't say what an appointment is for.
+:::
+
+## Who can see this
+
+People with the bishopric role. Messages go out through the sender's own phone or email app: Ward Desk doesn't store phone numbers.

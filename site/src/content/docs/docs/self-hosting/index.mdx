@@ -1,6 +1,38 @@
 ---
-title: Running it for your ward
-description: Running it for your ward in Ward Desk.
+title: "Running it for your ward"
+description: "What it takes to run your own copy of Ward Desk, and who is responsible for what."
+sidebar:
+  order: 1
 ---
 
-> TODO: document Running it for your ward.
+Ward Desk is open source (Apache-2.0). Any ward can run its own copy. This section is a short guide for the person who will do that.
+
+:::caution[Please read this first]
+Ward Desk is provided **as is**, with **no support**. Each ward that runs a copy is **responsible for its own copy and its own data**: where it is hosted, who has access, backups, and keeping it secure and up to date. The project and the hosted copy at warddesk.app have no access to your ward's data and can't help you recover it.
+
+Ward Desk is an independent project. It is not affiliated with or endorsed by The Church of Jesus Christ of Latter-day Saints. Check the Church's guidance on third-party tools before using member information in any tool.
+:::
+
+## What you need
+
+- A few free or low-cost accounts: **Supabase** (database, sign-in and background jobs), **Cloudflare** (hosting the app on Pages), **GitHub** (the code and automatic deploys), and **Resend** (sign-in emails). **Google Cloud** is optional, for "Sign in with Google".
+- A domain name you control.
+- A computer with Node.js, Docker and the command line. This is a technical job. Plan on a few hours, and ask a ward member who builds software if that is not you.
+- Someone to be the ward's **admin** and a plan for who takes over when you are released.
+
+## The guide
+
+1. [Run it on your computer](/docs/self-hosting/run-locally/): try the whole app with practice data first.
+2. [Set up hosting](/docs/self-hosting/set-up-hosting/): Supabase, Cloudflare Pages, Resend, and the environment commands.
+3. [Optional extras](/docs/self-hosting/optional-extras/): Google sign-in, notifications, alert emails and nightly backups.
+4. [Keep it running and hand it over](/docs/self-hosting/keep-it-running/): updates, privacy duties and succession.
+
+The full, always-current instructions are in the repository's README: **[Ward Desk on GitHub](https://github.com/ward-desk/ward-desk#readme)**. These pages are a summary. If they disagree, the README is right.
+
+## Costs
+
+The free tiers of Supabase and Cloudflare may be enough for a single ward. A free Supabase project pauses after about a week of inactivity, and a scheduled job keeps it awake. The free tier may not include automatic backups, so set up the nightly encrypted backup (see [Optional extras](/docs/self-hosting/optional-extras/)). Prices and limits are set by those companies and can change.
+
+## A note on privacy
+
+Your copy holds real member names. Keep it private to the ward, give roles only to people who need them, don't copy real data to a practice site, and never commit member information to the code. See [Roles & privacy](/docs/roles-and-privacy/).
