@@ -65,7 +65,8 @@ export function navFor(roles: AppRole[], templates: readonly unknown[] = [], off
   if (hasHome(roles, office)) links.push({ to: '/home', label: 'Home' })
   if (canSeeAgenda(templates)) links.push({ to: '/agenda', label: 'Meetings' })
   if (isMember(roles)) links.push({ to: '/sacrament', label: 'Sacrament' })
-  if (canSeeAppointments(roles)) links.push({ to: '/appointments', label: 'Appointments' })
+  // The secretaries book and change times here. Everyone else's appointments are on their Home.
+  if (hasSecretaryHome(roles, office)) links.push({ to: '/appointments', label: 'Appointments' })
   // Anyone can be sent a request, so everyone with a role has the tab.
   if (roles.length) links.push({ to: '/requests', label: 'Requests' })
   return links

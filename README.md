@@ -23,7 +23,7 @@ A mobile-first web app (PWA) for managing ward administration in one place: call
 
 All three modules share the same users, roles, notifications, and calendar.
 
-**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Meetings (each meeting's agenda), Sacrament, Appointments and Requests. The Requests tab shows a count of what's waiting on you. Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, the day-ahead summary), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
+**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Meetings (each meeting's agenda), Sacrament, Appointments (executive secretaries only) and Requests. The Requests tab shows a count of what's waiting on you. Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, the day-ahead summary), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
 
 ## Stack
 

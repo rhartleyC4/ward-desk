@@ -6,8 +6,16 @@ const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
 
 describe('navFor', () => {
   it('keeps the tabs to everyday work for the bishopric', () => {
-    expect(labels(['bishopric'], bishopric)).toEqual(['Meetings', 'Sacrament', 'Appointments', 'Requests'])
-    expect(navFor(['admin', 'bishopric'], bishopric, 'bishop').map((l) => l.label)).toEqual(['Home', 'Meetings', 'Sacrament', 'Appointments', 'Requests'])
+    expect(labels(['bishopric'], bishopric)).toEqual(['Meetings', 'Sacrament', 'Requests'])
+    expect(navFor(['admin', 'bishopric'], bishopric, 'bishop').map((l) => l.label)).toEqual(['Home', 'Meetings', 'Sacrament', 'Requests'])
+  })
+
+  it('shows the Appointments tab only to the executive secretaries', () => {
+    const tabs = (office: Parameters<typeof navFor>[2]) => navFor(['bishopric'], bishopric, office).map((l) => l.label)
+    expect(tabs('executive_secretary')).toEqual(['Home', 'Meetings', 'Sacrament', 'Appointments', 'Requests'])
+    expect(tabs('assistant_executive_secretary')).toContain('Appointments')
+    expect(tabs('first_counselor')).not.toContain('Appointments')
+    expect(tabs('ward_clerk')).toEqual(['Meetings', 'Sacrament', 'Requests'])
   })
 
   it('gives called leaders only their requests', () => {
