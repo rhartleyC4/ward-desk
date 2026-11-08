@@ -17,7 +17,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import type { AppRole } from '../lib/access'
 import type { Enums } from '../lib/database.types'
-import { longDate, todayIso } from '../lib/dates'
+import { addDays, longDate, todayIso } from '../lib/dates'
 import { addInvite, deleteAccount, loadAccess, removeInvite, updateInvite, type Account, type InviteAccess } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -37,6 +37,9 @@ const OFFICES: { office: Enums<'bishopric_office'>; label: string }[] = [
   { office: 'assistant_executive_secretary', label: 'Assistant Executive Secretary' },
   { office: 'ward_clerk', label: 'Ward Clerk' },
 ]
+
+/** How long an account stays after its last role is taken away (purge_old_records in the database). */
+const REMOVED_ACCOUNT_DAYS = 180
 
 const NOBODY: InviteAccess = { initial_roles: [], initial_office: null }
 
@@ -220,7 +223,7 @@ export function AccessPage() {
                       aria-label={`Remove ${invite.email}`}
                       disabled={me || save.busy}
                       onClick={() => {
-                        if (window.confirm(`Remove ${invite.email}? They won't be able to use the app until they're added again. Their account stays until you delete it.`))
+                        if (window.confirm(`Remove ${invite.email}? They won't be able to use the app until they're added again. Their account is deleted after 180 days unless they're added back.`))
                           run(() => removeInvite(supabase, invite.email))
                       }}
                     >
@@ -237,7 +240,7 @@ export function AccessPage() {
       {removed.length > 0 && (
         <SectionCard title={`Removed, account kept (${removed.length})`}>
           <Box sx={{ mb: 1.5 }}>
-            <Muted>These people can't use the app anymore, but their account and personal records are still here. Delete an account when it's no longer needed.</Muted>
+            <Muted>These people can't use the app anymore. Their account and personal records are deleted automatically 180 days after they were removed, unless they're added back. Delete one now if it's no longer needed.</Muted>
           </Box>
           <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />} spacing={1.5}>
             {removed.map((account) => (
@@ -245,7 +248,7 @@ export function AccessPage() {
                 <Typography sx={{ overflowWrap: 'anywhere' }}>{account.display_name || account.email}</Typography>
                 <Muted>
                   {account.email}
-                  {account.removed_at && ` · removed ${longDate(todayIso(new Date(account.removed_at)))}`}
+                  {account.removed_at && ` · removed ${longDate(todayIso(new Date(account.removed_at)))}, deleted after ${longDate(addDays(todayIso(new Date(account.removed_at)), REMOVED_ACCOUNT_DAYS))}`}
                 </Muted>
                 <Box>{deleteButton(account)}</Box>
               </Box>

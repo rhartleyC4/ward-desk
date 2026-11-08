@@ -410,6 +410,43 @@ Once a quarter, and after any change to the schema's shape or to Supabase's Post
 4. Run `npm run dev` and sign in locally. Spot-check a recent agenda and the callings list.
 5. `npm run db:reset`, and delete the key file.
 
+## Data retention
+
+Every day at 09:23 UTC, `pg_cron` runs `public.purge_old_records()`, which deletes records once they are past these periods. The same table heads the migration that made it (`supabase/migrations/*_purge_old_records.sql`); change both together, in a new migration.
+
+| Records | Rule |
+|---|---|
+| Declined names on a calling | deleted 90 days after the decision |
+| Cancelled callings ("no longer needed") | deleted 90 days after the decision, with their names and calling requests |
+| Finished callings (name set apart, or a release-only calling whose release was announced) | notes on the calling, its names and its calling requests cleared 90 days after done; all of them deleted 1 year after done |
+| Calling requests without a calling (suggested names, or the calling was deleted) | notes cleared 90 days after they were made, deleted after 1 year, once finished |
+| Appointments | notes and the report cleared 90 days after the appointment; deleted 1 year after |
+| Requests, done or declined | deleted 1 year after they were closed |
+| Prayer roll | deleted 90 days after the name was taken off |
+| Agenda items, resolved | deleted 2 years after they were resolved |
+| Sacrament meetings and programs | deleted 3 years after the meeting |
+| Away dates | deleted 1 year after they end |
+| Meeting reminders sent | deleted 90 days after the meeting |
+| Meeting assignments (prayers, spiritual thought) and the answers | deleted 90 days after the meeting; the name stays on that day's agenda |
+| Accounts removed from every role | deleted 180 days after the last role was taken away, the same way an admin's **Delete account** does |
+
+Kept by the hourly `health_check()` instead:
+
+| Records | Rule |
+|---|---|
+| Calls to the notify function (`notify_calls`) | deleted after 7 days |
+| Error reports from the app (`client_errors`) | deleted after 90 days |
+
+Open work is never deleted: a calling still being filled, an appointment waiting for a time, an open request, a name still on the prayer roll and unresolved agenda items stay however old. `npm run export-sheets` only reaches back as far as these periods. Deleted rows stay in backups until those expire (see "Backups and restore").
+
+To see what the next run would delete without deleting anything:
+
+```sql
+begin; select public.purge_old_records(); rollback;
+```
+
+It returns a count for each kind. The first run on a database deletes everything already past its date, so tell the ward before it reaches production.
+
 ## Handoff checklist
 
 Do these in order when passing the app to a successor:
