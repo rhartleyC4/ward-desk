@@ -14,8 +14,8 @@ name: Database backup
 # These are repository secrets, not the environments' SUPABASE_DB_URL: the production environment
 # only allows the gp7 branch, and scheduled runs start from main.
 #
-# Off until the BACKUP_ENABLED repo variable is 'true'. Retention is done by R2 lifecycle rules:
-# daily/ objects expire after 31 days, monthly/ after 366.
+# Off until the BACKUP_ENABLED repo variable is 'true'. Retention is done by R2 lifecycle rules that
+# the repo manages: periods in scripts/lib/backup-retention.mjs, applied with npm run backup:lifecycle.
 
 on:
   schedule:

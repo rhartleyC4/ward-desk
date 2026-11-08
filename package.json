@@ -27,6 +27,7 @@
     "env:check": "node scripts/env-check.mjs",
     "env:github": "node scripts/env-github.mjs",
     "env:auth": "node scripts/env-auth.mjs",
+    "backup:lifecycle": "node scripts/backup-lifecycle.mjs",
     "backup:restore": "node scripts/backup-restore.mjs",
     "admin:add": "node scripts/admin-add.mjs",
     "import-sheets": "tsx scripts/import-sheets/import.ts",

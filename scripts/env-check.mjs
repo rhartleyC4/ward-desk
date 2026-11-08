@@ -19,7 +19,8 @@ import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
-import { ENVIRONMENTS, environmentArg, firstLine, ghTry, querySql, rowsOf, supabaseJson, supabaseTry, withPrivateFileAsync } from './lib/cli.mjs'
+import { diffRules, lifecycleClient, sameRules } from './lib/backup-retention.mjs'
+import { ask, ENVIRONMENTS, environmentArg, firstLine, ghTry, querySql, rowsOf, supabaseJson, supabaseTry, withPrivateFileAsync } from './lib/cli.mjs'
 
 const { positionals } = parseArgs({ allowPositionals: true })
 const env = environmentArg(positionals, 'env:check', ['staging', 'production', 'local'])
@@ -120,6 +121,24 @@ async function checkHosted() {
   backupCheck(/^https:\/\/[0-9a-f]{32}\.(eu\.)?r2\.cloudflarestorage\.com$/.test(repoVars.BACKUP_R2_ENDPOINT ?? ''), 'variable BACKUP_R2_ENDPOINT is an R2 endpoint', { detail: repoVars.BACKUP_R2_ENDPOINT ?? 'not set', fix: fixGithub })
   for (const name of ['BACKUP_R2_ACCESS_KEY_ID', 'BACKUP_R2_SECRET_ACCESS_KEY', backupUrlName]) backupCheck(repoSecrets.has(name), `secret ${name}`, { fix: fixGithub })
   if (env === 'production') backups.check(repoVars.BACKUP_ENABLED === 'true', 'variable BACKUP_ENABLED is true', { detail: repoVars.BACKUP_ENABLED ?? 'not set', fix: 'gh variable set BACKUP_ENABLED --body true (after the R2 and age setup in the README)' })
+
+  // Expiry rules on the bucket (scripts/lib/backup-retention.mjs). Reading them needs a token with
+  // Admin Read & Write on the bucket, so it's skipped unless the keys are in the environment or typed.
+  if (repoVars.BACKUP_R2_BUCKET && repoVars.BACKUP_R2_ENDPOINT) {
+    const fixLifecycle = `npm run backup:lifecycle -- ${env}`
+    const accessKeyId = process.env.BACKUP_R2_ACCESS_KEY_ID || (process.stdin.isTTY ? await ask('R2 access key ID with Admin Read & Write, to check backup expiry (Enter to skip): ') : '')
+    const secretAccessKey = !accessKeyId ? '' : process.env.BACKUP_R2_SECRET_ACCESS_KEY || (await ask('R2 secret access key (won’t show): ', { hidden: true }))
+    if (!accessKeyId || !secretAccessKey) {
+      backups.note('backup expiry rules not checked (set BACKUP_R2_ACCESS_KEY_ID and BACKUP_R2_SECRET_ACCESS_KEY, or run npm run backup:lifecycle -- ' + env + ' --dry-run)')
+    } else {
+      const live = await lifecycleClient({ endpoint: repoVars.BACKUP_R2_ENDPOINT, bucket: repoVars.BACKUP_R2_BUCKET, accessKeyId, secretAccessKey }).get()
+      if (live.error) backups.check(false, 'the bucket’s expiry rules can be read', { detail: live.error, fix: 'use a token with Admin Read & Write on the bucket' })
+      else {
+        const { missing, extra } = diffRules(live.rules)
+        backups.check(sameRules(live.rules), 'the bucket’s expiry rules match scripts/lib/backup-retention.mjs', { detail: [...missing.map((l) => `missing ${l}`), ...extra.map((l) => `unexpected ${l}`)].join('; ') || undefined, fix: fixLifecycle })
+      }
+    }
+  }
 
   const ghEnv = section(`GitHub environment "${env}"`)
   if (!envOut.ok) {
