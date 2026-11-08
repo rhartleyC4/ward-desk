@@ -26,6 +26,11 @@ export const canEditHours = (roles: AppRole[]) => roles.includes('bishopric') ||
 export const canManageMeetings = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
 /** Decide who may sign in and with which roles. Matches the allowlist RLS policy. */
 export const canManageAccess = (roles: AppRole[]) => roles.includes('admin')
+/** A change of bishopric: the bishop or an admin, as themselves. Matches run_handover(). */
+export const canRunHandover = (roles: AppRole[], office: Office, mentoring = false) =>
+  !mentoring && ((roles.includes('bishopric') && office === 'bishop') || roles.includes('admin'))
+/** A new leader for an organization. Matches change_leader(). */
+export const canChangeLeaders = (roles: AppRole[]) => roles.includes('bishopric') || roles.includes('admin')
 /** Tidy the titles the Calling box suggests. RLS also lets the bishopric add to the list as they use new titles. */
 export const canManageCallingList = (roles: AppRole[]) => roles.includes('admin')
 /** Called leaders only submit names; everyone else with a role sees the ward calendar pages. */
@@ -66,12 +71,12 @@ export function navFor(roles: AppRole[], templates: readonly unknown[] = [], off
   return links
 }
 
-export type SettingsIcon = 'away' | 'hours' | 'lengths' | 'messages' | 'whoBooks' | 'agendas' | 'schedule' | 'callingList' | 'access'
+export type SettingsIcon = 'away' | 'hours' | 'lengths' | 'messages' | 'whoBooks' | 'agendas' | 'schedule' | 'callingList' | 'access' | 'handover' | 'leader'
 export type SettingsLink = NavLink & { hint: string; icon: SettingsIcon }
 export type SettingsGroup = { title: string; links: SettingsLink[] }
 
 /** Settings, grouped by what they're about. Each person sees only what their role can change. */
-export function settingsFor(roles: AppRole[], office: Office = null): SettingsGroup[] {
+export function settingsFor(roles: AppRole[], office: Office = null, mentoring = false): SettingsGroup[] {
   const you: SettingsLink[] = []
   if (isMember(roles)) you.push({ to: '/away', label: "Dates I'll be away", hint: 'Taken out of your appointment hours', icon: 'away' })
 
@@ -92,6 +97,8 @@ export function settingsFor(roles: AppRole[], office: Office = null): SettingsGr
 
   const ward: SettingsLink[] = []
   if (canManageAccess(roles)) ward.push({ to: '/access', label: 'Who can sign in', hint: 'People, roles and positions', icon: 'access' })
+  if (canRunHandover(roles, office, mentoring)) ward.push({ to: '/settings/handover', label: 'Change of bishopric', hint: 'A new bishopric takes over the open work', icon: 'handover' })
+  if (canChangeLeaders(roles)) ward.push({ to: '/settings/leader', label: 'Change a ward leader', hint: 'A new president for an organization', icon: 'leader' })
 
   return [
     { title: 'You', links: you },

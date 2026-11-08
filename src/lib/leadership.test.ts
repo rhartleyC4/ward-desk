@@ -22,7 +22,7 @@ describe('leavingPeople', () => {
 describe('doubleBooked', () => {
   it('catches one person in two offices, and the same new email twice', () => {
     expect(doubleBooked({ ...currentSeats(people), first_counselor: { kind: 'person', id: 'avery' } })).toBe(true)
-    const twice: Seats = { ...currentSeats(people), ward_clerk: { kind: 'new', name: 'A', email: 'new@x.org' }, assistant_executive_secretary: { kind: 'new', name: 'B', email: ' NEW@x.org' } }
+    const twice: Seats = { ...currentSeats(people), ward_clerk: { kind: 'new', email: 'new@x.org' }, assistant_executive_secretary: { kind: 'new', email: ' NEW@x.org' } }
     expect(doubleBooked(twice)).toBe(true)
     expect(doubleBooked(currentSeats(people))).toBe(false)
   })
@@ -30,7 +30,7 @@ describe('doubleBooked', () => {
 
 describe('payloads', () => {
   it('sends every office, by person, by email, or empty', () => {
-    const seats: Seats = { ...currentSeats(people), ward_clerk: { kind: 'new', name: 'New', email: ' New@Ward.test ' } }
+    const seats: Seats = { ...currentSeats(people), ward_clerk: { kind: 'new', email: ' New@Ward.test ' } }
     expect(seatsPayload(seats)).toContainEqual({ office: 'bishop', person: 'avery' })
     expect(seatsPayload(seats)).toContainEqual({ office: 'ward_clerk', email: 'new@ward.test' })
     expect(seatsPayload(seats)).toContainEqual({ office: 'assistant_executive_secretary' })

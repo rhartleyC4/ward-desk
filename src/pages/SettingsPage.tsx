@@ -6,6 +6,8 @@ import FlightTakeoffIcon from '@mui/icons-material/FlightTakeoff'
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted'
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined'
 import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined'
+import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined'
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined'
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined'
 import Avatar from '@mui/material/Avatar'
@@ -32,6 +34,8 @@ const ICONS: Record<SettingsIcon, { icon: ReactNode; color: TileColor }> = {
   schedule: { icon: <EventRepeatIcon />, color: 'error' },
   callingList: { icon: <AccountTreeOutlinedIcon />, color: 'warning' },
   access: { icon: <KeyOutlinedIcon />, color: 'secondary' },
+  handover: { icon: <SwapHorizIcon />, color: 'primary' },
+  leader: { icon: <ManageAccountsOutlinedIcon />, color: 'success' },
 }
 
 type Mode = 'system' | 'light' | 'dark'
@@ -72,9 +76,9 @@ function useSelected() {
 
 /** Everything set up once: grouped like the iPhone's Settings app, with the setup checklist on top. */
 function SettingsList() {
-  const { roles, office, profile, session, signOut } = useAuth()
+  const { roles, office, profile, session, signOut, actingFor } = useAuth()
   const steps = useSetupSteps()
-  const groups = settingsFor(roles, office)
+  const groups = settingsFor(roles, office, !!actingFor)
   const split = useSettingsSplit()
   const isSelected = useSelected()
   const selected = (to: string) => split && isSelected(to)

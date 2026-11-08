@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider, useAuth } from './auth/AuthProvider'
 import { Layout, Loading } from './components/Layout'
-import { canEditHours, hasHome, canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, homeFor, isMember, type AppRole } from './lib/access'
+import { canChangeLeaders, canEditHours, canRunHandover, hasHome, canManageAccess, canManageCallingList, canManageMeetings, canSeeAgenda, canSeeAppointments, homeFor, isMember, type AppRole } from './lib/access'
 import { keepsHours } from './lib/availability'
 import type { AgendaTemplate } from './lib/queries'
 import { AccessPage } from './pages/AccessPage'
@@ -13,7 +13,9 @@ import { AgendaPage } from './pages/AgendaPage'
 import { AppointmentsPage } from './pages/AppointmentsPage'
 import { CallingListPage } from './pages/CallingListPage'
 import { AwayPage } from './pages/AwayPage'
+import { HandoverPage } from './pages/HandoverPage'
 import { HomePage } from './pages/HomePage'
+import { LeaderChangePage } from './pages/LeaderChangePage'
 import { HoursPage } from './pages/HoursPage'
 import { LoginPage } from './pages/LoginPage'
 import { MeetingsPage } from './pages/MeetingsPage'
@@ -34,6 +36,12 @@ function Guard({ allow, children }: { allow: (roles: AppRole[], templates: Agend
 function HomeGuard({ children }: { children: ReactNode }) {
   const { roles, templates, office } = useAuth()
   return hasHome(roles, office) ? children : <Navigate to={homeFor(roles, templates, office)} replace />
+}
+
+/** The bishop or an admin as themselves; a mentor acting for the bishop can't change the bishopric. */
+function HandoverGuard({ children }: { children: ReactNode }) {
+  const { roles, templates, office, actingFor } = useAuth()
+  return canRunHandover(roles, office, !!actingFor) ? children : <Navigate to={homeFor(roles, templates, office)} replace />
 }
 
 const booksForOthers = (roles: AppRole[]) => canSeeAppointments(roles) && canManageMeetings(roles)
@@ -73,6 +81,8 @@ function AppRoutes() {
           <Route path="settings/lengths" element={<Guard allow={canSeeAppointments}><LengthsPage /></Guard>} />
           <Route path="settings/messages" element={<Guard allow={canSeeAppointments}><MessagesPage /></Guard>} />
           <Route path="settings/who-books" element={<Guard allow={booksForOthers}><WhoBooksPage /></Guard>} />
+          <Route path="settings/handover" element={<HandoverGuard><HandoverPage /></HandoverGuard>} />
+          <Route path="settings/leader" element={<Guard allow={canChangeLeaders}><LeaderChangePage /></Guard>} />
         </Route>
         <Route
           path="no-access"

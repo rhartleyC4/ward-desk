@@ -43,14 +43,21 @@ describe('settingsFor', () => {
       You: ["Dates I'll be away"],
       Appointments: ['Appointment hours', 'Usual lengths', 'Message templates', 'Who books for whom'],
       Meetings: ['Agendas', 'Standing schedule', 'Calling list'],
-      Ward: ['Who can sign in'],
+      Ward: ['Who can sign in', 'Change of bishopric', 'Change a ward leader'],
     })
   })
 
+  it('lets the bishop or an admin change the bishopric, and the whole bishopric change a leader', () => {
+    expect(settings(['bishopric'], 'first_counselor').Ward).toEqual(['Change a ward leader'])
+    expect(settings(['bishopric'], 'bishop').Ward).toEqual(['Change of bishopric', 'Change a ward leader'])
+    // A mentor acting for the bishop isn't the bishop.
+    expect(settingsFor(['bishopric'], 'bishop', true).find((g) => g.title === 'Ward')!.links.map((l) => l.label)).toEqual(['Change a ward leader'])
+  })
+
   it('lets only admins manage sign-in access and tidy the calling list', () => {
-    expect(settings(['bishopric'], 'first_counselor').Ward).toBeUndefined()
+    expect(settings(['bishopric'], 'first_counselor').Ward).not.toContain('Who can sign in')
     expect(settings(['bishopric'], 'first_counselor').Meetings).not.toContain('Calling list')
-    expect(settings(['admin'])).toEqual({ You: ["Dates I'll be away"], Appointments: ['Appointment hours'], Meetings: ['Agendas', 'Standing schedule', 'Calling list'], Ward: ['Who can sign in'] })
+    expect(settings(['admin'])).toEqual({ You: ["Dates I'll be away"], Appointments: ['Appointment hours'], Meetings: ['Agendas', 'Standing schedule', 'Calling list'], Ward: ['Who can sign in', 'Change of bishopric', 'Change a ward leader'] })
   })
 
   it('leaves out empty groups', () => {

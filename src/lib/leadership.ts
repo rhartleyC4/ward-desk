@@ -22,7 +22,7 @@ export const officeLabel = (office: Office | null) => OFFICES.find((o) => o.offi
 export type Person = { id: string; display_name: string | null; email: string; office: Office | null; organization: string | null }
 
 /** Who takes an office: someone with an account, someone new (by email), or nobody. */
-export type Pick = { kind: 'person'; id: string } | { kind: 'new'; name: string; email: string } | { kind: 'empty' }
+export type Pick = { kind: 'person'; id: string } | { kind: 'new'; email: string } | { kind: 'empty' }
 
 export type Seats = Record<Office, Pick>
 
@@ -52,6 +52,9 @@ export function doubleBooked(seats: Seats): boolean {
   const keys = Object.values(seats).flatMap((s) => (s.kind === 'person' ? [s.id] : s.kind === 'new' ? [s.email.trim().toLowerCase()] : []))
   return new Set(keys).size !== keys.length
 }
+
+/** A pick is ready to send: a person, nobody, or a new email that looks like one. */
+export const pickReady = (p: Pick) => p.kind !== 'new' || validEmail(p.email)
 
 export const validEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 
