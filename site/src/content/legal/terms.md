@@ -77,7 +77,7 @@ Your ward administrator can also remove your access at any time.
 
 ## Privacy
 
-How personal information is handled is explained in the [Privacy Policy](/legal/privacy). <!-- CHECK: confirm this link path matches the site's routing. -->
+How personal information is handled is explained in the [Privacy Policy](/privacy/).
 
 ## Governing law
 
