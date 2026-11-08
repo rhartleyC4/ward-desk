@@ -432,8 +432,9 @@ enabled = true
 project_id = "mpzwseusjpgpotwgcobh"
 
 [remotes.staging.auth]
-site_url = "https://gp7-training.warddesk.app"
-additional_redirect_urls = ["https://gp7-training.warddesk.app"]
+site_url = "https://demo.warddesk.app"
+# The old address stays until it redirects to the new one, so sign-in links already sent still work.
+additional_redirect_urls = ["https://demo.warddesk.app", "https://gp7-training.warddesk.app"]
 
 [remotes.staging.auth.email]
 enable_confirmations = true
@@ -468,8 +469,8 @@ enabled = true
 
 [remotes.staging.auth.webauthn]
 rp_display_name = "Ward Desk"
-rp_id = "gp7-training.warddesk.app"
-rp_origins = ["https://gp7-training.warddesk.app"]
+rp_id = "demo.warddesk.app"
+rp_origins = ["https://demo.warddesk.app"]
 
 # One Google OAuth client serves both environments. npm run env:auth asks for the secret (or reads
 # GOOGLE_CLIENT_SECRET); leave it blank there to keep the one already set.

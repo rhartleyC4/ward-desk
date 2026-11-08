@@ -139,7 +139,7 @@ jobs:
     timeout-minutes: 15
     environment:
       name: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
-      url: ${{ github.ref_name == 'production' && 'https://gp7.warddesk.app' || 'https://gp7-training.warddesk.app' }}
+      url: ${{ github.ref_name == 'production' && 'https://gp7.warddesk.app' || 'https://demo.warddesk.app' }}
     concurrency:
       group: deploy-${{ github.ref_name }}
       cancel-in-progress: false

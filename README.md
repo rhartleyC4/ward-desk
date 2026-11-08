@@ -193,7 +193,7 @@ There are two hosted copies of the app. Each has its own Supabase project and Cl
 
 | | Training site (staging) | Real site (production) |
 |---|---|---|
-| URL | https://gp7-training.warddesk.app | https://gp7.warddesk.app |
+| URL | https://demo.warddesk.app | https://gp7.warddesk.app |
 | Deploys from | `main`, after CI passes | `production`, after CI passes |
 | Data | Invented practice data from `supabase/seed.sql` | Real ward data. Never copy it to staging |
 | Extras | "Training site" banner, practice-account sign-in | None |
@@ -224,7 +224,7 @@ A few steps need a person in a dashboard. Do these first:
    ```bash
    npx wrangler pages project create ward-desk --production-branch production
    ```
-   Under Custom domains, add `gp7-training.warddesk.app` to the staging project and `gp7.warddesk.app` to the other. Create a custom API token (or an account-owned token under Manage Account → Account API Tokens, which survives a handoff). Give it only **Account → Cloudflare Pages → Edit** on your account, with no zone permissions and no IP filtering.
+   Under Custom domains, add `demo.warddesk.app` to the staging project and `gp7.warddesk.app` to the other. Create a custom API token (or an account-owned token under Manage Account → Account API Tokens, which survives a handoff). Give it only **Account → Cloudflare Pages → Edit** on your account, with no zone permissions and no IP filtering.
 5. **Google Cloud** (optional, can wait): see "Google sign-in" below.
 
 Then sign in to both CLIs once on your machine: `gh auth login` and `npx supabase login`. No Supabase access token goes to CI: it would reach every project you own. Run each command for staging first, then production:
@@ -257,7 +257,7 @@ Optional. Email links work without it, but Google sign-in means most people neve
    - Data access: only `openid`, `.../auth/userinfo.email` and `.../auth/userinfo.profile`. These basic scopes don't need Google's app verification.
    - **Publish the app** (Audience → Publish app). While it is in "Testing", only listed test users can sign in, and their sign-ins expire after 7 days.
 3. **OAuth client** (Clients → Create client → Web application):
-   - Authorized JavaScript origins: `https://gp7.warddesk.app` and `https://gp7-training.warddesk.app`.
+   - Authorized JavaScript origins: `https://gp7.warddesk.app` and `https://demo.warddesk.app`.
    - Authorized redirect URIs: `https://<prod-ref>.supabase.co/auth/v1/callback` and `https://<staging-ref>.supabase.co/auth/v1/callback`.
    - Copy the client ID and client secret.
 4. **Supabase:** put the client ID in each `[remotes.*.auth.external.google]` block of `supabase/config.toml`, then run `npm run env:auth -- staging` (and production) and paste the client secret when it asks.
@@ -315,8 +315,8 @@ Turn passkeys on in each Supabase project's Auth settings in the dashboard, with
 | Setting | Staging | Production |
 |---|---|---|
 | Passkeys | Enabled | Enabled |
-| Relying party ID | `gp7-training.warddesk.app` | `gp7.warddesk.app` |
-| Origins | `https://gp7-training.warddesk.app` | `https://gp7.warddesk.app` |
+| Relying party ID | `demo.warddesk.app` | `gp7.warddesk.app` |
+| Origins | `https://demo.warddesk.app` | `https://gp7.warddesk.app` |
 | Display name | `Ward Desk` | `Ward Desk` |
 
 Locally, `supabase/config.toml` already turns them on for `localhost`. Open the app at `http://localhost:5173` (not `127.0.0.1`) to try them. Passkeys only work on HTTPS or localhost, so a phone on your local network can't test them; use staging. The allowlist still applies, since only someone already signed in can add a passkey.

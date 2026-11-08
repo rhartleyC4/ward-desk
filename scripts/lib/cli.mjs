@@ -14,7 +14,7 @@ import { promisify } from 'node:util'
 const execFileAsync = promisify(execFile)
 
 export const ENVIRONMENTS = {
-  staging: { url: 'https://gp7-training.warddesk.app', pagesProject: 'ward-desk-staging' },
+  staging: { url: 'https://demo.warddesk.app', pagesProject: 'ward-desk-staging' },
   production: { url: 'https://gp7.warddesk.app', pagesProject: 'ward-desk' },
 }
 
