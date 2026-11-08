@@ -16,7 +16,7 @@ This policy covers:
 
 - this website, **warddesk.app**
 - the ward copy I host at **gp7.warddesk.app**
-- its training copy at **gp7-training.warddesk.app**, which holds invented practice data
+- the public demo at **demo.warddesk.app**, which holds invented practice data only (see "The demo" below)
 
 **Contact:** privacy@warddesk.app <!-- PLACEHOLDER: confirm this address exists and is monitored, or replace it. -->
 
@@ -31,6 +31,12 @@ Ward Desk is open source, so other wards can run their own copy. If you use a co
 ## This website
 
 warddesk.app (the overview and docs) does not use analytics, tracking or advertising, and sets no cookies. <!-- CHECK before publishing: still true of the finished site? --> Like any website, the hosting provider (Cloudflare) briefly processes your IP address and browser details to deliver pages and block attacks.
+
+## The demo
+
+**demo.warddesk.app** is a public practice copy. It holds only invented names and data, and anyone may sign in with the practice accounts listed on its sign-in page. It is reset from time to time, which wipes everything entered since the last reset.
+
+**Never type real member information into the demo.** Anything entered there can be seen by anyone else using it until the next reset. The rest of this policy is about the real ward copy; for the demo, the only personal information involved is the technical details every website sees (see "This website") and any error reports.
 
 ## Invite-only
 
@@ -47,7 +53,7 @@ The app stores only what the ward's leaders need to do their work.
 - **Sign-in records** kept by our sign-in provider: sessions, the passkeys you add for Face ID or fingerprint sign-in (the public part only; your fingerprint or face never leaves your device), and technical details such as IP address and browser.
 - **Your notification settings and devices**: which notifications you turned off, and for each device where you turned notifications on, the address the browser's push service gave it.
 - **Your away dates** and, if you are the bishop or a counselor, your **appointment hours**.
-- **Your work in the app**: requests you send or answer and your replies, agenda items you add, appointments you book or report on, and similar records.
+- **Your work in the app**: requests you send or answer and your replies, meeting assignments (such as a prayer) you accept or decline and any reason you give, agenda items you add, appointments you book or report on, and similar records.
 
 **About other ward members** (who are usually not users)
 
@@ -70,6 +76,7 @@ Access is enforced by rules in the database itself, not only by what the screens
 - **Appointments** are visible only to the bishopric.
 - **Requests** are visible to the person who sent them and the person asked. A request between two bishopric members can be read by the whole bishopric.
 - **Meeting agendas** are visible to the bishopric and to people listed as attending that meeting.
+- **Meeting assignments** (who gives a prayer or spiritual thought, and their answer) are visible to that meeting's attendees and the person asked.
 - **Sacrament meeting plans, away dates and the standing schedule** are visible to everyone with access to the app.
 - **Error reports** are visible only to administrators.
 
@@ -125,7 +132,7 @@ The app does not use advertising or tracking cookies, and no analytics. It store
 - your sign-in session, so you stay signed in
 - your light or dark mode choice
 - whether you dismissed the "install the app" hint, or chose to set up Face ID or fingerprint sign-in on this device
-- on the training site, whether you hid its banner
+- on the demo, whether you hid its banner
 - the app's own files, so it opens quickly and can show notifications
 
 Signing out ends your session. Clearing your browser's site data removes the rest.

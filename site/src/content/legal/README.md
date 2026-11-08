@@ -19,7 +19,8 @@
 
 | Claim | Source |
 |---|---|
-| Hosted copies are gp7.warddesk.app and gp7-training.warddesk.app (invented data) | README.md "Deploying" |
+| Hosted copies are gp7.warddesk.app (deploys from the `gp7` branch) and demo.warddesk.app (invented data) | README.md "Deploying" |
+| Demo: invented data, practice accounts listed on the sign-in page, reset from time to time | `src/pages/LoginPage.tsx` (`PRACTICE_ACCOUNTS`), `supabase/seed.sql`, `.github/workflows/reset-staging.yml` |
 | No connection to Church systems; nothing read from or sent to them | No such integration in `src/`, `supabase/functions/`, `scripts/` (LCR import was researched but not built) |
 | Branding: no Church name or logos in the app | README.md "Maintenance notes" |
 
@@ -59,13 +60,14 @@
 | Requests: sender and recipient; whole bishopric if both are bishopric | `20261105035000_requests.sql` |
 | Agendas: bishopric plus listed attendees | `20261103025546_meeting_templates.sql`, README.md "Roles" |
 | Sacrament plans, away dates, schedule readable by anyone with a role | `members read ...` policies, initial schema |
+| Meeting assignments: attendees and the person asked; accept/decline with optional reply | `supabase/migrations/20261107145553_meeting_assignments.sql` |
 | Error reports: admins only | `20261106222524_health_checks.sql` |
 
 ### Notifications and email
 
 | Claim | Source |
 |---|---|
-| Notification text has no names or details; office only | README.md "Notifications"; `supabase/functions/push/plan.ts`; `src/lib/daySummary.ts` |
+| Notification text has no names or details; office only (incl. meeting assignment notices) | README.md "Notifications"; `supabase/functions/push/plan.ts`; `src/lib/daySummary.ts` |
 | Rotation titles are sent as typed (keep them general) | README.md "Notifications" |
 | Push via browser push services (VAPID) | `public/push-handler.js`, `scripts/notify/deliver.ts`, `supabase/functions/push/index.ts` |
 | Dead subscriptions deleted on 404/410; turning off deletes it | `scripts/notify/deliver.ts`, `supabase/functions/push/index.ts`, `deletePushSubscription` in `src/lib/queries.ts` |
@@ -99,7 +101,7 @@
 | Theme choice | `src/theme.ts` (MUI color scheme) |
 | Install hint dismissed | `src/components/InstallPrompt.tsx` |
 | Passkey choice per device | `src/lib/passkeys.ts` |
-| Training banner hidden (sessionStorage) | `src/components/EnvironmentBanner.tsx` |
+| Demo banner hidden (sessionStorage) | `src/components/EnvironmentBanner.tsx` |
 | Service worker caches app files | `vite.config.ts` (vite-plugin-pwa / Workbox) |
 | No analytics in the app | No analytics library in `package.json` or `src/` |
 

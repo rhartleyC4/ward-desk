@@ -6,7 +6,7 @@ lastUpdated: 2026-11-06
 
 <!-- DRAFT for the owner's review. Not legal advice. Have it checked before publishing, especially the warranty, liability and governing-law sections. -->
 
-These terms apply when you use this website (warddesk.app) or a copy of Ward Desk that I host, such as gp7.warddesk.app and its training site. By using them, you agree to these terms. If you don't agree, please don't use them.
+These terms apply when you use this website (warddesk.app) or a copy of Ward Desk that I host, such as gp7.warddesk.app and the public demo at demo.warddesk.app. By using them, you agree to these terms. If you don't agree, please don't use them.
 
 ## Who provides Ward Desk
 
@@ -21,6 +21,10 @@ The Church's name and any other trademarks mentioned belong to their owners and 
 ## Who can use it
 
 Access is by invitation only. A ward administrator adds you, and can remove you. You must be a ward leader or otherwise invited for ward business, and an adult.
+
+## The demo
+
+demo.warddesk.app is for trying Ward Desk out. Anyone may use its practice accounts. It holds invented data only and is reset from time to time without notice. **Don't enter real member information or anything private there**: other visitors can see it.
 
 ## Using it properly
 
