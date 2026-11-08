@@ -1,4 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
+import { useEffect } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuthProvider, useAuth } from './AuthProvider'
 
@@ -32,12 +33,14 @@ vi.mock('../lib/queries', () => ({ loadMe, whoami }))
 // Every state the tree rendered, including intermediate ones a redirect could act on.
 const rendered: string[] = []
 
-let switchActing: (id: string | null) => Promise<void> = async () => {}
+const handle: { switchActing: (id: string | null) => Promise<void> } = { switchActing: async () => {} }
 
 function Probe() {
   const auth = useAuth()
   const { loading, session, roles } = auth
-  switchActing = auth.switchActing
+  useEffect(() => {
+    handle.switchActing = auth.switchActing
+  })
   const s = loading ? 'loading' : `${session ? 'in' : 'out'}:${roles.join(',')}${auth.actingFor ? `:as-${auth.actingFor.for_id}` : ''}${auth.callingsHidden ? ':no-callings' : ''}`
   rendered.push(s)
   return <p data-testid="state">{s}</p>
@@ -124,9 +127,9 @@ describe('AuthProvider', () => {
     expect(state()).toBe('in:leader')
     expect(acting.id).toBe(null)
 
-    await act(async () => switchActing('newbishop'))
+    await act(async () => handle.switchActing('newbishop'))
     expect(state()).toBe('in:bishopric:as-newbishop:no-callings')
-    await act(async () => switchActing(null))
+    await act(async () => handle.switchActing(null))
     expect(state()).toBe('in:leader')
     expect(acting.id).toBe(null)
   })
