@@ -13,7 +13,7 @@ import { toPasskeyError } from './passkeys'
 import type { CallingRequest, CallingRequestKind, MyCallingRequest, Recipient, Request, RequestStatus } from './requests'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
-import { leavingPayload, seatsPayload, type Leaving, type Seats, type Work } from './leadership'
+import { leavingPayload, organizationsOf, seatsPayload, type Leaving, type Seats, type Work } from './leadership'
 import { leaderHomeCount, meetingsCount, sacramentCount, secretaryHomeCount, type TabCounts } from './tabCounts'
 
 type Result<T> = { data: T; error: { message: string } | null }
@@ -855,8 +855,8 @@ export async function removeAttendee(client: Client, templateId: string, userId:
 // Sign-in access (admins only)
 // ---------------------------------------------------------------------------
 
-export type Invite = Pick<Tables<'allowlist'>, 'email' | 'initial_roles' | 'initial_office' | 'created_at' | 'profile_id'>
-export type InviteAccess = Pick<Invite, 'initial_roles' | 'initial_office'>
+export type Invite = Pick<Tables<'allowlist'>, 'email' | 'initial_roles' | 'initial_office' | 'initial_organization' | 'created_at' | 'profile_id'>
+export type InviteAccess = Pick<Invite, 'initial_roles' | 'initial_office'> & Partial<Pick<Invite, 'initial_organization'>>
 export type Account = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' | 'removed_at'>
 
 /**
@@ -864,11 +864,12 @@ export type Account = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' |
  * who was taken off the list; it stays until it's deleted.
  */
 export async function loadAccess(client: Client) {
-  const [invites, accounts] = await Promise.all([
-    client.from('allowlist').select('email, initial_roles, initial_office, created_at, profile_id').order('email'),
+  const [invites, accounts, callings] = await Promise.all([
+    client.from('allowlist').select('email, initial_roles, initial_office, initial_organization, created_at, profile_id').order('email'),
     client.from('profiles').select('id, email, display_name, removed_at').order('display_name'),
+    client.from('callings').select('organization'),
   ])
-  return { invites: must(invites) as Invite[], accounts: must(accounts) as Account[] }
+  return { invites: must(invites) as Invite[], accounts: must(accounts) as Account[], organizations: organizationsOf(must(callings)) }
 }
 
 /**

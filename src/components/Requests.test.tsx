@@ -184,6 +184,15 @@ describe('RequestsView', () => {
     })
   })
 
+  it('starts a calling the list doesn’t know on the leader’s own organization', async () => {
+    const a = actions()
+    view({ userId: 'leader', canAskCallings: true, actions: a, organization: 'Young Women' })
+    await userEvent.click(screen.getByRole('button', { name: /Ask for a calling change/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    await userEvent.type(screen.getByRole('combobox', { name: /Calling/ }), 'Camp Leader')
+    expect(screen.getByLabelText(/Which organization/)).toHaveValue('Young Women')
+  })
+
   it('tells a leader how far along their request is, without the bishopric’s decisions', () => {
     const mine: MyCallingRequest = {
       id: 'c1',

@@ -41,17 +41,21 @@ const OFFICES: { office: Enums<'bishopric_office'>; label: string }[] = [
 /** How long an account stays after its last role is taken away (purge_old_records in the database). */
 const REMOVED_ACCOUNT_DAYS = 180
 
-const NOBODY: InviteAccess = { initial_roles: [], initial_office: null }
+const NOBODY: InviteAccess = { initial_roles: [], initial_office: null, initial_organization: null }
 
-/** A position only goes with the bishopric role, so turning that off clears it. */
+/** A position only goes with the bishopric role, and an organization with the leader role. */
 function toggleRole(access: InviteAccess, role: AppRole): InviteAccess {
   const roles = access.initial_roles
   const initial_roles = roles.includes(role) ? roles.filter((r) => r !== role) : [...roles, role]
-  return { initial_roles, initial_office: initial_roles.includes('bishopric') ? access.initial_office : null }
+  return {
+    initial_roles,
+    initial_office: initial_roles.includes('bishopric') ? access.initial_office : null,
+    initial_organization: initial_roles.includes('leader') ? access.initial_organization : null,
+  }
 }
 
 /** Role chips, plus the bishopric position once Bishopric is on. */
-function AccessFields({ who, access, onChange, locked }: { who: string; access: InviteAccess; onChange: (access: InviteAccess) => void; locked?: AppRole }) {
+function AccessFields({ who, access, onChange, locked, organizations }: { who: string; access: InviteAccess; onChange: (access: InviteAccess) => void; locked?: AppRole; organizations: string[] }) {
   return (
     <Stack spacing={1.5}>
       <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap' }}>
@@ -89,6 +93,24 @@ function AccessFields({ who, access, onChange, locked }: { who: string; access: 
           {OFFICES.map(({ office, label }) => (
             <option key={office} value={office}>
               {label}
+            </option>
+          ))}
+        </TextField>
+      )}
+      {access.initial_roles.includes('leader') && (
+        <TextField
+          select
+          size="small"
+          label="Organization"
+          slotProps={{ ...nativeSelect, htmlInput: { 'aria-label': `Organization for ${who}` } }}
+          sx={{ maxWidth: 260 }}
+          value={access.initial_organization ?? ''}
+          onChange={(e) => onChange({ ...access, initial_organization: e.target.value || null })}
+        >
+          <option value="">No organization</option>
+          {[...new Set([...organizations, ...(access.initial_organization ? [access.initial_organization] : [])])].map((o) => (
+            <option key={o} value={o}>
+              {o}
             </option>
           ))}
         </TextField>
@@ -186,7 +208,7 @@ export function AccessPage() {
       <SectionCard title="Add someone">
         <Stack component="form" spacing={1.5} onSubmit={submit}>
           <TextField label="Email" type="email" required autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <AccessFields who="the new email" access={access} onChange={setAccess} />
+          <AccessFields who="the new email" access={access} onChange={setAccess} organizations={data.organizations} />
           <Box>
             <Button type="submit" variant="contained" disabled={save.busy}>
               Add
@@ -209,7 +231,8 @@ export function AccessPage() {
                   <Box sx={{ mt: 1 }}>
                     <AccessFields
                       who={invite.email}
-                      access={{ initial_roles: invite.initial_roles, initial_office: invite.initial_office }}
+                      access={{ initial_roles: invite.initial_roles, initial_office: invite.initial_office, initial_organization: invite.initial_organization }}
+                      organizations={data.organizations}
                       locked={me ? 'admin' : undefined}
                       onChange={(next) => run(() => updateInvite(supabase, invite.email, next))}
                     />

@@ -375,9 +375,16 @@ export type CallingRequestForm = {
 const EMPTY_FORM = { kind: 'fill' as CallingRequestKind, calling_title: '', organization: '', release_name: '', needed_by: '', notes: '', names: [''] }
 
 /** Three short steps: what kind of change, which calling, then names and anything else. */
-export function NewCallingRequest({ callings, onSend, onClose, busy }: { callings: ListedCalling[]; onSend: (form: CallingRequestForm) => Promise<boolean>; onClose: () => void; busy: boolean }) {
+export function NewCallingRequest({ callings, onSend, onClose, busy, organization }: {
+  callings: ListedCalling[]
+  onSend: (form: CallingRequestForm) => Promise<boolean>
+  onClose: () => void
+  busy: boolean
+  /** The organization this leader leads, picked to begin with when the calling list doesn't know. */
+  organization?: string | null
+}) {
   const [step, setStep] = useState<1 | 2 | 3 | 'sent'>(1)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [form, setForm] = useState({ ...EMPTY_FORM, organization: organization ?? '' })
   const listed = callings.find((c) => c.title.toLowerCase() === form.calling_title.trim().toLowerCase())
   const release = needsRelease(form.kind)
   const names = takesNames(form.kind)
@@ -400,7 +407,7 @@ export function NewCallingRequest({ callings, onSend, onClose, busy }: { calling
             variant="outlined"
             size="large"
             onClick={() => {
-              setForm(EMPTY_FORM)
+              setForm({ ...EMPTY_FORM, organization: organization ?? '' })
               setStep(1)
             }}
           >
@@ -526,6 +533,7 @@ export function RequestsView({
   startWith = null,
   actions,
   busy,
+  organization = null,
 }: {
   data: RequestsData
   userId: string
@@ -537,6 +545,8 @@ export function RequestsView({
   startWith?: 'request' | 'calling' | null
   actions: RequestsActions
   busy: boolean
+  /** The organization this ward leader leads. */
+  organization?: string | null
 }) {
   const [open, setOpen] = useState<'request' | 'calling' | null>(startWith)
   const recent = (r: Request) => isOpen(r) || (!!r.closed_at && dayOf(r.closed_at) >= addDays(today, -KEEP_CLOSED_DAYS))
@@ -559,7 +569,7 @@ export function RequestsView({
               {open === 'request' ? (
                 <NewRequest recipients={data.recipients} onSend={actions.send} onClose={() => setOpen(null)} busy={busy} />
               ) : open === 'calling' ? (
-                <NewCallingRequest callings={data.callings} onSend={actions.sendCallingRequest} onClose={() => setOpen(null)} busy={busy} />
+                <NewCallingRequest callings={data.callings} onSend={actions.sendCallingRequest} onClose={() => setOpen(null)} busy={busy} organization={organization} />
               ) : (
                 <Stack sx={{ gap: 1 }}>
                   {canSend && <ActionButton icon={<SendIcon />} label="Ask someone to do something" hint="They'll let you know they've seen it and when it's done." onClick={() => setOpen('request')} />}

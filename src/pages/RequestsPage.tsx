@@ -10,7 +10,7 @@ import { useAction, useAsync } from '../lib/useAsync'
 import { useRefreshWaiting } from '../components/WaitingCount'
 
 export function RequestsPage() {
-  const { roles, profile } = useAuth()
+  const { roles, profile, organization } = useAuth()
   const userId = profile?.id ?? ''
   const today = todayIso()
   const canSend = canSendRequests(roles)
@@ -79,7 +79,7 @@ export function RequestsPage() {
   return (
     <>
       <ErrorNote error={save.error} />
-      <RequestsView data={data} userId={userId} today={today} canSend={canSend} canAskCallings={canAsk} startWith={startWith} actions={actions} busy={save.busy} />
+      <RequestsView data={data} userId={userId} today={today} canSend={canSend} canAskCallings={canAsk} startWith={startWith} actions={actions} busy={save.busy} organization={organization} />
     </>
   )
 }
