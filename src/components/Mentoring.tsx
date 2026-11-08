@@ -10,7 +10,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { addDays, todayIso, type IsoDate } from '../lib/dates'
+import { addDays, longDate, todayIso, type IsoDate } from '../lib/dates'
 import { MENTOR_MAX_DAYS, mentorDayAllowed, mentorEndsAt } from '../lib/leadership'
 import { updateMentoring, type MentoredBy } from '../lib/queries'
 import { WARD_TIME_ZONE, supabase } from '../lib/supabase'
@@ -37,7 +37,7 @@ export function MentorChoice() {
         value={value}
         onChange={pick}
         options={[
-          ...mentoring.map((m) => ({ value: m.for_id, label: `For ${m.name ?? 'the bishop'}`, hint: `Until ${lastDay(m.ends_at)}${m.sees_callings ? ', callings included' : ', without callings'}` })),
+          ...mentoring.map((m) => ({ value: m.for_id, label: `For ${m.name ?? 'the bishop'}`, hint: `Until ${longDate(lastDay(m.ends_at))}${m.sees_callings ? ', callings included' : ', without callings'}` })),
           { value: 'me', label: 'Yourself', hint: hasOwnRoles ? 'Your own calling' : 'You have no calling of your own in Ward Desk' },
         ]}
       />
@@ -72,7 +72,7 @@ function MentorCard({ m }: { m: MentoredBy }) {
           value={day}
           onChange={(e) => setDay(e.target.value as IsoDate)}
           error={!allowed}
-          helperText={allowed ? ' ' : `Pick a day from today to ${addDays(startedOn, MENTOR_MAX_DAYS)}`}
+          helperText={allowed ? ' ' : `Pick a day from today to ${longDate(addDays(startedOn, MENTOR_MAX_DAYS))}`}
           slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: today, max: addDays(startedOn, MENTOR_MAX_DAYS) } }}
         />
         <Button variant="outlined" sx={{ mt: 1 }} disabled={save.busy || !allowed || day === lastDay(m.ends_at)} onClick={() => void change({ ends_at: mentorEndsAt(day, WARD_TIME_ZONE) })}>

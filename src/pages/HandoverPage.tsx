@@ -21,7 +21,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import { PersonPick } from '../components/PersonPick'
 import { Choices, StepFrame } from '../components/Steps'
-import { addDays, todayIso, type IsoDate } from '../lib/dates'
+import { addDays, longDate, todayIso, type IsoDate } from '../lib/dates'
 import {
   currentSeats,
   describeWork,
@@ -221,7 +221,7 @@ export function HandoverPage() {
                     value={l.becomes}
                     onChange={(becomes) => setLeaving({ ...leaving, [p.id]: { ...l, becomes } })}
                     options={[
-                      { value: 'released', label: 'Released', hint: 'No longer uses Ward Desk, unless they help as a mentor' },
+                      { value: 'released', label: 'Released', hint: 'Leaves the bishopric. An admin stays an admin.' },
                       { value: 'leader', label: 'Stays as a ward leader', hint: 'Called to lead an organization' },
                     ]}
                   />
@@ -312,7 +312,7 @@ export function HandoverPage() {
             ))}
             {canMentor && mentor && (
               <Typography>
-                {outgoingBishop!.display_name} helps the new bishop until {mentorDay}
+                {outgoingBishop!.display_name} helps the new bishop until {longDate(mentorDay)}
                 {mentorCallings ? ', callings included.' : ', without callings.'}
               </Typography>
             )}
