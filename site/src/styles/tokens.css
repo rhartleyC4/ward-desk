@@ -18,6 +18,9 @@
   --wd-glass-bg: color-mix(in srgb, var(--wd-paper) 72%, transparent);
   --wd-glass-shadow: inset 0 1px 0 rgb(255 255 255 / 0.6), 0 8px 24px rgb(20 33 61 / 0.1);
   --wd-device-body: #14213d;
+  --wd-device-edge: rgb(255 255 255 / 0.1);
+  --wd-device-dot: rgb(255 255 255 / 0.7);
+  --wd-device-shadow: 0 2px 4px rgb(20 33 61 / 0.08), 0 32px 64px -16px rgb(20 33 61 / 0.38);
   --wd-font: 'Lexend Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
@@ -32,6 +35,7 @@
   --wd-on-primary: #0b1526;
   --wd-glass-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 8px 24px rgb(0 0 0 / 0.45);
   --wd-device-body: #2a3345;
+  --wd-device-shadow: 0 2px 4px rgb(0 0 0 / 0.3), 0 32px 64px -16px rgb(0 0 0 / 0.7);
 }
 
 /* Starlight's palette, rebuilt from the tokens above. Gray 1 is the strongest, 7 the faintest. */

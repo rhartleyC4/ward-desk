@@ -1,0 +1,61 @@
+---
+// One feature: a short benefit-led heading and a sentence or two, beside the matching screenshot.
+// Phones get the phone screenshot; wide screens get the desktop one in a browser frame.
+// Both are lazy, and the hidden one is display:none, so only the one shown is downloaded.
+import Screenshot from '../Screenshot.astro'
+import Arrow from './Arrow.astro'
+
+interface Props {
+  kicker: string
+  title: string
+  shot: string
+  alt: string
+  docs: string
+  docsLabel: string
+  flip?: boolean
+}
+const { kicker, title, shot, alt, docs, docsLabel, flip = false } = Astro.props
+const id = `f-${shot}`
+---
+<article class:list={['feature', { flip }]} aria-labelledby={id}>
+  <div class="text" data-reveal>
+    <p class="eyebrow">{kicker}</p>
+    <h3 id={id}>{title}</h3>
+    <div class="body"><slot /></div>
+    <a class="text-link" href={docs}>{docsLabel} <Arrow /></a>
+  </div>
+  <div class="media" data-reveal style="--reveal-delay: 120ms">
+    <div class="drift">
+      <div class="on-phone"><Screenshot name={shot} device="phone" alt={alt} sizes="15rem" widths={[280, 420, 560, 840]} /></div>
+      <div class="on-wide"><Screenshot name={shot} device="desktop" alt={alt} sizes="(min-width: 76rem) 40rem, 55vw" widths={[640, 800, 1100, 1400, 1800]} /></div>
+    </div>
+  </div>
+</article>
+
+<style>
+  .feature { display: grid; gap: 2rem; align-items: center; padding-block: 3rem; }
+  .text { text-align: center; max-width: 34rem; margin-inline: auto; }
+  h3 { margin: 0 0 1rem; font-size: clamp(1.5rem, 1.15rem + 1.6vw, 2.25rem); line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
+  .body :global(p) { margin: 0 0 1rem; font-size: 1.0625rem; color: var(--wd-text-2); text-wrap: pretty; }
+  .body :global(strong) { color: var(--wd-text); font-weight: 600; }
+  .media { display: grid; justify-items: center; --phone-w: 15rem; }
+  .on-wide { display: none; }
+
+  @media (min-width: 60rem) {
+    .feature { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 4rem; padding-block: 5rem; }
+    .feature.flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+    .feature.flip .text { order: 2; }
+    .text { text-align: left; margin: 0; }
+    .on-phone { display: none; }
+    .on-wide { display: block; width: 100%; }
+    .media { justify-items: stretch; }
+  }
+
+  /* A slow drift as the screenshot passes through the viewport. */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .drift { animation: drift linear both; animation-timeline: view(); animation-range: cover; }
+      @keyframes drift { from { transform: translateY(2.5rem); } to { transform: translateY(-2.5rem); } }
+    }
+  }
+</style>

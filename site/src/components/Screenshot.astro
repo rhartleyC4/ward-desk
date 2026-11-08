@@ -2,6 +2,7 @@
 // <Screenshot name="home" device="phone" alt="..." />
 // Looks for src/assets/screens/<name>-<device>-light.(png|jpg|webp) and -dark, and shows the one
 // matching the color scheme. The screenshot pipeline owns that folder; this only reads it.
+// The hidden scheme's image is display:none, so with loading="lazy" the browser never fetches it.
 import { Image } from 'astro:assets'
 import DeviceFrame from './DeviceFrame.astro'
 
@@ -11,8 +12,27 @@ interface Props {
   device?: 'phone' | 'desktop'
   alt: string
   loading?: 'lazy' | 'eager'
+  /** Rendered widths for the srcset. Defaults suit the frame sizes in DeviceFrame. */
+  widths?: number[]
+  /** How wide the image shows on the page, for the browser to pick from the srcset. */
+  sizes?: string
+  /** For the largest image above the fold. */
+  priority?: boolean
+  /** false renders the images alone, for stacking several inside one DeviceFrame. */
+  frame?: boolean
+  class?: string
 }
-const { name, device = 'phone', alt, loading = 'lazy' } = Astro.props
+const {
+  name,
+  device = 'phone',
+  alt,
+  loading = 'lazy',
+  widths = device === 'phone' ? [280, 420, 560, 840] : [640, 960, 1280, 1600],
+  sizes = device === 'phone' ? '17rem' : '(min-width: 72rem) 44rem, 90vw',
+  priority = false,
+  frame = true,
+  class: className,
+} = Astro.props
 
 const files = import.meta.glob<{ default: ImageMetadata }>('../assets/screens/*.{png,jpg,jpeg,webp}', { eager: true })
 const find = (mode: 'light' | 'dark') => {
@@ -22,12 +42,21 @@ const find = (mode: 'light' | 'dark') => {
 const light = find('light')
 const dark = find('dark') ?? light
 if (!light) throw new Error(`Screenshot: no src/assets/screens/${name}-${device}-light.* found`)
-const width = device === 'phone' ? 560 : 1400
+const common = { widths, sizes, loading: priority ? 'eager' : loading, decoding: 'async' } as const
+// Only one of the pair is displayed; both carry the alt text so screen readers get the visible one.
+const fetchpriority = priority ? 'high' : undefined
 ---
-<DeviceFrame kind={device === 'phone' ? 'phone' : 'browser'}>
-  <Image class="shot-light" src={light} alt={alt} width={width} {loading} />
-  <Image class="shot-dark" src={dark!} alt="" aria-hidden="true" width={width} {loading} />
-</DeviceFrame>
+{frame ? (
+  <DeviceFrame kind={device === 'phone' ? 'phone' : 'browser'} class={className}>
+    <Image class="shot-light" src={light} alt={alt} {...common} fetchpriority={fetchpriority} />
+    <Image class="shot-dark" src={dark!} alt={alt} {...common} fetchpriority={fetchpriority} />
+  </DeviceFrame>
+) : (
+  <Fragment>
+    <Image class:list={['shot-light', className]} src={light} alt={alt} {...common} fetchpriority={fetchpriority} />
+    <Image class:list={['shot-dark', className]} src={dark!} alt={alt} {...common} fetchpriority={fetchpriority} />
+  </Fragment>
+)}
 
 <style is:global>
   :root[data-theme='light'] .shot-dark, :root[data-theme='dark'] .shot-light { display: none; }

@@ -1,0 +1,141 @@
+---
+// "Who it's for": each role's Home. On wide screens the phone stays put while the roles scroll past
+// and its screen changes to match the one in the middle of the viewport. On phones the roles are a
+// swipeable row of cards, each with its own screenshot.
+import DeviceFrame from '../DeviceFrame.astro'
+import Screenshot from '../Screenshot.astro'
+
+const roles = [
+  {
+    shot: 'home-bishop',
+    who: 'The bishop',
+    title: 'Today, at a glance',
+    text: "The day's meetings and appointments, anything waiting on a decision, and the week ahead.",
+    alt: "The bishop's Home: a request waiting, today's meetings and appointments",
+  },
+  {
+    shot: 'home-counselor',
+    who: 'Counselors',
+    title: 'Just their own part',
+    text: 'Their own interviews, the requests waiting on them, and what is coming up this week.',
+    alt: "A counselor's Home: their interviews and what is waiting for them",
+  },
+  {
+    shot: 'home-secretary',
+    who: 'Executive secretaries',
+    title: 'Everything to schedule',
+    text: "Who still needs an appointment, each leader's open times, and tomorrow's reminders ready to send.",
+    alt: "The executive secretary's Home: who needs an appointment, open times and the week ahead",
+  },
+  {
+    shot: 'home-leader',
+    who: 'Other ward leaders',
+    title: 'Ask, answer, follow along',
+    text: 'Requests from the bishopric to answer, and a simple way to ask for a calling to be filled. They see how it is going, never the names being discussed.',
+    alt: "A ward leader's Requests page: what the bishopric has asked and calling requests they have sent",
+  },
+]
+---
+<section class="tour" aria-labelledby="tour-title">
+  <div class="wrap">
+    <header class="section-head" data-reveal>
+      <p class="eyebrow">Who it's for</p>
+      <h2 id="tour-title">Everyone opens to what's theirs</h2>
+      <p>Each person sees the parts of ward business that belong to their calling, and nothing more.</p>
+    </header>
+
+    <div class="layout">
+      <ol class="roles" tabindex="0" aria-label="Roles, scroll sideways for more">
+        {roles.map((r, i) => (
+          <li class="role" data-role={i}>
+            <div class="role-text">
+              <p class="who">{r.who}</p>
+              <h3>{r.title}</h3>
+              <p>{r.text}</p>
+            </div>
+            <div class="role-shot">
+              <Screenshot name={r.shot} alt={r.alt} sizes="13rem" widths={[240, 420, 640]} />
+            </div>
+          </li>
+        ))}
+      </ol>
+
+      <div class="stage" aria-hidden="true">
+        <DeviceFrame>
+          <div class="stack">
+            {roles.map((r, i) => (
+              <div class:list={['layer', { active: i === 0 }]} data-layer={i}>
+                <Screenshot name={r.shot} alt="" frame={false} sizes="18rem" widths={[280, 560, 840]} />
+              </div>
+            ))}
+          </div>
+        </DeviceFrame>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Swap the sticky phone's screen to match the role in the middle of the viewport.
+  const tour = document.querySelector('.tour')
+  const layers = tour?.querySelectorAll<HTMLElement>('[data-layer]') ?? []
+  const roles = tour?.querySelectorAll<HTMLElement>('[data-role]') ?? []
+  if (tour && 'IntersectionObserver' in window) {
+    const show = (i: string) => {
+      layers.forEach((l) => l.classList.toggle('active', l.dataset.layer === i))
+      roles.forEach((r) => r.classList.toggle('current', r.dataset.role === i))
+    }
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => e.isIntersecting && show((e.target as HTMLElement).dataset.role!)),
+      { rootMargin: '-45% 0px -45% 0px' },
+    )
+    roles.forEach((r) => io.observe(r))
+  }
+</script>
+
+<style>
+  .tour { padding-block: 5rem; overflow-x: clip; background: linear-gradient(to bottom, transparent, color-mix(in srgb, var(--wd-primary) 6%, transparent) 30%, color-mix(in srgb, var(--wd-primary) 6%, transparent) 70%, transparent); }
+  .roles {
+    list-style: none; margin: 0 -1rem; padding: 0.5rem 1rem 1.5rem;
+    display: grid; grid-auto-flow: column; grid-auto-columns: min(82%, 18rem); gap: 1rem;
+    overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 1rem; overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .role {
+    scroll-snap-align: start; display: flex; flex-direction: column; gap: 1.25rem; padding: 1.25rem;
+    border-radius: calc(var(--wd-radius) * 1.5); background: var(--wd-paper); border: 1px solid var(--wd-divider);
+  }
+  .who { margin: 0 0 0.25rem; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--wd-primary); }
+  .role h3 { margin: 0 0 0.5rem; font-size: 1.25rem; line-height: 1.25; }
+  .role-text p:last-child { margin: 0; color: var(--wd-text-2); }
+  .role-shot { margin-top: auto; display: grid; justify-items: center; --phone-w: 13rem; }
+  .stage { display: none; }
+
+  @media (min-width: 60rem) {
+    .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; }
+    .roles { display: block; margin: 0; padding: 0; overflow: visible; }
+    .role {
+      min-height: 70vh; justify-content: center; padding: 0 0 0 1.75rem; background: none; border: 0; border-radius: 0;
+      border-left: 3px solid var(--wd-divider); transition: border-color 300ms ease, opacity 300ms ease;
+    }
+    .role:first-child { min-height: 50vh; justify-content: flex-start; padding-top: 6rem; }
+    .role h3 { font-size: clamp(1.5rem, 1rem + 1.4vw, 2.25rem); letter-spacing: -0.02em; }
+    .role-text p:last-child { font-size: 1.125rem; max-width: 26rem; }
+    .role-shot { display: none; }
+    /* The phone is about 2.23× as tall as it is wide; keep it within short laptop screens too. */
+    .stage {
+      --phone-w: clamp(13rem, calc((100vh - 8rem) * 0.44), 18rem);
+      display: grid; justify-items: center; position: sticky; align-self: start;
+      top: calc(50vh - var(--phone-w) * 1.115 + 30px);
+    }
+    .stack { display: grid; }
+    .layer { grid-area: 1 / 1; opacity: 0; transform: scale(1.03); transition: opacity 500ms ease, transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+    .layer.active { opacity: 1; transform: none; }
+    /* Highlight the role being shown once the script is running. */
+    .role { opacity: 0.5; }
+    .role.current, .role:first-child:not(:has(~ .current)) { opacity: 1; border-left-color: var(--wd-primary); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .layer, .role { transition: none; }
+  }
+</style>

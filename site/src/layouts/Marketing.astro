@@ -5,15 +5,25 @@ import '../styles/marketing.css'
 import ThemeScript from '../components/ThemeScript.astro'
 import ThemeToggle from '../components/ThemeToggle.astro'
 import logo from '../assets/logo.svg'
+import lexendLatin from '@fontsource-variable/lexend/files/lexend-latin-wght-normal.woff2?url'
 import { SITE_NAME, SIGN_IN_URL, REPO_URL } from '../site.config'
 
 interface Props {
   title?: string
   description?: string
+  /** Social preview image, 1200×630, from public/. */
+  image?: string
+  imageAlt?: string
 }
-const { title, description = 'Ward administration in one place: agendas, callings, sacrament meeting, appointments and requests.' } = Astro.props
-const pageTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME}: ward administration in one place`
+const {
+  title,
+  description = 'Ward administration in one place: agendas, callings, sacrament meeting, appointments and requests.',
+  image = '/og.png',
+  imageAlt = 'Ward Desk: ward business, all in one calm place. A phone showing the app.',
+} = Astro.props
+const pageTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME}: ward business, all in one calm place`
 const canonical = new URL(Astro.url.pathname, Astro.site)
+const imageUrl = new URL(image, Astro.site)
 ---
 <!doctype html>
 <html lang="en">
@@ -25,9 +35,25 @@ const canonical = new URL(Astro.url.pathname, Astro.site)
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="preload" href={lexendLatin} as="font" type="font/woff2" crossorigin />
+    <!-- Matches --wd-bg in tokens.css. -->
+    <meta name="theme-color" content="#f2f4f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)" />
+    <meta property="og:site_name" content={SITE_NAME} />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={imageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={imageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl} />
+    <meta name="twitter:image:alt" content={imageAlt} />
     <meta name="generator" content={Astro.generator} />
     <ThemeScript />
   </head>

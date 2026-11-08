@@ -34,3 +34,29 @@ main { flex: 1; padding-block: 2rem 4rem; }
 .prose table { border-collapse: collapse; width: 100%; }
 .prose th, .prose td { border-bottom: 1px solid var(--wd-divider); padding: 0.5rem 0.375rem; text-align: left; }
 .prose blockquote { margin: 1rem 0; padding: 0.25rem 1rem; border-left: 3px solid var(--wd-primary); color: var(--wd-text-2); }
+
+/* Focus and buttons */
+:where(a, button, [tabindex]):focus-visible { outline: 3px solid var(--wd-primary); outline-offset: 3px; border-radius: 6px; }
+.btn { gap: 0.5rem; transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
+.btn:hover { background: var(--wd-secondary); border-color: var(--wd-secondary); }
+.btn:active { transform: translateY(1px); }
+.btn.secondary:hover { background: color-mix(in srgb, var(--wd-primary) 10%, transparent); border-color: var(--wd-primary); }
+.btn.lg { min-height: 52px; padding: 0 1.5rem; font-size: 1.0625rem; }
+.text-link { display: inline-flex; align-items: center; gap: 0.375rem; min-height: 44px; font-weight: 600; text-decoration: none; }
+.text-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.text-link svg { transition: transform 160ms ease; }
+.text-link:hover svg { transform: translateX(3px); }
+
+/* Section headings used on the landing page */
+.eyebrow { margin: 0 0 0.75rem; font-size: 0.8125rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--wd-primary); }
+.section-head { max-width: 40rem; margin: 0 auto 3rem; text-align: center; }
+.section-head h2 { margin: 0 0 1rem; font-size: clamp(1.75rem, 1.2rem + 2.4vw, 2.75rem); line-height: 1.15; letter-spacing: -0.02em; text-wrap: balance; }
+.section-head p { margin: 0; font-size: 1.125rem; color: var(--wd-text-2); text-wrap: pretty; }
+
+/* Scroll reveals. `reveal-on` is only set when motion is welcome and JS runs (see index.astro). */
+.reveal-on [data-reveal] {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 700ms cubic-bezier(0.2, 0.7, 0.2, 1), transform 900ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal-on [data-reveal].in { opacity: 1; transform: none; }

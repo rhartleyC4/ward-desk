@@ -1,0 +1,49 @@
+---
+import { REPO_URL } from '../../site.config'
+
+const facts = [
+  { label: 'License', value: 'Apache 2.0' },
+  { label: 'Cost', value: 'Free software' },
+  { label: 'Works on', value: 'Any phone or computer' },
+  { label: 'Support', value: 'Provided as is' },
+]
+---
+<section class="oss" aria-labelledby="oss-title">
+  <div class="wrap panel" data-reveal>
+    <div class="copy">
+      <p class="eyebrow">Open source</p>
+      <h2 id="oss-title">Free to use, and yours to run</h2>
+      <p>
+        Ward Desk is open-source software, built by a volunteer for one ward and shared in case it helps
+        others. If your ward would like its own copy, the setup guide walks a tech-minded member
+        through it, and your ward's information stays in accounts you control.
+      </p>
+      <div class="actions">
+        <a class="btn" href="/docs/self-hosting/">Read the setup guide</a>
+        <a class="btn secondary" href={REPO_URL}>See the code on GitHub</a>
+      </div>
+    </div>
+    <dl class="facts">
+      {facts.map((f) => (
+        <div><dt>{f.label}</dt><dd>{f.value}</dd></div>
+      ))}
+    </dl>
+  </div>
+</section>
+
+<style>
+  .oss { padding-block: 3rem 5rem; }
+  .panel {
+    display: grid; gap: 2rem; padding: clamp(1.5rem, 1rem + 3vw, 3.5rem);
+    border-radius: calc(var(--wd-radius) * 2); background: var(--wd-paper); border: 1px solid var(--wd-divider);
+    box-shadow: var(--wd-glass-shadow);
+  }
+  h2 { margin: 0 0 1rem; font-size: clamp(1.75rem, 1.2rem + 2.4vw, 2.5rem); line-height: 1.15; letter-spacing: -0.02em; }
+  .copy p:not(.eyebrow) { margin: 0 0 1.5rem; font-size: 1.0625rem; color: var(--wd-text-2); max-width: 36rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+  .facts { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border-radius: var(--wd-radius); overflow: hidden; background: var(--wd-divider); border: 1px solid var(--wd-divider); align-self: center; }
+  .facts div { padding: 1rem 1.125rem; background: var(--wd-paper); }
+  dt { font-size: 0.8125rem; color: var(--wd-text-2); }
+  dd { margin: 0.125rem 0 0; font-weight: 600; line-height: 1.35; }
+  @media (min-width: 60rem) { .panel { grid-template-columns: 3fr 2fr; gap: 3rem; } }
+</style>

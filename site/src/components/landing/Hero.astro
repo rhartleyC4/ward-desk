@@ -1,0 +1,113 @@
+---
+import Screenshot from '../Screenshot.astro'
+import Arrow from './Arrow.astro'
+import { DEMO_URL, SIGN_IN_URL } from '../../site.config'
+---
+<section class="hero" aria-labelledby="hero-title">
+  <div class="glow" aria-hidden="true"></div>
+  <div class="wrap grid">
+    <div class="copy">
+      <p class="eyebrow">For bishoprics and ward councils</p>
+      <h1 id="hero-title">Ward business, all in one <span>calm place</span></h1>
+      <p class="lede">
+        Agendas, callings, sacrament meeting, appointments and the small requests in between, shared
+        with the people who need them and no one else.
+      </p>
+      <div class="actions">
+        <a class="btn lg" href={SIGN_IN_URL}>Sign in</a>
+        <a class="btn lg secondary" href={DEMO_URL}>Try the demo</a>
+      </div>
+      <p class="helper">
+        Sign in is for wards already using Ward Desk. Just curious? The demo has practice accounts for every role.
+      </p>
+      <a class="text-link" href="/docs/self-hosting/">Run it for your ward <Arrow /></a>
+    </div>
+
+    <div class="art">
+      <div class="back">
+        <Screenshot name="sacrament" alt="Sacrament meeting planning with the coming Sundays listed" sizes="14rem" widths={[240, 480, 720]} />
+      </div>
+      <div class="front">
+        <Screenshot
+          name="home-bishop"
+          alt="Ward Desk on a phone: the bishop's Home showing a request waiting, today's meetings and an appointment"
+          priority
+          sizes="(min-width: 60rem) 18rem, 15rem"
+          widths={[280, 420, 560, 840]}
+        />
+      </div>
+      <div class="chip c1" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+        It's done
+      </div>
+      <div class="chip c2" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+        Tue 7:30 PM · booked
+      </div>
+      <div class="chip c3" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/></svg>
+        2 appointments tomorrow
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero { position: relative; overflow-x: clip; padding-block: 1.5rem 4rem; }
+  .glow {
+    position: absolute; inset: -20% -10% auto; height: 120%; z-index: -1; pointer-events: none;
+    background:
+      radial-gradient(40rem 26rem at 78% 30%, color-mix(in srgb, var(--wd-primary) 28%, transparent), transparent 70%),
+      radial-gradient(30rem 22rem at 12% 10%, color-mix(in srgb, var(--wd-secondary) 12%, transparent), transparent 70%);
+  }
+  .grid { display: grid; gap: 3rem; align-items: center; }
+  .copy { text-align: center; }
+  h1 {
+    margin: 0 0 1.25rem; font-size: clamp(2.25rem, 1.4rem + 4.2vw, 4rem); line-height: 1.05;
+    letter-spacing: -0.035em; font-weight: 700; text-wrap: balance;
+  }
+  h1 span { color: var(--wd-primary); }
+  .lede { margin: 0 auto 2rem; max-width: 34rem; font-size: clamp(1.0625rem, 1rem + 0.4vw, 1.25rem); color: var(--wd-text-2); text-wrap: pretty; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+  .actions .btn { flex: 1 1 10rem; max-width: 14rem; }
+  .helper { margin: 1rem auto 0.25rem; max-width: 26rem; font-size: 0.875rem; color: var(--wd-text-2); }
+
+  .art { position: relative; display: grid; place-items: center; min-height: 26rem; --phone-w: 15rem; }
+  .front { position: relative; z-index: 1; }
+  .back { display: none; }
+  .chip {
+    position: absolute; z-index: 2; display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.5rem 0.875rem; border-radius: 999px; font-size: 0.8125rem; font-weight: 600; white-space: nowrap;
+    color: var(--wd-text); background: var(--wd-glass-bg); box-shadow: var(--wd-glass-shadow);
+    -webkit-backdrop-filter: blur(16px) saturate(180%); backdrop-filter: blur(16px) saturate(180%);
+  }
+  .chip svg { color: var(--wd-primary); flex: none; }
+  .c1 { top: 5%; left: max(0rem, calc(50% - 11rem)); }
+  .c2 { bottom: 3%; right: max(0rem, calc(50% - 11.5rem)); }
+  .c3 { display: none; }
+  @media (prefers-reduced-transparency: reduce) { .chip { background: var(--wd-paper); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+  @media (min-width: 60rem) {
+    .hero { padding-block: 3rem 6rem; }
+    .grid { grid-template-columns: 1.05fr 1fr; gap: 2rem; }
+    .copy { text-align: left; }
+    .lede, .helper { margin-inline: 0; }
+    .actions { justify-content: flex-start; }
+    .art { min-height: 38rem; --phone-w: 18rem; }
+    .back { display: block; position: absolute; top: 3rem; right: 0; --phone-w: 14rem; width: var(--phone-w); opacity: 0.92; transform: rotate(6deg); }
+    .front { margin-right: 9rem; }
+    .c1 { top: 18%; left: -1rem; }
+    .c2 { bottom: 16%; right: 1rem; }
+    .c3 { display: inline-flex; bottom: 7%; left: -1.5rem; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    /* The chips stay still on purpose: animating anything over a backdrop blur kept slower phones busy. */
+    @supports (animation-timeline: scroll()) {
+      .front { animation: lift linear both; animation-timeline: scroll(root); animation-range: 0 90vh; }
+      .back { animation: lift-back linear both; animation-timeline: scroll(root); animation-range: 0 90vh; }
+      @keyframes lift { to { transform: translateY(-3rem) scale(0.97); } }
+      @keyframes lift-back { from { transform: rotate(6deg); } to { transform: translateY(2rem) rotate(9deg); } }
+    }
+  }
+</style>

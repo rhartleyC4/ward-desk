@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- Source for public/og.png (the social preview). Regenerate with: npm --prefix site run og -->
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="../../src/styles/tokens.css" />
+<style>
+  @font-face { font-family: 'Lexend Variable'; src: url('../../node_modules/@fontsource-variable/lexend/files/lexend-latin-wght-normal.woff2') format('woff2'); font-weight: 100 900; }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    font-family: var(--wd-font); color: var(--wd-text); position: relative;
+    background:
+      radial-gradient(520px 420px at 900px 260px, color-mix(in srgb, var(--wd-primary) 30%, transparent), transparent 70%),
+      radial-gradient(420px 320px at 80px 40px, color-mix(in srgb, var(--wd-secondary) 14%, transparent), transparent 70%),
+      var(--wd-bg);
+  }
+  .copy { position: absolute; left: 80px; top: 0; bottom: 0; width: 600px; display: flex; flex-direction: column; justify-content: center; }
+  .brand { display: flex; align-items: center; gap: 16px; font-size: 30px; font-weight: 700; margin-bottom: 40px; }
+  .brand img { width: 56px; height: 56px; }
+  h1 { margin: 0 0 28px; font-size: 68px; line-height: 1.04; letter-spacing: -0.035em; font-weight: 700; }
+  h1 span { color: var(--wd-primary); }
+  p { margin: 0; font-size: 26px; line-height: 1.4; color: var(--wd-text-2); max-width: 520px; }
+  .phone {
+    position: absolute; left: 780px; top: 70px; width: 330px; padding: 10px; border-radius: 48px;
+    background: var(--wd-device-body); box-shadow: var(--wd-device-shadow); transform: rotate(4deg);
+  }
+  .phone img { display: block; width: 100%; border-radius: 38px; }
+</style>
+</head>
+<body>
+  <div class="copy">
+    <div class="brand"><img src="../../src/assets/logo.svg" alt="" />Ward Desk</div>
+    <h1>Ward business, all in one <span>calm place</span></h1>
+    <p>Callings, agendas, sacrament meeting, appointments and requests for bishoprics and ward leaders.</p>
+  </div>
+  <div class="phone"><img src="../../src/assets/screens/home-bishop-phone-light.webp" alt="" /></div>
+</body>
+</html>

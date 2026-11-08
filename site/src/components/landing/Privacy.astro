@@ -1,0 +1,61 @@
+---
+import Arrow from './Arrow.astro'
+
+const points = [
+  {
+    title: 'Invite only',
+    text: 'Only people your ward adds can sign in, with Google or a link sent by email. There is no public sign-up.',
+    icon: '<rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  },
+  {
+    title: 'Checked by the database',
+    text: 'Who can see what is enforced where the data lives, not just hidden on screen. A leader who suggests names never sees the discussion.',
+    icon: '<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/>',
+  },
+  {
+    title: 'Quiet notifications',
+    text: 'Lock screens show when and how many, never who or why. "The bishop asked you to do something" is as specific as it gets.',
+    icon: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 0 0 4 0"/>',
+  },
+  {
+    title: 'Keeps only what it needs',
+    text: 'No phone numbers or birthdates. Messages to members open in your own texting app, so their numbers stay on your phone.',
+    icon: '<path d="M12 3l7.5 3v5.5c0 4.5-3.2 8.3-7.5 9.5-4.3-1.2-7.5-5-7.5-9.5V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  },
+]
+---
+<section class="privacy" aria-labelledby="privacy-title">
+  <div class="wrap">
+    <header class="section-head" data-reveal>
+      <p class="eyebrow">Built for privacy</p>
+      <h2 id="privacy-title">Confidences stay confidential</h2>
+      <p>Callings, interviews and personal matters deserve care. Ward Desk is built so the right people see them, and only them.</p>
+    </header>
+    <ul class="cards">
+      {points.map((p, i) => (
+        <li class="card" data-reveal style={`--reveal-delay: ${i * 90}ms`}>
+          <span class="icon"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={p.icon} /></span>
+          <h3>{p.title}</h3>
+          <p>{p.text}</p>
+        </li>
+      ))}
+    </ul>
+    <p class="more" data-reveal><a class="text-link" href="/privacy">Read the privacy policy <Arrow /></a></p>
+  </div>
+</section>
+
+<style>
+  .privacy { padding-block: 5rem; }
+  .cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+  .card {
+    padding: 1.5rem; border-radius: calc(var(--wd-radius) * 1.5);
+    background: var(--wd-glass-bg); box-shadow: var(--wd-glass-shadow); border: 1px solid var(--wd-divider);
+  }
+  .icon {
+    display: inline-grid; place-items: center; width: 3rem; height: 3rem; margin-bottom: 1rem; border-radius: 0.875rem;
+    color: var(--wd-primary); background: color-mix(in srgb, var(--wd-primary) 12%, transparent);
+  }
+  h3 { margin: 0 0 0.5rem; font-size: 1.125rem; line-height: 1.3; }
+  .card p { margin: 0; color: var(--wd-text-2); }
+  .more { margin: 2rem 0 0; text-align: center; }
+</style>

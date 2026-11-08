@@ -1,34 +1,154 @@
 ---
 import Marketing from '../layouts/Marketing.astro'
-import Screenshot from '../components/Screenshot.astro'
-import { DEMO_URL, SIGN_IN_URL } from '../site.config'
+import Hero from '../components/landing/Hero.astro'
+import Feature from '../components/landing/Feature.astro'
+import RoleTour from '../components/landing/RoleTour.astro'
+import Privacy from '../components/landing/Privacy.astro'
+import OpenSource from '../components/landing/OpenSource.astro'
+import ClosingCta from '../components/landing/ClosingCta.astro'
 ---
-<Marketing>
-  <div class="wrap hero">
-    <div>
-      <h1>Ward administration in one place</h1>
-      <p>Placeholder landing page. TODO(round 2): hero, feature sections, screenshots, calls to action.</p>
-      <p class="actions">
-        <a class="btn" href={DEMO_URL}>Try the demo</a>
-        <a class="btn secondary" href={SIGN_IN_URL}>Sign in</a>
-      </p>
+<Marketing
+  description="Ward Desk keeps callings, meeting agendas, sacrament meeting, appointments and requests in one private place for bishoprics, secretaries and ward leaders. Free and open source."
+>
+  <!-- Hide reveal targets before they paint, but only when motion is welcome and JS is running. -->
+  <script is:inline>
+    if (matchMedia('(prefers-reduced-motion: no-preference)').matches && 'IntersectionObserver' in window) {
+      document.documentElement.classList.add('reveal-on')
+    }
+  </script>
+
+  <Hero />
+
+  <section id="features" class="features" aria-labelledby="features-title">
+    <div class="wrap">
+      <header class="section-head" data-reveal>
+        <p class="eyebrow">What it does</p>
+        <h2 id="features-title">The week's ward business, without the scattered texts</h2>
+        <p>Everything a bishopric and ward council keep track of, in one place everyone can reach from their phone.</p>
+      </header>
+
+      <Feature
+        kicker="Callings"
+        title="Work through callings together, in confidence"
+        shot="agenda-bishopric-callings"
+        alt="Callings on the bishopric agenda: a new request from a leader, names to consider and callings waiting to be set apart"
+        docs="/docs/callings/"
+        docsLabel="How callings work"
+      >
+        <p>
+          What's needed, the names being considered and where each calling stands sit right on the
+          bishopric agenda. <strong>Leaders can ask for a calling to be filled and suggest names</strong>,
+          then follow along without ever seeing the discussion.
+        </p>
+      </Feature>
+
+      <Feature
+        kicker="Meetings"
+        title="Agendas that are ready when you sit down"
+        shot="agenda-ward-council"
+        alt="The ward council agenda with a section for each organization"
+        docs="/docs/meetings/"
+        docsLabel="About meeting agendas"
+        flip
+      >
+        <p>
+          Bishopric meeting and ward council each have their own agenda, with a place for every
+          organization. Hand an item to someone and see where it stands, and ask people to give the
+          prayers or a spiritual thought.
+        </p>
+      </Feature>
+
+      <Feature
+        kicker="Sacrament meeting"
+        title="Plan Sundays well before they arrive"
+        shot="sacrament"
+        alt="Sacrament meeting planning: the coming Sundays with who is conducting, speakers and hymns"
+        docs="/docs/sacrament/"
+        docsLabel="Planning sacrament meeting"
+      >
+        <p>
+          See the coming Sundays at a glance: who's conducting, speakers, topics and hymns. <strong>Fast Sundays and conferences are marked for you</strong>, so a special Sunday never
+          catches anyone off guard.
+        </p>
+      </Feature>
+
+      <Feature
+        kicker="Appointments"
+        title="Secretaries book around each leader's hours"
+        shot="appointments-booking"
+        alt="An executive secretary booking an appointment, choosing from a leader's open times"
+        docs="/docs/appointments/"
+        docsLabel="How booking works"
+        flip
+      >
+        <p>
+          The bishop and counselors set the hours they can meet and the days they'll be away.
+          Secretaries see who still needs a time, send a few open times from their own phone, and
+          book the one that works.
+        </p>
+      </Feature>
+
+      <Feature
+        kicker="Requests"
+        title="Ask once, and know it's handled"
+        shot="requests-received"
+        alt="A request received, with buttons for Got it and It's done"
+        docs="/docs/requests/"
+        docsLabel="About requests"
+      >
+        <p>
+          When the bishopric asks someone to do something, they tap <strong>Got it</strong> once they've
+          seen it and <strong>It's done</strong> when it's finished. No more wondering whether a message
+          landed.
+        </p>
+      </Feature>
+
+      <Feature
+        kicker="Notifications"
+        title="Gentle reminders that never name anyone"
+        shot="settings-notifications"
+        alt="Notification settings: tomorrow's summary, how did today go, and other reminders, each with its own switch"
+        docs="/docs/settings/"
+        docsLabel="Choosing notifications"
+        flip
+      >
+        <p>
+          A summary of tomorrow each evening, a nudge after the day's interviews, and a heads-up for
+          secretaries with reminders to send. Lock screens only ever show when and how many, never who
+          or why.
+        </p>
+      </Feature>
     </div>
-    <Screenshot name="placeholder" device="phone" alt="Placeholder app screen" loading="eager" />
-  </div>
-  <section id="features" class="wrap">
-    <h2>Features</h2>
-    <p>TODO(round 2).</p>
   </section>
+
+  <RoleTour />
+  <Privacy />
+  <OpenSource />
+  <ClosingCta />
 </Marketing>
 
-<style>
-  .hero { display: grid; gap: 2rem; align-items: center; justify-items: center; padding-block: 1rem 3rem; text-align: center; }
-  .hero h1 { font-size: 1.75rem; line-height: 1.25; margin: 0 0 1rem; }
-  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
-  #features { scroll-margin-top: 5rem; }
-  @media (min-width: 52rem) {
-    .hero { grid-template-columns: 1fr auto; text-align: left; }
-    .hero h1 { font-size: 2.5rem; }
-    .actions { justify-content: flex-start; }
+<script>
+  // Fade sections in as they scroll into view. Without this script (or with reduced motion) they
+  // are simply visible, because `reveal-on` is never set.
+  const root = document.documentElement
+  if (root.classList.contains('reveal-on')) {
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            e.target.classList.add('in')
+            io.unobserve(e.target)
+          }
+        }
+      },
+      { rootMargin: '0px 0px -12% 0px' },
+    )
+    document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el))
   }
+</script>
+
+<style>
+  :global(main) { padding-top: 0; }
+  .features { scroll-margin-top: 4rem; padding-block: 2rem; }
+  @media (min-width: 60rem) { .features { padding-top: 6rem; } }
 </style>

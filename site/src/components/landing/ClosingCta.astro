@@ -1,0 +1,50 @@
+---
+import { DEMO_URL, SIGN_IN_URL } from '../../site.config'
+---
+<section class="cta" aria-labelledby="cta-title">
+  <div class="wrap inner" data-reveal>
+    <h2 id="cta-title">See how it would feel in your ward</h2>
+    <p>
+      The demo has practice accounts for the bishop, counselors, secretaries and other leaders, filled
+      with made-up people. Look around and try anything.
+    </p>
+    <div class="actions">
+      <a class="btn lg invert" href={DEMO_URL}>Try the demo</a>
+      <a class="btn lg outline" href={SIGN_IN_URL}>Sign in</a>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cta { padding-block: 2rem 1rem; }
+  .inner {
+    position: relative; overflow: hidden; text-align: center;
+    padding: clamp(2.5rem, 1.5rem + 5vw, 5rem) clamp(1.25rem, 1rem + 3vw, 4rem);
+    border-radius: calc(var(--wd-radius) * 2);
+    color: var(--wd-on-primary);
+    background:
+      radial-gradient(30rem 18rem at 85% 0%, color-mix(in srgb, var(--wd-on-primary) 18%, transparent), transparent 70%),
+      linear-gradient(135deg, var(--wd-primary), var(--wd-secondary));
+  }
+  h2 { margin: 0 auto 1rem; max-width: 22ch; font-size: clamp(1.75rem, 1.2rem + 2.6vw, 3rem); line-height: 1.1; letter-spacing: -0.025em; text-wrap: balance; }
+  p { margin: 0 auto 2rem; max-width: 34rem; font-size: 1.0625rem; opacity: 0.9; }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+  .btn.invert { color: var(--wd-primary); background: var(--wd-on-primary); border-color: var(--wd-on-primary); }
+  .btn.invert:hover { background: color-mix(in srgb, var(--wd-on-primary) 88%, var(--wd-primary)); }
+  .btn.outline { color: var(--wd-on-primary); background: transparent; border-color: color-mix(in srgb, var(--wd-on-primary) 55%, transparent); }
+  .btn.outline:hover { background: color-mix(in srgb, var(--wd-on-primary) 12%, transparent); border-color: var(--wd-on-primary); }
+  .inner :global(:focus-visible) { outline-color: var(--wd-on-primary); }
+
+  /* In dark mode a bright panel would glare, so it becomes a deep tinted card instead. */
+  :global([data-theme='dark']) .inner {
+    color: var(--wd-text);
+    background:
+      radial-gradient(30rem 18rem at 85% 0%, color-mix(in srgb, var(--wd-primary) 30%, transparent), transparent 70%),
+      linear-gradient(135deg, color-mix(in srgb, var(--wd-primary) 22%, var(--wd-paper)), var(--wd-paper));
+    border: 1px solid color-mix(in srgb, var(--wd-primary) 30%, transparent);
+  }
+  :global([data-theme='dark']) .btn.invert { color: var(--wd-on-primary); background: var(--wd-primary); border-color: var(--wd-primary); }
+  :global([data-theme='dark']) .btn.invert:hover { background: var(--wd-secondary); }
+  :global([data-theme='dark']) .btn.outline { color: var(--wd-primary); border-color: var(--wd-divider); }
+  :global([data-theme='dark']) .inner :global(:focus-visible) { outline-color: var(--wd-primary); }
+</style>
