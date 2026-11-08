@@ -87,7 +87,7 @@ function SettingsList() {
           selected={selected('/account')}
           start={<Avatar sx={{ width: 44, height: 44, fontWeight: 700, bgcolor: 'secondary.main', color: 'primary.contrastText' }}>{initials(profile?.display_name)}</Avatar>}
           label={<Box component="span" sx={{ fontWeight: 600 }}>{profile?.display_name ?? session?.user.email}</Box>}
-          hint={canSeeAppointments(roles) ? 'Sign-in, Face ID and notifications' : 'Sign-in and Face ID'}
+          hint={canSeeAppointments(roles) ? 'Name, sign-in, Face ID and notifications' : 'Name, sign-in and Face ID'}
         />
       </GroupedList>
 

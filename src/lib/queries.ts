@@ -7,6 +7,7 @@ import { tidyTitle, type ListedCalling } from './callings'
 import type { MessageTemplate } from './messages'
 import type { NotificationKind } from './notifications'
 import { addDays, todayIso, upcomingSunday, type IsoDate } from './dates'
+import { cleanName } from './names'
 import type { ErrorReport } from './errorReport'
 import { toPasskeyError } from './passkeys'
 import type { CallingRequest, CallingRequestKind, MyCallingRequest, Recipient, Request, RequestStatus } from './requests'
@@ -58,6 +59,12 @@ export async function loadMe(client: Client, userId: string) {
 
 export async function loadProfiles(client: Client): Promise<Profile[]> {
   return must(await client.from('profiles').select('id, email, display_name, short_name').order('display_name'))
+}
+
+/** Changes the signed-in person's own name (1-60 characters, trimmed) and returns it as saved. */
+export async function updateMyName(client: Client, userId: string, name: string): Promise<string> {
+  const row = must(await client.from('profiles').update({ display_name: cleanName(name) }).eq('id', userId).select('display_name').single())
+  return row.display_name ?? ''
 }
 
 /** The bishop and counselors, in that order, for the Conducting and "Meets with" pickers. */

@@ -1,17 +1,21 @@
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
 import FingerprintIcon from '@mui/icons-material/Fingerprint'
+import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import IconButton from '@mui/material/IconButton'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableRow from '@mui/material/TableRow'
+import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import { NotificationChoices, type ChoiceActions } from '../components/NotificationChoices'
 import { NotificationsCard, type NotificationActions } from '../components/NotificationsCard'
 import { longDate, todayIso } from '../lib/dates'
+import { cleanName, NAME_MAX, nameProblem } from '../lib/names'
 import { deviceLabel, passkeysSupported, rememberPasskeyChoice } from '../lib/passkeys'
 import { currentSubscription, showTestNotification, subscribeDevice, subscriptionParts } from '../lib/push'
 import {
@@ -23,9 +27,61 @@ import {
   registerPasskey,
   savePushSubscription,
   setNotificationOn,
+  updateMyName,
 } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+
+/** The name others see on agendas, requests and pickers, which the person can change themselves. */
+function YourName() {
+  const { session, profile, setDisplayName } = useAuth()
+  const saved = profile?.display_name ?? ''
+  const [name, setName] = useState(saved)
+  const [done, setDone] = useState(false)
+  const save = useAction()
+  const problem = nameProblem(name)
+  const changed = cleanName(name) !== saved
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!session || problem || !changed) return
+    let next = ''
+    const ok = await save.act(async () => {
+      next = await updateMyName(supabase, session.user.id, name)
+    })
+    if (ok) {
+      setDisplayName(next)
+      setName(next)
+      setDone(true)
+    }
+  }
+
+  return (
+    <SectionCard title="Your name">
+      <Box component="form" onSubmit={submit} noValidate>
+        <Muted>How you appear to others in Ward Desk, on agendas, requests and appointments.</Muted>
+        <ErrorNote error={save.error} />
+        <TextField
+          label="Your name"
+          fullWidth
+          autoComplete="name"
+          sx={{ mt: 1.5 }}
+          value={name}
+          onChange={(e) => {
+            setName(e.target.value)
+            setDone(false)
+          }}
+          error={changed && !!problem}
+          helperText={changed && problem ? problem : done ? 'Saved.' : ' '}
+          slotProps={{ htmlInput: { maxLength: NAME_MAX + 10 } }}
+        />
+        <Button type="submit" variant="contained" sx={{ mt: 0.5 }} disabled={save.busy || !changed || !!problem}>
+          Save
+        </Button>
+      </Box>
+    </SectionCard>
+  )
+}
 
 /** A timestamp as a date in this device's time zone. */
 const localDate = (timestamp: string) => longDate(todayIso(new Date(timestamp)))
@@ -52,6 +108,10 @@ export function AccountPage() {
   return (
     <>
       <Typography variant="h1" sx={{ mb: 2 }}>
+        You
+      </Typography>
+      <YourName />
+      <Typography variant="h1" sx={{ mt: 3, mb: 2 }}>
         Sign-in
       </Typography>
       <SectionCard title="Face ID and fingerprint">
