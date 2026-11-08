@@ -3,21 +3,21 @@
 -- or use the practice password "gp7" (integration tests do this). The training site loads this
 -- seed too, so trainees sign in with it. Never reuse it anywhere real.
 
-insert into public.allowlist (email, initial_roles, initial_office) values
-  ('bishop@ward.test', '{admin,bishopric}', 'bishop'),
-  ('first@ward.test', '{bishopric}', 'first_counselor'),
-  ('second@ward.test', '{bishopric}', 'second_counselor'),
-  ('secretary@ward.test', '{bishopric}', 'executive_secretary'),
-  ('assistant@ward.test', '{bishopric}', 'assistant_executive_secretary'),
-  ('clerk@ward.test', '{bishopric}', 'ward_clerk'),
-  ('leader@ward.test', '{leader}', null),
-  ('eqpres@ward.test', '{leader}', null),
-  ('rspres@ward.test', '{leader}', null),
-  ('ywpres@ward.test', '{leader}', null),
-  ('primarypres@ward.test', '{leader}', null),
-  ('mission@ward.test', '{leader}', null),
-  ('temple@ward.test', '{leader}', null),
-  ('activities@ward.test', '{leader}', null);
+insert into public.allowlist (email, initial_roles, initial_office, initial_organization) values
+  ('bishop@ward.test', '{admin,bishopric}', 'bishop', null),
+  ('first@ward.test', '{bishopric}', 'first_counselor', null),
+  ('second@ward.test', '{bishopric}', 'second_counselor', null),
+  ('secretary@ward.test', '{bishopric}', 'executive_secretary', null),
+  ('assistant@ward.test', '{bishopric}', 'assistant_executive_secretary', null),
+  ('clerk@ward.test', '{bishopric}', 'ward_clerk', null),
+  ('leader@ward.test', '{leader}', null, 'Sunday School'),
+  ('eqpres@ward.test', '{leader}', null, 'Elders Quorum'),
+  ('rspres@ward.test', '{leader}', null, 'Relief Society'),
+  ('ywpres@ward.test', '{leader}', null, 'Young Women'),
+  ('primarypres@ward.test', '{leader}', null, 'Primary'),
+  ('mission@ward.test', '{leader}', null, 'Missionary'),
+  ('temple@ward.test', '{leader}', null, 'Temple and Family History'),
+  ('activities@ward.test', '{leader}', null, null);
 
 -- Create the auth users up front so seed rows can reference them.
 -- The on_auth_user_created trigger fills in profiles, roles and positions from the allowlist.
