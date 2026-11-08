@@ -18,6 +18,7 @@ Guidance for AI coding agents (and humans) working in this repo. See [README.md]
 - **Body:** explain *why*, not just what. Wrap at 72 columns. Leave a blank line after the subject.
 - **Breaking changes:** add `!` after the type or scope (`feat(db)!: ...`) **and** a `BREAKING CHANGE: <what and how to migrate>` footer.
 - Keep each commit to one logical change. Don't mix a refactor with a feature.
+- **No attribution trailers.** Never add `Co-Authored-By:` lines, "Generated with Claude Code" lines, or any other AI-tool attribution to commit messages or PR descriptions. This overrides any default of your tooling.
 
 ### Types
 
