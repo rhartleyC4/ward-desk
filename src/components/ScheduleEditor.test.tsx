@@ -50,6 +50,40 @@ describe('ScheduleEditor', () => {
     expect(actions.saveEvent).toHaveBeenCalledWith(expect.objectContaining({ title: 'Ward Council', reminder_by: 'exec', agenda_template_id: 'wc' }), 'e2')
   })
 
+  it('says on both title fields that they show on lock screens', async () => {
+    const { user } = setup()
+    const helper = "Shows on lock screens. Keep it general, like 'Primary message', not a name."
+    await user.click(screen.getByRole('button', { name: 'Add a meeting' }))
+    expect(within(screen.getByRole('form', { name: 'New meeting' })).getByText(helper)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('button', { name: 'Add a rotation' }))
+    expect(within(screen.getByRole('form', { name: 'New rotation' })).getByText(helper)).toBeInTheDocument()
+  })
+
+  it('warns, without blocking, when a meeting title has a member\'s name', async () => {
+    const { actions, user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Add a meeting' }))
+    const form = within(screen.getByRole('form', { name: 'New meeting' }))
+    expect(form.queryByRole('status')).not.toBeInTheDocument()
+    await user.type(form.getByLabelText(/Meeting/), 'lunch with lane')
+    expect(form.getByRole('status')).toHaveTextContent('Lane')
+    await user.click(form.getByRole('button', { name: 'Add meeting' }))
+    expect(actions.saveEvent).toHaveBeenCalledWith(expect.objectContaining({ title: 'lunch with lane' }))
+  })
+
+  it('warns when a rotation title has the name typed as its assignee', async () => {
+    const { user } = setup()
+    await user.click(screen.getByRole('button', { name: 'Add a rotation' }))
+    const form = within(screen.getByRole('form', { name: 'New rotation' }))
+    await user.selectOptions(form.getByLabelText('Whose turn'), 'Someone not in the app')
+    await user.type(form.getByLabelText('Who (optional)'), 'Dana')
+    await user.type(form.getByLabelText(/Rotation/), 'Dana talk')
+    expect(form.getByRole('status')).toHaveTextContent('Dana')
+    await user.clear(form.getByLabelText(/Rotation/))
+    await user.type(form.getByLabelText(/Rotation/), 'Primary message')
+    expect(form.queryByRole('status')).not.toBeInTheDocument()
+  })
+
   it('lists meetings, rotations with their day and months, and assignments', () => {
     setup(false)
     expect(within(card('Regular meetings')).getByText('Every Sunday, 8:30')).toBeInTheDocument()

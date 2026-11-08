@@ -13,6 +13,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { personLabel } from '../lib/agenda'
 import type { EventDraft, Profile, RotationDraft, StandingEvent, StandingRotation } from '../lib/queries'
 import { formatTime, monthsLabel, rotationDayLabel } from '../lib/schedule'
+import { namesInTitle, TITLE_HELPER, titleNameWarning } from '../lib/titleNames'
 import { ORGANIZATIONS } from '../lib/callings'
 import type { Tables } from '../lib/database.types'
 import { nativeSelect } from '../theme'
@@ -93,8 +94,24 @@ function FormButtons({ busy, canSave, onCancel, onDelete, saveLabel }: { busy: b
 // Regular meetings
 // ---------------------------------------------------------------------------
 
-function EventForm({ event, secretaries, agendaTemplates, busy, onSave, onCancel, onDelete }: {
+/** Helper text for a title that reaches lock screens, with a soft (non-blocking) warning if it may hold a name. */
+function titleHelp(names: string[]): ReactNode {
+  const warning = titleNameWarning(names)
+  return (
+    <>
+      {TITLE_HELPER}
+      {warning && (
+        <Box component="span" role="status" sx={{ display: 'block', mt: 0.25, color: 'warning.main' }}>
+          {warning}
+        </Box>
+      )}
+    </>
+  )
+}
+
+function EventForm({ event, profiles, secretaries, agendaTemplates, busy, onSave, onCancel, onDelete }: {
   event?: StandingEvent
+  profiles: Profile[]
   secretaries: Profile[]
   agendaTemplates: ScheduleData['agendaTemplates']
   busy: boolean
@@ -116,7 +133,7 @@ function EventForm({ event, secretaries, agendaTemplates, busy, onSave, onCancel
     <Box component="form" onSubmit={submit} aria-label={event ? `Edit ${event.title}` : 'New meeting'} sx={{ py: 1 }}>
       <Grid container spacing={1.5}>
         <Grid size={12}>
-          <TextField label="Meeting" required value={title} onChange={(e) => setTitle(e.target.value)} autoFocus={!event} />
+          <TextField label="Meeting" required value={title} onChange={(e) => setTitle(e.target.value)} autoFocus={!event} helperText={titleHelp(namesInTitle(title, profiles.map((p) => p.display_name)))} />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
           <TextField select label="Which weeks" slotProps={nativeSelect} value={week} onChange={(e) => setWeek(Number(e.target.value))}>
@@ -190,8 +207,9 @@ function EventForm({ event, secretaries, agendaTemplates, busy, onSave, onCancel
 
 const SOMEONE_ELSE = 'other'
 
-function RotationForm({ rotation, bishopric, busy, onSave, onCancel, onDelete }: {
+function RotationForm({ rotation, profiles, bishopric, busy, onSave, onCancel, onDelete }: {
   rotation?: StandingRotation
+  profiles: Profile[]
   bishopric: Profile[]
   busy: boolean
   onSave: (r: RotationDraft) => void
@@ -227,7 +245,7 @@ function RotationForm({ rotation, bishopric, busy, onSave, onCancel, onDelete }:
     <Box component="form" onSubmit={submit} aria-label={rotation ? `Edit ${rotation.title}` : 'New rotation'} sx={{ py: 1 }}>
       <Grid container spacing={1.5}>
         <Grid size={12}>
-          <TextField label="Rotation" required placeholder="PPI: Elders Quorum President" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus={!rotation} />
+          <TextField label="Rotation" required placeholder="PPI: Elders Quorum President" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus={!rotation} helperText={titleHelp(namesInTitle(title, profiles.map((p) => p.display_name), who === SOMEONE_ELSE ? label : null))} />
         </Grid>
         <Grid size={{ xs: 12, sm: 6 }}>
           <TextField select label="Whose turn" slotProps={nativeSelect} value={who} onChange={(e) => setWho(e.target.value)}>
@@ -399,13 +417,14 @@ export function ScheduleEditor({ data, canEdit, actions, busy }: Props) {
       <SectionCard title="Regular meetings" action={addButton('event', 'Add a meeting')}>
         {is('event', 'new') && (
           <>
-            <EventForm secretaries={data.secretaries} agendaTemplates={data.agendaTemplates} busy={busy} onCancel={close} onSave={(e) => void actions.saveEvent(e).then(after)} />
+            <EventForm profiles={data.profiles} secretaries={data.secretaries} agendaTemplates={data.agendaTemplates} busy={busy} onCancel={close} onSave={(e) => void actions.saveEvent(e).then(after)} />
             <Divider sx={{ my: 1 }} />
           </>
         )}
         {data.events.map((e) =>
           is('event', e.id) ? (
             <EventForm
+              profiles={data.profiles}
               secretaries={data.secretaries}
               agendaTemplates={data.agendaTemplates}
               key={e.id}
@@ -425,7 +444,7 @@ export function ScheduleEditor({ data, canEdit, actions, busy }: Props) {
       <SectionCard title="Rotations" action={addButton('rotation', 'Add a rotation')}>
         {is('rotation', 'new') && (
           <>
-            <RotationForm bishopric={data.bishopric} busy={busy} onCancel={close} onSave={(r) => void actions.saveRotation(r).then(after)} />
+            <RotationForm profiles={data.profiles} bishopric={data.bishopric} busy={busy} onCancel={close} onSave={(r) => void actions.saveRotation(r).then(after)} />
             <Divider sx={{ my: 1 }} />
           </>
         )}
@@ -435,6 +454,7 @@ export function ScheduleEditor({ data, canEdit, actions, busy }: Props) {
             <RotationForm
               key={r.id}
               rotation={r}
+              profiles={data.profiles}
               bishopric={data.bishopric}
               busy={busy}
               onCancel={close}
