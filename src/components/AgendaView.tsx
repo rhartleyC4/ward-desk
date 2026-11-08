@@ -322,6 +322,7 @@ function Section({
   actions,
   timeZone,
   canEditCallings,
+  callingsHidden,
 }: {
   section: AgendaSection
   date: IsoDate
@@ -329,6 +330,7 @@ function Section({
   actions: AgendaActions
   timeZone: string
   canEditCallings: boolean
+  callingsHidden: boolean
 }) {
   const who = (id: string | null) => personLabel(id, data.profiles) || 'Unassigned'
   const rotations = rotationsDue(date, data.rotations)
@@ -373,6 +375,13 @@ function Section({
       )
 
     case 'callings': {
+      if (callingsHidden) {
+        return (
+          <SectionCard title={section.title}>
+            <Muted>Callings are private while you help as a mentor. The bishop can let you see them from his Account page.</Muted>
+          </SectionCard>
+        )
+      }
       if (canEditCallings) {
         return (
           <SectionCard title={section.title}>
@@ -530,6 +539,7 @@ export function AgendaView({
   actions,
   timeZone,
   canEditCallings = false,
+  callingsHidden = false,
   me = { id: '', name: '' },
 }: {
   template: AgendaTemplate
@@ -539,6 +549,8 @@ export function AgendaView({
   timeZone: string
   /** Bishopric members work callings right on the agenda; anyone else sees the table. */
   canEditCallings?: boolean
+  /** A mentor the new bishop hasn't let see callings. */
+  callingsHidden?: boolean
   /** Who is looking, to sign messages and skip their own assignments. */
   me?: { id: string; name: string }
 }) {
@@ -556,7 +568,7 @@ export function AgendaView({
 
       <Split>
         {template.sections.map((section) => {
-          const card = <Section key={section.id} section={section} date={date} data={data} actions={actions} timeZone={timeZone} canEditCallings={canEditCallings} />
+          const card = <Section key={section.id} section={section} date={date} data={data} actions={actions} timeZone={timeZone} canEditCallings={canEditCallings} callingsHidden={callingsHidden} />
           return SIDE_SECTIONS.includes(section.kind) ? <Side key={section.id}>{card}</Side> : card
         })}
       </Split>

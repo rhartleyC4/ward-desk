@@ -34,6 +34,7 @@ import { initials } from '../lib/names'
 import { nextStep } from '../lib/setup'
 import { WARD_NAME } from '../lib/ward'
 import { InstallPrompt } from './InstallPrompt'
+import { MentorBanner } from './MentorBanner'
 import { PasskeyOffer } from './PasskeyOffer'
 import { SetupProvider, useSetupSteps } from './Setup'
 import { glass } from '../theme'
@@ -146,6 +147,7 @@ function Shell() {
             <PasskeyOffer />
           </>
         )}
+        <MentorBanner />
         {/* Keyed by path, so a page that crashed comes back after moving to another one. */}
         <ErrorBoundary key={pathname}>
           <Outlet />

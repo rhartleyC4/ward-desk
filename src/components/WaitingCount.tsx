@@ -14,7 +14,7 @@ import { totalCount, type TabCounts } from '../lib/tabCounts'
 const WaitingContext = createContext<{ counts: TabCounts; refresh: () => void }>({ counts: {}, refresh: () => {} })
 
 export function WaitingProvider({ children }: { children: ReactNode }) {
-  const { profile, roles, office, templates } = useAuth()
+  const { profile, roles, office, templates, callingsHidden } = useAuth()
   const { pathname } = useLocation()
   const [counts, setCounts] = useState<TabCounts>({})
   const [tick, setTick] = useState(0)
@@ -23,7 +23,7 @@ export function WaitingProvider({ children }: { children: ReactNode }) {
   const bishopric = canSendRequests(roles)
   const home = hasSecretaryHome(roles, office) ? 'secretary' : hasBishopricHome(roles, office) ? 'leader' : null
   // Suggestions are sorted in the callings section, so only someone whose agenda has one gets the badge.
-  const callings = canSeeCallings(roles) && templates.some((t) => t.sections.some((s) => s.kind === 'callings'))
+  const callings = canSeeCallings(roles, callingsHidden) && templates.some((t) => t.sections.some((s) => s.kind === 'callings'))
   const sacrament = canPlanMeetings(roles)
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { MentorChoice, YourMentors } from '../components/Mentoring'
 import { NotificationChoices, type ChoiceActions } from '../components/NotificationChoices'
 import { NotificationsCard, type NotificationActions } from '../components/NotificationsCard'
 import { longDate, todayIso } from '../lib/dates'
@@ -87,7 +88,7 @@ function YourName() {
 const localDate = (timestamp: string) => longDate(todayIso(new Date(timestamp)))
 
 export function AccountPage() {
-  const { session, roles, office } = useAuth()
+  const { session, roles, office, actingFor } = useAuth()
   const { data, error, reload } = useAsync(() => listPasskeys(supabase), [])
   const save = useAction()
 
@@ -110,7 +111,9 @@ export function AccountPage() {
       <Typography variant="h1" sx={{ mb: 2 }}>
         You
       </Typography>
-      <YourName />
+      <MentorChoice />
+      {actingFor ? <Muted>Choose Yourself to change your name and notifications.</Muted> : <YourName />}
+      <YourMentors />
       <Typography variant="h1" sx={{ mt: 3, mb: 2 }}>
         Sign-in
       </Typography>
@@ -152,7 +155,7 @@ export function AccountPage() {
           <Muted>This browser can't use Face ID or fingerprint sign-in.</Muted>
         )}
       </SectionCard>
-      {roles.length > 0 && (
+      {roles.length > 0 && !actingFor && (
         <>
           <Typography variant="h1" sx={{ mt: 3, mb: 2 }}>
             Notifications

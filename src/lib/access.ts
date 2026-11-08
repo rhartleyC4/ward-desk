@@ -5,8 +5,11 @@ import type { Enums } from './database.types'
 
 export type AppRole = Enums<'app_role'>
 
-/** Callings are worked on the bishopric agenda; this decides whether they're editable there. */
-export const canSeeCallings = (roles: AppRole[]) => roles.includes('bishopric')
+/**
+ * Callings are worked on the bishopric agenda; this decides whether they're editable there. A
+ * mentor sees them only when the new bishop allows it (can_see_callings() in the database).
+ */
+export const canSeeCallings = (roles: AppRole[], callingsHidden = false) => roles.includes('bishopric') && !callingsHidden
 /** Appointments sit with interviews, which RLS limits to the bishopric. */
 export const canSeeAppointments = (roles: AppRole[]) => roles.includes('bishopric')
 /** Agendas follow attendance, not roles: RLS returns only the templates someone may open. */

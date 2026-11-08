@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { backFor, canAskForCallings, canSendRequests, homeFor, isSettingsPage, navFor, settingsFor } from './access'
+import { backFor, canAskForCallings, canSeeCallings, canSendRequests, homeFor, isSettingsPage, navFor, settingsFor } from './access'
 
 const labels = (roles: Parameters<typeof navFor>[0], templates: unknown[] = []) => navFor(roles, templates).map((l) => l.label)
 const bishopric = [{ slug: 'bishopric' }, { slug: 'ward-council' }]
@@ -124,5 +124,13 @@ describe('backFor', () => {
     expect(backFor('/account', leader)).toEqual({ to: '/settings', label: 'Settings' })
     expect(backFor('/requests', leader)).toBeNull()
     expect(backFor('/requests/123', leader)).toBeNull()
+  })
+})
+
+describe('canSeeCallings for a mentor', () => {
+  it('hides callings from a mentor until the new bishop allows them', () => {
+    expect(canSeeCallings(['bishopric'])).toBe(true)
+    expect(canSeeCallings(['bishopric'], true)).toBe(false)
+    expect(canSeeCallings(['leader'])).toBe(false)
   })
 })

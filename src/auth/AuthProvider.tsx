@@ -2,8 +2,27 @@ import type { Session } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { AppRole } from '../lib/access'
 import type { Enums } from '../lib/database.types'
-import { loadAgendaTemplates, loadMe, type AgendaTemplate, type Profile } from '../lib/queries'
-import { supabase } from '../lib/supabase'
+import { loadAgendaTemplates, loadMe, whoami, type AgendaTemplate, type MentoredBy, type MentoringFor, type Profile } from '../lib/queries'
+import { setActingFor, supabase } from '../lib/supabase'
+
+const ACTING_KEY = 'ward.actingFor'
+
+function storedActing(): string | null {
+  try {
+    return localStorage.getItem(ACTING_KEY)
+  } catch {
+    return null
+  }
+}
+
+function storeActing(id: string | null) {
+  try {
+    if (id) localStorage.setItem(ACTING_KEY, id)
+    else localStorage.removeItem(ACTING_KEY)
+  } catch {
+    // Private windows may refuse; the choice just isn't remembered.
+  }
+}
 
 type AuthState = {
   loading: boolean
@@ -23,9 +42,58 @@ type AuthState = {
   /** Re-reads the meetings after one is created or changed, so the Agenda tabs stay current. */
   reloadTemplates: () => Promise<void>
   signOut: () => Promise<void>
+  /** The organization a ward leader leads. */
+  organization: string | null
+  /** The new bishops this person mentors right now (they may use Ward Desk as them). */
+  mentoring: MentoringFor[]
+  /** The mentors helping this person right now. */
+  mentoredBy: MentoredBy[]
+  /** Who this person is using Ward Desk as, when mentoring; null when they're themself. */
+  actingFor: MentoringFor | null
+  /** Whether this person holds a role of their own (so "Yourself" is worth switching to). */
+  hasOwnRoles: boolean
+  /** Calling discussions are hidden: a mentor the new bishop hasn't allowed to see them. */
+  callingsHidden: boolean
+  /** Uses Ward Desk as someone this person mentors, or as themself (null). */
+  switchActing: (id: string | null) => Promise<void>
+  /** Re-reads mentoring after the new bishop changes it. */
+  reloadMentoring: () => Promise<void>
 }
 
-type Me = { userId: string; profile: Profile | null; office: Enums<'bishopric_office'> | null; roles: AppRole[]; templates: AgendaTemplate[]; hasHours: boolean }
+type Me = {
+  userId: string
+  profile: Profile | null
+  office: Enums<'bishopric_office'> | null
+  organization: string | null
+  roles: AppRole[]
+  templates: AgendaTemplate[]
+  hasHours: boolean
+  mentoring: MentoringFor[]
+  mentoredBy: MentoredBy[]
+  actingFor: MentoringFor | null
+  hasOwnRoles: boolean
+}
+
+const NO_ONE = { profile: null, office: null, organization: null, roles: [], templates: [], hasHours: false, mentoring: [], mentoredBy: [], actingFor: null, hasOwnRoles: false }
+
+/**
+ * Loads who this person is, and who they use Ward Desk as. A mentor with no role of their own acts
+ * for the new bishop straight away; one with their own role starts as themself unless they chose
+ * otherwise on this device.
+ */
+async function loadWho(userId: string, wanted: string | null | undefined): Promise<Me> {
+  setActingFor(null)
+  const [who, own] = await Promise.all([whoami(supabase), loadMe(supabase, userId)])
+  const mentoring = who?.mentoring ?? []
+  const mentoredBy = who?.mentored_by ?? []
+  const hasOwnRoles = own.roles.length > 0
+  const choice = wanted === undefined ? storedActing() : wanted
+  const actingFor = mentoring.find((m) => m.for_id === choice) ?? (!hasOwnRoles && wanted !== null ? mentoring[0] : undefined) ?? null
+  if (!actingFor) return { userId, ...own, mentoring, mentoredBy, actingFor: null, hasOwnRoles }
+  setActingFor(actingFor.for_id)
+  const acting = await loadMe(supabase, actingFor.for_id)
+  return { userId, ...acting, mentoring, mentoredBy, actingFor, hasOwnRoles }
+}
 
 const AuthContext = createContext<AuthState | null>(null)
 
@@ -50,10 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId) return
     let cancelled = false
-    loadMe(supabase, userId)
-      .then((loaded) => !cancelled && setMe({ userId, ...loaded }))
+    loadWho(userId, undefined)
+      .then((loaded) => !cancelled && setMe(loaded))
       // Treat a failed lookup as "no roles" rather than spinning forever.
-      .catch(() => !cancelled && setMe({ userId, profile: null, office: null, roles: [], templates: [], hasHours: false }))
+      .catch(() => !cancelled && setMe({ userId, ...NO_ONE }))
     return () => {
       cancelled = true
     }
@@ -73,7 +141,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const setDisplayName = (display_name: string) => setMe((m) => (m?.profile ? { ...m, profile: { ...m.profile, display_name } } : m))
 
   const signOut = async () => {
+    storeActing(null)
+    setActingFor(null)
     await supabase.auth.signOut()
+  }
+
+  const switchActing = async (id: string | null) => {
+    if (!userId) return
+    storeActing(id)
+    setMe(await loadWho(userId, id))
+  }
+
+  const reloadMentoring = async () => {
+    if (!userId) return
+    setMe(await loadWho(userId, me?.actingFor?.for_id ?? null))
   }
 
   return (
@@ -90,6 +171,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         templates: current?.templates ?? [],
         reloadTemplates,
         signOut,
+        organization: current?.organization ?? null,
+        mentoring: current?.mentoring ?? [],
+        mentoredBy: current?.mentoredBy ?? [],
+        actingFor: current?.actingFor ?? null,
+        hasOwnRoles: current?.hasOwnRoles ?? false,
+        callingsHidden: !!current?.actingFor && !current.actingFor.sees_callings,
+        switchActing,
+        reloadMentoring,
       }}
     >
       {children}

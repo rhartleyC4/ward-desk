@@ -18,7 +18,7 @@ import { useAction, useAsync } from '../lib/useAsync'
 const isIsoDate = (s: string | undefined) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s)
 
 export function AgendaPage() {
-  const { roles, templates, profile } = useAuth()
+  const { roles, templates, profile, callingsHidden } = useAuth()
   const params = useParams()
   // Links from before templates were /agenda/:date and meant the bishopric meeting.
   const legacyDate = isIsoDate(params.slug) ? params.slug : undefined
@@ -108,7 +108,7 @@ export function AgendaPage() {
         </Button>
       </Stack>
       <ErrorNote error={error ?? save.error} />
-      {data ? <AgendaView template={template} date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} canEditCallings={canSeeCallings(roles)} me={{ id: profile?.id ?? '', name: profile?.display_name ?? '' }} /> : !error && <Loading />}
+      {data ? <AgendaView template={template} date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} canEditCallings={canSeeCallings(roles, callingsHidden)} callingsHidden={callingsHidden} me={{ id: profile?.id ?? '', name: profile?.display_name ?? '' }} /> : !error && <Loading />}
     </>
   )
 }

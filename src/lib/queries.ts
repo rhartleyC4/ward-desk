@@ -13,6 +13,7 @@ import { toPasskeyError } from './passkeys'
 import type { CallingRequest, CallingRequestKind, MyCallingRequest, Recipient, Request, RequestStatus } from './requests'
 import type { Enums, Tables, TablesInsert, TablesUpdate } from './database.types'
 import type { Client } from './supabase'
+import { leavingPayload, seatsPayload, type Leaving, type Seats, type Work } from './leadership'
 import { leaderHomeCount, meetingsCount, sacramentCount, secretaryHomeCount, type TabCounts } from './tabCounts'
 
 type Result<T> = { data: T; error: { message: string } | null }
@@ -41,7 +42,7 @@ export type Profile = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' |
 
 export async function loadMe(client: Client, userId: string) {
   const [profile, roles, templates, hours] = await Promise.all([
-    client.from('profiles').select('id, email, display_name, short_name, office').eq('id', userId).maybeSingle(),
+    client.from('profiles').select('id, email, display_name, short_name, office, organization').eq('id', userId).maybeSingle(),
     client.from('roles').select('role').eq('user_id', userId),
     loadAgendaTemplates(client),
     client.from('availability').select('id', { count: 'exact', head: true }).eq('user_id', userId),
@@ -50,6 +51,7 @@ export async function loadMe(client: Client, userId: string) {
   return {
     profile: row && { id: row.id, email: row.email, display_name: row.display_name, short_name: row.short_name },
     office: row?.office ?? null,
+    organization: row?.organization ?? null,
     roles: must(roles).map((r) => r.role),
     templates,
     // RLS hides hours from anyone outside the bishopric, who keep none anyway.
@@ -889,6 +891,60 @@ export async function updateInvite(client: Client, email: string, access: Invite
 /** Also takes away every role and the position from an account that has already signed in. */
 export async function removeInvite(client: Client, email: string) {
   check(await client.from('allowlist').delete().eq('email', email))
+}
+
+// ---------------------------------------------------------------------------
+// Leadership changes and mentoring
+// ---------------------------------------------------------------------------
+
+export type MentoringFor = { id: string; for_id: string; name: string | null; ends_at: string; sees_callings: boolean }
+export type MentoredBy = { id: string; mentor_id: string; name: string | null; starts_at: string; ends_at: string; sees_callings: boolean }
+export type WhoAmI = { id: string; acting_as: string; mentoring: MentoringFor[]; mentored_by: MentoredBy[] }
+
+/** Who is signed in, who they act as, and any mentoring they give or get. */
+export async function whoami(client: Client): Promise<WhoAmI | null> {
+  return (must(await client.rpc('whoami')) as WhoAmI | null) ?? null
+}
+
+/** The new bishop changes his mentor's access: allow callings, move the end, or end it now. */
+export async function updateMentoring(client: Client, id: string, changes: { sees_callings?: boolean; ends_at?: string; ended?: true }) {
+  const { ended, ...rest } = changes
+  check(await client.from('delegations').update({ ...rest, ...(ended ? { ended_at: new Date().toISOString() } : {}) }).eq('id', id))
+}
+
+export type LeadershipPerson = Pick<Tables<'profiles'>, 'id' | 'display_name' | 'email' | 'office' | 'organization'>
+
+/** Everyone with an account the bishopric can see, with their office or organization. */
+export async function loadLeadershipPeople(client: Client): Promise<LeadershipPerson[]> {
+  return must(await client.from('profiles').select('id, display_name, email, office, organization').is('removed_at', null).order('display_name'))
+}
+
+/** What would move from this person to a successor. */
+export async function loadLeadershipWork(client: Client, personId: string): Promise<Work | null> {
+  return must(await client.rpc('leadership_work', { person: personId }))[0] ?? null
+}
+
+export async function runHandover(client: Client, args: { seats: Seats; leaving: Record<string, Leaving>; mentorEndsAt: string | null; mentorSeesCallings: boolean }): Promise<string> {
+  return must(
+    await client.rpc('run_handover', {
+      seats: seatsPayload(args.seats),
+      leaving: leavingPayload(args.leaving),
+      mentor_ends_at: args.mentorEndsAt ?? undefined,
+      mentor_sees_callings: args.mentorSeesCallings,
+    }),
+  )
+}
+
+/** A new leader for an organization: someone with an account, or a new email. */
+export async function changeLeader(client: Client, args: { organization: string; person?: string; email?: string; outgoingBecomes: 'released' | 'leader' }): Promise<string> {
+  return must(
+    await client.rpc('change_leader', {
+      org: args.organization,
+      person: args.person,
+      email: args.email?.trim().toLowerCase(),
+      outgoing_becomes: args.outgoingBecomes,
+    }),
+  )
 }
 
 // ---------------------------------------------------------------------------

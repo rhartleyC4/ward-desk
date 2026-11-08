@@ -189,14 +189,14 @@ isOneToOne: false
                   ]
                 },"allowlist": {
                   Row: {
-                    "created_at": string,"email": string,"initial_office": Database["public"]['Enums']["bishopric_office"] | null,"initial_roles": (Database["public"]['Enums']["app_role"])[],"invited_by": string | null,"profile_id": string | null
+                    "created_at": string,"email": string,"initial_office": Database["public"]['Enums']["bishopric_office"] | null,"initial_organization": string | null,"initial_roles": (Database["public"]['Enums']["app_role"])[],"invited_by": string | null,"profile_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"email": string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"profile_id"?: string | null
+                    "created_at"?: string,"email": string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_organization"?: string | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"profile_id"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"profile_id"?: string | null
+                    "created_at"?: string,"email"?: string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_organization"?: string | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"profile_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -387,6 +387,90 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"delegations": {
+                  Row: {
+                    "created_at": string,"ended_at": string | null,"ends_at": string,"for_id": string,"handover_id": string | null,"id": string,"mentor_id": string,"sees_callings": boolean,"starts_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"ended_at"?: string | null,"ends_at": string,"for_id": string,"handover_id"?: string | null,"id"?: string,"mentor_id": string,"sees_callings"?: boolean,"starts_at"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"ended_at"?: string | null,"ends_at"?: string,"for_id"?: string,"handover_id"?: string | null,"id"?: string,"mentor_id"?: string,"sees_callings"?: boolean,"starts_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delegations_for_id_fkey"
+      columns: ["for_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delegations_handover_id_fkey"
+      columns: ["handover_id"]
+isOneToOne: false
+      referencedRelation: "handovers"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delegations_mentor_id_fkey"
+      columns: ["mentor_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"handover_seats": {
+                  Row: {
+                    "handover_id": string,"id": string,"incoming_email": string | null,"incoming_id": string | null,"moved_at": string | null,"office": Database["public"]['Enums']["bishopric_office"] | null,"organization": string | null,"outgoing_id": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "handover_id": string,"id"?: string,"incoming_email"?: string | null,"incoming_id"?: string | null,"moved_at"?: string | null,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"organization"?: string | null,"outgoing_id"?: string | null
+                  }
+                  Update: {
+                    "handover_id"?: string,"id"?: string,"incoming_email"?: string | null,"incoming_id"?: string | null,"moved_at"?: string | null,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"organization"?: string | null,"outgoing_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "handover_seats_handover_id_fkey"
+      columns: ["handover_id"]
+isOneToOne: false
+      referencedRelation: "handovers"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "handover_seats_incoming_id_fkey"
+      columns: ["incoming_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "handover_seats_outgoing_id_fkey"
+      columns: ["outgoing_id"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"handovers": {
+                  Row: {
+                    "id": string,"kind": string,"run_at": string,"run_by": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "id"?: string,"kind": string,"run_at"?: string,"run_by"?: string | null
+                  }
+                  Update: {
+                    "id"?: string,"kind"?: string,"run_at"?: string,"run_by"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "handovers_run_by_fkey"
+      columns: ["run_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"health_state": {
                   Row: {
                     "backup_alerted_at": string | null,"checked_at": string | null,"checked_until": string,"expects_backups": boolean,"id": boolean,"last_email_at": string | null,"last_email_request": number | null,"stalled_alerted_at": string | null
@@ -541,14 +625,14 @@ isOneToOne: false
                   ]
                 },"notification_outbox": {
                   Row: {
-                    "absence_id": string | null,"actor_id": string | null,"claimed_at": string | null,"created_at": string,"event": string,"id": number,"interview_id": string | null,"leader_id": string | null,"old_leader_id": string | null,"old_scheduled_at": string | null,"scheduled_at": string | null
+                    "absence_id": string | null,"acted_by": string | null,"actor_id": string | null,"claimed_at": string | null,"created_at": string,"event": string,"id": number,"interview_id": string | null,"leader_id": string | null,"old_leader_id": string | null,"old_scheduled_at": string | null,"scheduled_at": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "absence_id"?: string | null,"actor_id"?: string | null,"claimed_at"?: string | null,"created_at"?: string,"event": string,"id"?: never,"interview_id"?: string | null,"leader_id"?: string | null,"old_leader_id"?: string | null,"old_scheduled_at"?: string | null,"scheduled_at"?: string | null
+                    "absence_id"?: string | null,"acted_by"?: string | null,"actor_id"?: string | null,"claimed_at"?: string | null,"created_at"?: string,"event": string,"id"?: never,"interview_id"?: string | null,"leader_id"?: string | null,"old_leader_id"?: string | null,"old_scheduled_at"?: string | null,"scheduled_at"?: string | null
                   }
                   Update: {
-                    "absence_id"?: string | null,"actor_id"?: string | null,"claimed_at"?: string | null,"created_at"?: string,"event"?: string,"id"?: never,"interview_id"?: string | null,"leader_id"?: string | null,"old_leader_id"?: string | null,"old_scheduled_at"?: string | null,"scheduled_at"?: string | null
+                    "absence_id"?: string | null,"acted_by"?: string | null,"actor_id"?: string | null,"claimed_at"?: string | null,"created_at"?: string,"event"?: string,"id"?: never,"interview_id"?: string | null,"leader_id"?: string | null,"old_leader_id"?: string | null,"old_scheduled_at"?: string | null,"scheduled_at"?: string | null
                   }
                   Relationships: [
                     {
@@ -556,6 +640,12 @@ isOneToOne: false
       columns: ["absence_id"]
 isOneToOne: false
       referencedRelation: "absences"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "notification_outbox_acted_by_fkey"
+      columns: ["acted_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     },{
       foreignKeyName: "notification_outbox_actor_id_fkey"
@@ -613,14 +703,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"display_name": string | null,"email": string,"id": string,"office": Database["public"]['Enums']["bishopric_office"] | null,"removed_at": string | null,"short_name": string | null
+                    "created_at": string,"display_name": string | null,"email": string,"id": string,"office": Database["public"]['Enums']["bishopric_office"] | null,"organization": string | null,"removed_at": string | null,"short_name": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"display_name"?: string | null,"email": string,"id": string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"removed_at"?: string | null,"short_name"?: string | null
+                    "created_at"?: string,"display_name"?: string | null,"email": string,"id": string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"organization"?: string | null,"removed_at"?: string | null,"short_name"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"display_name"?: string | null,"email"?: string,"id"?: string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"removed_at"?: string | null,"short_name"?: string | null
+                    "created_at"?: string,"display_name"?: string | null,"email"?: string,"id"?: string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"organization"?: string | null,"removed_at"?: string | null,"short_name"?: string | null
                   }
                   Relationships: [
                     
@@ -829,7 +919,13 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "attends":
+            "acting_as":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"apply_waiting_seats":
+{ Args: { "person": string,"person_email": string }; Returns: undefined
+                           },
+"attends":
 { Args: { "template": string }; Returns: boolean
                            },
 "attends_section":
@@ -853,8 +949,14 @@ isOneToOne: false
 "can_manage_meetings":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"can_see_callings":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "can_use_prayer_roll":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"change_leader":
+{ Args: { "email"?: string,"org": string,"outgoing_becomes"?: string,"person"?: string }; Returns: string
                            },
 "delete_account":
 { Args: { "person": string }; Returns: undefined
@@ -886,8 +988,16 @@ isOneToOne: false
 "holds_role":
 { Args: { "check_role": Database["public"]['Enums']["app_role"],"person": string }; Returns: boolean
                            },
+"is_mentoring":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
 "is_planner":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"leadership_work":
+{ Args: { "person": string }; Returns: {
+              "agendas": number,"appointments": number,"calling_requests": number,"conducting": number,"has_hours": boolean,"reminders": number,"requests": number,"rotations": number,"secretary_links": number,"stewardships": number
+            }[]
                            },
 "legacy_agenda_section":
 { Args: { "item_kind": Database["public"]['Enums']["agenda_item_kind"] }; Returns: string
@@ -899,6 +1009,9 @@ isOneToOne: false
                            },
 "merge_calling":
 { Args: { "keep_id": string,"stray_id": string }; Returns: undefined
+                           },
+"move_leadership_work":
+{ Args: { "froms": (string)[],"tos": (string)[] }; Returns: undefined
                            },
 "my_calling_requests":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -927,6 +1040,9 @@ isOneToOne: false
               "display_name": string,"id": string,"in_bishopric": boolean,"office": Database["public"]['Enums']["bishopric_office"]
             }[]
                            },
+"run_handover":
+{ Args: { "leaving"?: Json,"mentor_ends_at"?: string,"mentor_sees_callings"?: boolean,"seats": Json }; Returns: string
+                           },
 "save_push_subscription":
 { Args: { "sub_auth": string,"sub_endpoint": string,"sub_p256dh": string }; Returns: undefined
                            },
@@ -936,8 +1052,14 @@ isOneToOne: false
 "send_alert":
 { Args: { "body": string,"subject": string }; Returns: number
                            },
+"set_position":
+{ Args: { "add_role": Database["public"]['Enums']["app_role"],"keep_roles": (Database["public"]['Enums']["app_role"])[],"new_email": string,"new_office": Database["public"]['Enums']["bishopric_office"],"new_organization": string,"person": string }; Returns: undefined
+                           },
 "submit_calling_request":
 { Args: { "names"?: (string)[],"needed"?: string,"org"?: string,"releasing"?: string,"request_kind": Database["public"]['Enums']["calling_request_kind"],"request_notes"?: string,"title": string }; Returns: string
+                           },
+"whoami":
+{ Args: Record<PropertyKey, never>; Returns: Json
                            }
           }
           Enums: {

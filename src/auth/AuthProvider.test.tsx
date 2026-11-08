@@ -9,6 +9,8 @@ const auth = vi.hoisted(() => ({
   initialSession: null as unknown,
 }))
 const loadMe = vi.hoisted(() => vi.fn())
+const whoami = vi.hoisted(() => vi.fn())
+const acting = vi.hoisted(() => ({ id: null as string | null }))
 
 vi.mock('../lib/supabase', () => ({
   supabase: {
@@ -21,18 +23,27 @@ vi.mock('../lib/supabase', () => ({
       signOut: () => Promise.resolve(),
     },
   },
+  setActingFor: (id: string | null) => {
+    acting.id = id
+  },
 }))
-vi.mock('../lib/queries', () => ({ loadMe }))
+vi.mock('../lib/queries', () => ({ loadMe, whoami }))
 
 // Every state the tree rendered, including intermediate ones a redirect could act on.
 const rendered: string[] = []
 
+let switchActing: (id: string | null) => Promise<void> = async () => {}
+
 function Probe() {
-  const { loading, session, roles } = useAuth()
-  const s = loading ? 'loading' : `${session ? 'in' : 'out'}:${roles.join(',')}`
+  const auth = useAuth()
+  const { loading, session, roles } = auth
+  switchActing = auth.switchActing
+  const s = loading ? 'loading' : `${session ? 'in' : 'out'}:${roles.join(',')}${auth.actingFor ? `:as-${auth.actingFor.for_id}` : ''}${auth.callingsHidden ? ':no-callings' : ''}`
   rendered.push(s)
   return <p data-testid="state">{s}</p>
 }
+
+const mentoring = { id: 'd1', for_id: 'newbishop', name: 'Bishop New', ends_at: '2026-12-05T07:00:00Z', sees_callings: false }
 
 const state = () => screen.getByTestId('state').textContent
 
@@ -41,6 +52,10 @@ describe('AuthProvider', () => {
     auth.listener = null
     auth.initialSession = null
     loadMe.mockReset()
+    whoami.mockReset()
+    whoami.mockResolvedValue({ id: 'u1', acting_as: 'u1', mentoring: [], mentored_by: [] })
+    acting.id = null
+    localStorage.clear()
     rendered.length = 0
   })
 
@@ -88,5 +103,31 @@ describe('AuthProvider', () => {
     render(<AuthProvider><Probe /></AuthProvider>)
     await act(async () => {})
     expect(state()).toBe('in:')
+  })
+
+  it('acts for the new bishop straight away when the mentor has no role of their own', async () => {
+    whoami.mockResolvedValue({ id: 'u1', acting_as: 'u1', mentoring: [mentoring], mentored_by: [] })
+    loadMe.mockImplementation((_c: unknown, id: string) => Promise.resolve({ profile: null, roles: id === 'newbishop' ? ['bishopric'] : [] }))
+    auth.initialSession = { user: { id: 'u1' } }
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await act(async () => {})
+    expect(state()).toBe('in:bishopric:as-newbishop:no-callings')
+    expect(acting.id).toBe('newbishop')
+  })
+
+  it('starts a mentor with their own role as themself, and switches when asked', async () => {
+    whoami.mockResolvedValue({ id: 'u1', acting_as: 'u1', mentoring: [mentoring], mentored_by: [] })
+    loadMe.mockImplementation((_c: unknown, id: string) => Promise.resolve({ profile: null, roles: id === 'newbishop' ? ['bishopric'] : ['leader'] }))
+    auth.initialSession = { user: { id: 'u1' } }
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await act(async () => {})
+    expect(state()).toBe('in:leader')
+    expect(acting.id).toBe(null)
+
+    await act(async () => switchActing('newbishop'))
+    expect(state()).toBe('in:bishopric:as-newbishop:no-callings')
+    await act(async () => switchActing(null))
+    expect(state()).toBe('in:leader')
+    expect(acting.id).toBe(null)
   })
 })
