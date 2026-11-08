@@ -189,17 +189,23 @@ isOneToOne: false
                   ]
                 },"allowlist": {
                   Row: {
-                    "created_at": string,"email": string,"initial_office": Database["public"]['Enums']["bishopric_office"] | null,"initial_roles": (Database["public"]['Enums']["app_role"])[],"invited_by": string | null
+                    "created_at": string,"email": string,"initial_office": Database["public"]['Enums']["bishopric_office"] | null,"initial_roles": (Database["public"]['Enums']["app_role"])[],"invited_by": string | null,"profile_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"email": string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null
+                    "created_at"?: string,"email": string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"profile_id"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null
+                    "created_at"?: string,"email"?: string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"profile_id"?: string | null
                   }
                   Relationships: [
-                    
+                    {
+      foreignKeyName: "allowlist_profile_id_fkey"
+      columns: ["profile_id"]
+isOneToOne: true
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"appointment_lengths": {
                   Row: {

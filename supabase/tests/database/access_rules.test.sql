@@ -159,8 +159,8 @@ select lives_ok(
 );
 select is((select count(*)::int from public.allowlist), 0, 'bishopric who is not admin cannot see the allowlist');
 select lives_ok(
-  $$ update public.profiles set short_name = 'L.' where id = (select auth.uid()) $$,
-  'bishopric member edits their own short name'
+  $$ update public.profiles set display_name = 'Brother Lane' where id = (select auth.uid()) $$,
+  'bishopric member edits their own name'
 );
 select throws_ok(
   $$ update public.profiles set office = 'bishop' where id = (select auth.uid()) $$,
