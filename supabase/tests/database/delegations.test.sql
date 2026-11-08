@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(20);
+select plan(25);
 
 -- Signs in as someone, optionally asking to act for someone else (the x-acting-as header).
 create function pg_temp.act_as(user_email text, for_email text default null) returns void language plpgsql as $$
@@ -25,6 +25,12 @@ create temp table ids as
   select pg_temp.uid('leader@ward.test') as mentor, pg_temp.uid('first@ward.test') as bishop, pg_temp.uid('bishop@ward.test') as admin;
 grant select on ids to authenticated;
 
+-- A calling under discussion, and the appointment to extend it.
+insert into public.calling_needs (calling_title) values ('Test Calling For Mentors');
+insert into public.interviews (interviewer_id, scheduled_at, person_name, purpose)
+values (pg_temp.uid('first@ward.test'), now() + interval '2 days', 'Calling Visit', 'calling'),
+       (pg_temp.uid('first@ward.test'), now() + interval '2 days', 'Recommend Visit', 'temple_recommend');
+
 -- Sister Reyes (a ward leader) mentors Brother Lane, who stands in for the new bishop here.
 insert into public.delegations (mentor_id, for_id, ends_at)
 select mentor, bishop, now() + interval '4 weeks' from ids;
@@ -43,6 +49,9 @@ select ok(public.is_mentoring(), 'and is mentoring');
 select ok(public.has_role('bishopric'), 'she has his bishopric role');
 select ok(not public.has_role('leader'), 'but not her own leader role while acting for him');
 select ok(not public.can_see_callings(), 'callings stay hidden until he allows them');
+select is((select count(*)::int from public.calling_needs where calling_title = 'Test Calling For Mentors'), 0, 'she can''t read callings being discussed');
+select is((select count(*)::int from public.interviews where person_name = 'Calling Visit'), 0, 'nor appointments to extend a calling');
+select is((select count(*)::int from public.interviews where person_name = 'Recommend Visit'), 1, 'but sees his other appointments');
 
 select pg_temp.act_as('second@ward.test', 'first@ward.test');
 select is(public.acting_as(), pg_temp.uid('second@ward.test'), 'someone without a delegation who sends the header is themself');
@@ -82,6 +91,8 @@ select throws_ok(
 
 select pg_temp.act_as('leader@ward.test', 'first@ward.test');
 select ok(public.can_see_callings(), 'once allowed, the mentor sees callings');
+select is((select count(*)::int from public.calling_needs where calling_title = 'Test Calling For Mentors'), 1, 'and reads them');
+select is((select count(*)::int from public.interviews where person_name = 'Calling Visit'), 1, 'and the appointments to extend them');
 
 -- He loses the bishopric: the mentor is herself again.
 reset role;
