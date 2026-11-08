@@ -7,7 +7,6 @@
 | Where | Placeholder |
 |---|---|
 | privacy.md, terms.md | `privacy@warddesk.app`: create the mailbox (or alias) or replace it |
-| privacy.md, "Service providers" | `[REGION]`: the production Supabase project's region |
 | privacy.md, "How long data is kept" | Comment that `delegations`, `handovers` and `handover_seats` have no automatic deletion: remove once a purge rule exists, or keep the wording |
 | terms.md, "Governing law" | `[STATE]` (and county if wanted) |
 

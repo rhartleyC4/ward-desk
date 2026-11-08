@@ -124,7 +124,7 @@ I use these providers to run the service. Each handles data only to provide its 
 | Apple, Google, Mozilla push services | Delivering notifications | Notification text and device push address |
 | GitHub | Code hosting and scheduled jobs, including the nightly backup job | The backup passes through a GitHub-run job already encrypted; nothing is stored there |
 
-The database is hosted by Supabase in [REGION]. <!-- PLACEHOLDER: fill in the Supabase project region (e.g. "the United States (us-west-1)"). --> Providers may process data in other countries under their own terms.
+The database is hosted by Supabase in the United States (West US, Oregon). Providers may process data in other countries under their own terms.
 
 I do not sell personal information, share it for advertising, or use it to train AI.
 
