@@ -134,7 +134,7 @@ To see what the scheduled run would send at a given moment:
 npm run notify -- --tick --now 2026-11-08T11:00:00-07:00 --dry-run
 ```
 
-**Trying it on staging or production:** Actions → "Day-ahead summaries" → Run workflow, on `main` for staging or `production` for production. It's a dry run unless you untick that box; set a date and your own email to send yourself one, or tick "tick" to see everything due right now.
+**Trying it on staging or production:** Actions → "Day-ahead summaries" → Run workflow, on `main` for staging or `gp7` for production. It's a dry run unless you untick that box; set a date and your own email to send yourself one, or tick "tick" to see everything due right now.
 
 ### Instant notifications for requests
 
@@ -518,3 +518,5 @@ Push notifications require adding the app to the Home Screen first (iOS 16.4 or 
 Ward Desk is open source under the [Apache License 2.0](LICENSE). It is provided **as is**, with no warranty and no support. Issues and pull requests are welcome (see [CONTRIBUTING.md](CONTRIBUTING.md)), but nobody promises a reply, a fix or a release. Report security problems privately, as described in [SECURITY.md](SECURITY.md).
 
 Ward Desk is not affiliated with or endorsed by The Church of Jesus Christ of Latter-day Saints. Each ward that runs its own copy is responsible for its own deployment, its Supabase project and its member data. This repository contains none.
+
+The demo site (https://demo.warddesk.app) is public on purpose: it holds only invented data, and its practice accounts and their shared seed password are meant to be known. Don't enter real information there.
