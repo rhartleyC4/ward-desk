@@ -11,6 +11,8 @@
 //     WARD_TIME_ZONE, ENABLE_GOOGLE (on if Google sign-in is on in Auth).
 //   - SUPABASE_DB_URL: asks for the database password and builds the session pooler URL, then tests
 //     it. If one is already set, it asks before replacing it.
+//   - SUPABASE_ACCESS_TOKEN: asks for the deploy bot's token (README, "Deploying") and checks it can
+//     see the project. CI uses it to redeploy the Edge Functions.
 //   - VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY: makes a pair only when neither exists. Replacing a pair
 //     signs every device out of notifications, so it never does that.
 //   - Repository: CLOUDFLARE_ACCOUNT_ID, CLOUDFLARE_API_TOKEN (asked for if missing), NOTIFY_ENABLED.
@@ -135,6 +137,22 @@ if (!anonKey) fail('The project has no publishable or anon key.')
 const currentIsValid = keys.some((k) => (k.type === 'publishable' || k.name === 'anon') && k.api_key === vars.SUPABASE_ANON_KEY)
 if (!currentIsValid) setVar('SUPABASE_ANON_KEY', anonKey, vars.SUPABASE_ANON_KEY ? 'not one of this project’s keys' : 'missing')
 
+// --- Function deploys ------------------------------------------------------------
+
+step('Function deploys (SUPABASE_ACCESS_TOKEN)')
+if (secrets.SUPABASE_ACCESS_TOKEN) {
+  console.log('  Set (GitHub can’t show it); keeping it.')
+} else {
+  console.log('  CI redeploys the notify and push functions with this. Use a token from the deploy bot, a')
+  console.log('  Supabase account that is a member of the Ward Desk organization only, never your own.')
+  const token = await askFor('Deploy bot’s access token, sbp_… (won’t show; Enter to skip): ', { hidden: true })
+  if (token) {
+    const answer = await fetch(`https://api.supabase.com/v1/projects/${ref}`, { headers: { authorization: `Bearer ${token}` } }).catch(() => null)
+    if (!answer?.ok) fail(`That token can’t see ${project.name} (${answer ? `HTTP ${answer.status}` : 'no answer'}). Check the bot is a member of its organization. Nothing was changed.`)
+    setSecret('SUPABASE_ACCESS_TOKEN', token, 'missing')
+  }
+}
+
 // --- Build settings --------------------------------------------------------------
 
 step('Build settings')
@@ -250,7 +268,7 @@ for (const c of changes) {
 
 // --- Re-run the deploy ----------------------------------------------------------------------
 
-const buildVars = ['SUPABASE_PROJECT_REF', 'SUPABASE_ANON_KEY', 'WARD_NAME', 'WARD_TIME_ZONE', 'ENABLE_GOOGLE', 'VAPID_PUBLIC_KEY', 'CLOUDFLARE_PAGES_PROJECT', 'SUPABASE_DB_URL', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']
+const buildVars = ['SUPABASE_ACCESS_TOKEN', 'SUPABASE_PROJECT_REF', 'SUPABASE_ANON_KEY', 'WARD_NAME', 'WARD_TIME_ZONE', 'ENABLE_GOOGLE', 'VAPID_PUBLIC_KEY', 'CLOUDFLARE_PAGES_PROJECT', 'SUPABASE_DB_URL', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID']
 if (changes.some((c) => buildVars.includes(c.name))) {
   const branch = env === 'production' ? 'production' : 'main'
   const latest = parse(gh(['run', 'list', '--workflow', 'ci.yml', '--branch', branch, '--event', 'push', '--limit', '1', '--json', 'databaseId,displayTitle,status']), [])[0]

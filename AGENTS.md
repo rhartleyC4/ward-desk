@@ -99,5 +99,5 @@ CI (`.github/workflows/ci.yml`) runs on every push. Check it with `gh run list` 
 - A commit that mixes docs and code runs whatever the code needs. A multi-commit push is judged on the whole push.
 - Skipped jobs show as "skipped" in the Actions tab. That is expected, not a failure.
 - To run everything on demand: `gh workflow run ci.yml`.
-- The `deploy` job runs after the checks on pushes to `main` (staging) and `production`, as long as nothing failed. It stays off until the `DEPLOY_ENABLED` repo variable is `true`.
+- The `deploy` job runs after the checks on pushes to `main` (staging) and `production`, as long as nothing failed. It stays off until the `DEPLOY_ENABLED` repo variable is `true`. It applies migrations, then redeploys the notify and push Edge Functions (with the deploy bot's `SUPABASE_ACCESS_TOKEN`; it warns and skips them if that secret is missing), then builds and uploads the frontend.
 - When you add a new top-level folder or config file that affects the build or tests, add its path to the filters in the `changes` job, or CI will skip checks it should run. Keep this table in sync.

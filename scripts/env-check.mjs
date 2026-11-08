@@ -147,6 +147,7 @@ async function checkHosted() {
   ghEnv.check(google === 'true' || google === 'false', 'variable ENABLE_GOOGLE is true or false', { detail: google ?? 'not set', fix: fixGithub })
   ghEnv.check(!!vars.VAPID_PUBLIC_KEY, 'variable VAPID_PUBLIC_KEY', { fix: fixGithub })
   ghEnv.check(secrets.has('SUPABASE_DB_URL'), 'secret SUPABASE_DB_URL', { detail: 'present; the value can’t be read back', fix: fixGithub })
+  ghEnv.check(secrets.has('SUPABASE_ACCESS_TOKEN'), 'secret SUPABASE_ACCESS_TOKEN, so deploys update the functions', { detail: secrets.has('SUPABASE_ACCESS_TOKEN') ? 'present; the value can’t be read back' : 'not set, so the functions only change when you run notify:setup', fix: fixGithub })
   ghEnv.check(secrets.has('VAPID_PRIVATE_KEY'), 'secret VAPID_PRIVATE_KEY', { detail: 'present; the value can’t be read back', fix: fixGithub })
   if (env === 'staging') {
     const admins = (vars.STAGING_ADMIN_EMAILS ?? '').split(',').filter((e) => e.trim())
