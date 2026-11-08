@@ -219,6 +219,8 @@ jobs:
         run: npm run build
         env:
           VITE_APP_ENV: ${{ github.ref_name == 'gp7' && 'production' || 'staging' }}
+          # The seed's invented-accounts password, for one-tap sign-in on the training site. Empty for production.
+          VITE_PRACTICE_PASSWORD: ${{ github.ref_name != 'gp7' && 'gp7' || '' }}
           VITE_SUPABASE_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
           VITE_WARD_TIME_ZONE: ${{ vars.WARD_TIME_ZONE }}

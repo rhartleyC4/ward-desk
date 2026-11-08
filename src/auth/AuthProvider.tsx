@@ -3,9 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { AppRole } from '../lib/access'
 import type { Enums } from '../lib/database.types'
 import { loadAgendaTemplates, loadMe, whoami, type AgendaTemplate, type MentoredBy, type MentoringFor, type Profile } from '../lib/queries'
-import { setActingFor, supabase } from '../lib/supabase'
-
-const ACTING_KEY = 'ward.actingFor'
+import { ACTING_KEY, setActingFor, supabase } from '../lib/supabase'
 
 function storedActing(): string | null {
   try {

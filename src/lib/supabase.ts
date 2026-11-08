@@ -8,6 +8,9 @@ export type Client = SupabaseClient<Database>
 // says which of the identities they may use is wanted.
 let actingFor: string | null = null
 
+/** Remembers on this device who a mentor is acting for. */
+export const ACTING_KEY = 'ward.actingFor'
+
 /** Sends later requests as this person (a mentor acting for the new bishop), or as yourself. */
 export function setActingFor(id: string | null) {
   actingFor = id

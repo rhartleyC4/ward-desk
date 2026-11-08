@@ -6,6 +6,9 @@ import Button from '@mui/material/Button'
 import Card from '@mui/material/Card'
 import CardContent from '@mui/material/CardContent'
 import Divider from '@mui/material/Divider'
+import List from '@mui/material/List'
+import ListItemButton from '@mui/material/ListItemButton'
+import ListItemText from '@mui/material/ListItemText'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -15,26 +18,9 @@ import { ThemeToggle } from '../components/ThemeToggle'
 import { friendlyAuthError } from '../lib/authErrors'
 import { isTrainingSite } from '../lib/env'
 import { PasskeyCancelled, passkeysSupported, rememberPasskeyChoice } from '../lib/passkeys'
+import { PRACTICE_ACCOUNTS, practicePassword, signInAsPractice } from '../lib/practiceAccounts'
 import { signInWithPasskey } from '../lib/queries'
 import { supabase } from '../lib/supabase'
-
-// The seeded accounts in supabase/seed.sql, with their names there. Keep the two in sync.
-const PRACTICE_ACCOUNTS = [
-  { email: 'bishop@ward.test', name: 'Bishop Avery', role: 'Bishop (admin)' },
-  { email: 'first@ward.test', name: 'Brother Lane', role: '1st counselor' },
-  { email: 'second@ward.test', name: 'Brother Ortiz', role: '2nd counselor' },
-  { email: 'secretary@ward.test', name: 'Brother Quinn', role: 'Executive secretary' },
-  { email: 'assistant@ward.test', name: 'Brother Tate', role: 'Assistant executive secretary' },
-  { email: 'clerk@ward.test', name: 'Brother Pike', role: 'Ward clerk' },
-  { email: 'eqpres@ward.test', name: 'Brother Hollis', role: 'Elders Quorum president' },
-  { email: 'rspres@ward.test', name: 'Sister Young', role: 'Relief Society president' },
-  { email: 'ywpres@ward.test', name: 'Sister Vance', role: 'Young Women president' },
-  { email: 'primarypres@ward.test', name: 'Sister Ellis', role: 'Primary president' },
-  { email: 'mission@ward.test', name: 'Brother Navarro', role: 'Ward mission leader' },
-  { email: 'temple@ward.test', name: 'Sister Whitfield', role: 'Temple and family history leader' },
-  { email: 'activities@ward.test', name: 'Sister Okafor', role: 'Activities committee chair' },
-  { email: 'leader@ward.test', name: 'Sister Reyes', role: 'Other called leader' },
-]
 
 /** "Sister Reyes · Other called leader", shown under a practice account's email. */
 function practiceDetail(email: string) {
@@ -51,6 +37,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [noPasskey, setNoPasskey] = useState(false)
+  const [ownEmail, setOwnEmail] = useState(false)
 
   const sendLink = async () => {
     setBusy(true)
@@ -70,6 +57,14 @@ export function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     setBusy(false)
     if (error) setError(friendlyAuthError(error.message))
+  }
+
+  const practiceSignIn = async (account: string) => {
+    setBusy(true)
+    setError(null)
+    const problem = await signInAsPractice(account)
+    setBusy(false)
+    if (problem) setError(problem)
   }
 
   const passkeySignIn = async () => {
@@ -93,6 +88,7 @@ export function LoginPage() {
   // locally to skip Mailpit, and on the training site so trainees can try each role.
   const practice = isTrainingSite()
   const withPassword = import.meta.env.DEV || practice
+  const oneTap = !!practicePassword()
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -111,6 +107,22 @@ export function LoginPage() {
           </Stack>
           {sent ? (
             <Alert severity="success">Check {email} for a sign-in link.</Alert>
+          ) : oneTap && !ownEmail ? (
+            <>
+              <Typography variant="body2" color="text.secondary">
+                Everything here is made up. Pick anyone to see Ward Desk as they do.
+              </Typography>
+              <List disablePadding aria-label="Practice people" sx={{ my: 1 }}>
+                {PRACTICE_ACCOUNTS.map((a) => (
+                  <ListItemButton key={a.email} disabled={busy} onClick={() => void practiceSignIn(a.email)} sx={{ borderRadius: 1 }}>
+                    <ListItemText primary={a.name} secondary={a.role} />
+                  </ListItemButton>
+                ))}
+              </List>
+              <Button fullWidth disabled={busy} onClick={() => setOwnEmail(true)}>
+                Use your own email
+              </Button>
+            </>
           ) : (
             <Stack component="form" onSubmit={submit} spacing={1.5}>
               {withPassword ? (
@@ -181,6 +193,7 @@ export function LoginPage() {
                   No Face ID or fingerprint sign-in on this device yet? Sign in another way first, then turn it on when asked.
                 </Typography>
               )}
+              {oneTap && <Button onClick={() => setOwnEmail(false)}>Back to the practice people</Button>}
             </Stack>
           )}
           <Box sx={{ mt: 1.5 }}>

@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_VAPID_PUBLIC_KEY?: string
   /** 'staging' on the training site, 'production' on the real one, unset locally. */
   readonly VITE_APP_ENV?: 'staging' | 'production' | ''
+  /** The seed password, set only when building the training site, for one-tap practice sign-in. */
+  readonly VITE_PRACTICE_PASSWORD?: string
 }
 
 interface ImportMeta {

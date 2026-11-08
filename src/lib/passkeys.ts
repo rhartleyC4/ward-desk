@@ -65,12 +65,15 @@ function passkeyChoice(userId: string): DeviceChoice | null {
   }
 }
 
+/** The seeded practice accounts, which many people share, so a device's Face ID doesn't belong on them. */
+export const isSharedPracticeAccount = (email?: string | null) => !!email?.toLowerCase().endsWith('@ward.test')
+
 /**
  * Whether to offer "use Face ID next time" after signing in. Not for the shared practice accounts
  * on the training site, which sign in with the seed password.
  */
 export function shouldOfferPasskey(user: { id: string; email?: string | null }, supported = passkeysSupported()): boolean {
   if (!supported) return false
-  if (user.email?.toLowerCase().endsWith('@ward.test')) return false
+  if (isSharedPracticeAccount(user.email)) return false
   return passkeyChoice(user.id) === null
 }

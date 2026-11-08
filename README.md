@@ -208,7 +208,7 @@ There are two hosted copies of the app. Each has its own Supabase project and Cl
 | URL | https://demo.warddesk.app | https://gp7.warddesk.app |
 | Deploys from | `main`, after CI passes | `gp7`, after CI passes |
 | Data | Invented practice data from `supabase/seed.sql` | Real ward data. Never copy it to staging |
-| Extras | "Training site" banner, practice-account sign-in | None |
+| Extras | "Training site" banner, one-tap practice sign-in and switching (`VITE_PRACTICE_PASSWORD`, set by CI for this build only) | None |
 
 **Promoting** sends the code and migrations from staging to production. Data is never copied. After trying a change on staging:
 
@@ -218,7 +218,7 @@ git push origin main:gp7
 
 The deploy job refuses any `production` commit that isn't already on `main`. Each deploy applies migrations (`supabase db push`) and then publishes the frontend, so **a migration must keep working with the frontend that is still live**. Add columns before using them, and remove them only after nothing uses them.
 
-**Resetting the training site:** Actions → "Reset training site" → Run workflow, then type `reset staging`. This wipes staging and reloads the seed data, then re-adds everyone in the staging variable `STAGING_ADMIN_EMAILS` (comma-separated) as admin and bishopric. Real addresses live there rather than in `seed.sql`. Run it once after the first staging deploy, since `db push` doesn't load the seed. Trainees sign in with a seeded `@ward.test` email and the password from `seed.sql`.
+**Resetting the training site:** Actions → "Reset training site" → Run workflow, then type `reset staging`. This wipes staging and reloads the seed data, then re-adds everyone in the staging variable `STAGING_ADMIN_EMAILS` (comma-separated) as admin and bishopric. Real addresses live there rather than in `seed.sql`. Run it once after the first staging deploy, since `db push` doesn't load the seed. Trainees tap a practice person on the sign-in page and switch people from the banner. No password to type.
 
 ### One-time setup
 

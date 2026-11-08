@@ -7,7 +7,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import { Link, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { currentDevice, installPlatform } from '../lib/install'
-import { passkeysSupported } from '../lib/passkeys'
+import { isSharedPracticeAccount, passkeysSupported } from '../lib/passkeys'
 import { currentSubscription, pushAvailability, pushSupported, vapidPublicKey } from '../lib/push'
 import { hasPushSubscription, listPasskeys } from '../lib/queries'
 import { nextStep, setupSteps, type SetupFacts, type SetupStep } from '../lib/setup'
@@ -19,8 +19,8 @@ type Device = Pick<SetupFacts, 'passkeys' | 'notifications'>
 const SetupContext = createContext<SetupStep[]>([])
 
 /** What this device has set up: saved passkeys, and whether notifications are on. */
-async function loadDevice(wantsNotifications: boolean): Promise<Device> {
-  const passkeys = passkeysSupported() ? await listPasskeys(supabase).then((p) => p.length, () => null) : null
+async function loadDevice(wantsNotifications: boolean, email?: string): Promise<Device> {
+  const passkeys = passkeysSupported() && !isSharedPracticeAccount(email) ? await listPasskeys(supabase).then((p) => p.length, () => null) : null
   let notifications: Device['notifications'] = null
   if (wantsNotifications) {
     const availability = pushAvailability({
@@ -45,14 +45,15 @@ export function SetupProvider({ children }: { children: ReactNode }) {
   const [device, setDevice] = useState<Device>({ passkeys: null, notifications: null })
   const wantsNotifications = roles.length > 0
   const userId = session?.user.id
+  const email = session?.user.email
 
   useEffect(() => {
     let cancelled = false
-    loadDevice(wantsNotifications).then((d) => !cancelled && setDevice(d))
+    loadDevice(wantsNotifications, email).then((d) => !cancelled && setDevice(d))
     return () => {
       cancelled = true
     }
-  }, [pathname, userId, wantsNotifications])
+  }, [pathname, userId, email, wantsNotifications])
 
   return <SetupContext.Provider value={setupSteps({ roles, office, hasHours, ...device })}>{children}</SetupContext.Provider>
 }

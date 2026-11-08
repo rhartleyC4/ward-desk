@@ -16,22 +16,20 @@ The quickest way to see Ward Desk is the public demo at **[demo.warddesk.app](ht
 ## Sign in to the demo
 
 1. Open [demo.warddesk.app](https://demo.warddesk.app). A banner at the top says it is a training site.
-2. On the sign-in screen, tap the **Email** box. A list of practice accounts opens. You can also type a name or role to find one.
-3. Pick an account and enter the practice password, `gp7`.
-4. Tap **Sign in**.
+2. On the sign-in screen, tap anyone in the list. There is no password to type.
 
-The practice accounts end in `@ward.test`. They can't receive email, which is why the demo uses a password instead of an email link.
+To see someone else's view, pick them from the list in the banner at the top. You don't need to sign out first.
 
 ## The practice accounts
 
 | Account | Name | Try it to see... |
 |---|---|---|
-| bishop@ward.test | Bishop Avery | Everything. This account is also a ward admin. |
-| first@ward.test | Brother Lane | A counselor's Home and appointments |
+| bishop@ward.test | Bishop Avery | Almost everything. This account is also a ward admin. |
+| first@ward.test | Brother Lane | A counselor's Home |
 | second@ward.test | Brother Ortiz | A second counselor |
 | secretary@ward.test | Brother Quinn | The executive secretary's Home: who needs an appointment, open times, reminders |
 | assistant@ward.test | Brother Tate | An assistant executive secretary, who books for the counselors |
-| clerk@ward.test | Brother Pike | The ward clerk |
+| clerk@ward.test | Brother Pike | The ward clerk, who has no Home or Appointments tab |
 | eqpres@ward.test | Brother Hollis | A ward leader who attends ward council |
 | rspres@ward.test | Sister Young | Relief Society president, also a ward leader |
 | ywpres@ward.test | Sister Vance | Young Women president |
@@ -44,9 +42,9 @@ The practice accounts end in `@ward.test`. They can't receive email, which is wh
 ## A good tour
 
 1. Sign in as **Bishop Avery**. Open **Meetings** and look at the callings on the bishopric agenda. Then open **Requests** and ask someone to do something.
-2. Sign out and sign in as **Brother Quinn** (secretary). Accept the request on **Requests**, then open **Home** to see who needs an appointment.
-3. Sign in as **Brother Hollis** (Elders Quorum president). Notice that you see only Requests and the ward council agenda, with no callings or appointments. Ask for a calling change.
-4. Go back to the bishop and find your calling request on the bishopric agenda.
+2. Switch to **Brother Quinn** (secretary). Accept the request on **Requests**, then open **Home** to see who needs an appointment.
+3. Switch to **Brother Hollis** (Elders Quorum president). Notice that you see only Requests and the ward council agenda, with no callings or appointments. Ask for a calling change.
+4. Switch back to the bishop and find your calling request on the bishopric agenda.
 
 ## Good to know
 
