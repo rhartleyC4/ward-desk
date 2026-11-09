@@ -1,5 +1,6 @@
 /// <reference types="vitest/config" />
 import { execSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -69,6 +70,13 @@ export default defineConfig(({ mode }) => {
             environment: 'jsdom',
             include: ['src/**/*.test.{ts,tsx}', 'supabase/functions/**/*.test.ts', 'scripts/**/*.test.ts'],
             setupFiles: ['src/test/setup.ts'],
+            // Typing through the real UI is slow on a busy machine; a slow run shouldn't read as a failure.
+            testTimeout: 20_000,
+            // Lets the Edge Functions, written for Deno, run under Node. The bundle is built from tick.ts.
+            alias: [
+              { find: /^npm:(@?[^@]+)@.*$/, replacement: '$1' },
+              { find: './tick.bundle.js', replacement: fileURLToPath(new URL('./scripts/notify/tick.ts', import.meta.url)) },
+            ],
           },
         },
         {

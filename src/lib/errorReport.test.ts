@@ -118,3 +118,34 @@ describe('browserFamily', () => {
     expect(browserFamily(agent)).toBe(family)
   })
 })
+
+describe('reporting from anywhere', () => {
+  const loadFresh = async () => {
+    vi.resetModules()
+    return import('./errorReport')
+  }
+
+  it('does nothing until reporting has started', async () => {
+    const { reportError } = await loadFresh()
+    expect(() => reportError('load', new Error('x'))).not.toThrow()
+  })
+
+  it('sends what is reported once started', async () => {
+    const { reportError, startReporting } = await loadFresh()
+    const send = vi.fn(async () => {})
+    startReporting(send)
+    reportError('load', new Error('Could not load'))
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ source: 'load', message: 'Could not load' }))
+  })
+
+  it('reports uncaught errors and rejected promises', async () => {
+    const { startReporting } = await loadFresh()
+    const send = vi.fn(async () => {})
+    startReporting(send)
+    window.dispatchEvent(new ErrorEvent('error', { error: new Error('uncaught one') }))
+    window.dispatchEvent(new ErrorEvent('error', { message: 'only a message' }))
+    window.dispatchEvent(Object.assign(new Event('unhandledrejection'), { reason: new Error('rejected one') }))
+    const sent = send.mock.calls.map((c) => (c as unknown[])[0] as ErrorReport)
+    expect(sent.map((r) => [r.source, r.message])).toEqual(expect.arrayContaining([['error', 'uncaught one'], ['error', 'only a message'], ['promise', 'rejected one']]))
+  })
+})
