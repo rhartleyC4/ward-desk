@@ -10,7 +10,7 @@ These terms apply when you use this website (warddesk.app) or a copy of Ward Des
 
 ## Who provides Ward Desk
 
-Ward Desk is a free, open-source app run by one person, Ryan Hartley ("I", "me"), as a personal project. Contact: privacy@warddesk.app <!-- PLACEHOLDER: confirm this address, or add a separate contact address. -->
+Ward Desk is a free, open-source app run by one person, Ryan Hartley ("I", "me"), as a personal project. Contact: privacy@warddesk.app
 
 ## Not affiliated with the Church
 

@@ -18,7 +18,7 @@ This policy covers:
 - the ward copy I host at **gp7.warddesk.app**
 - the public demo at **demo.warddesk.app**, which holds invented practice data only (see "The demo" below)
 
-**Contact:** privacy@warddesk.app <!-- PLACEHOLDER: confirm this address exists and is monitored, or replace it. -->
+**Contact:** privacy@warddesk.app
 
 ## Not affiliated with the Church
 
