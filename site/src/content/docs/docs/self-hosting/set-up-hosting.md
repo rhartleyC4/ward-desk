@@ -81,4 +81,4 @@ A deploy applies database migrations and then publishes the frontend, so a migra
 
 ## Details
 
-The full, step-by-step version, including the table of every setting, is the **Deploying** section of the [README](https://github.com/ward-desk/ward-desk#readme).
+The full, step-by-step version, including the table of every setting, is the **Deploying** section of the [README](https://github.com/rhartleyC4/ward-desk#readme).

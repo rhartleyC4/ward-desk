@@ -11,7 +11,7 @@ Try everything on your own computer before you set up hosting. Nothing leaves yo
 
 - [Docker](https://www.docker.com/) (OrbStack or Docker Desktop), for a local copy of the database.
 - [nvm](https://github.com/nvm-sh/nvm) for the right Node.js version.
-- A copy of the code: `git clone https://github.com/ward-desk/ward-desk`
+- A copy of the code: `git clone https://github.com/rhartleyC4/ward-desk`
 
 ## Steps
 
@@ -45,4 +45,4 @@ Settings files hold secrets and stay on your machine. Never commit real member d
 
 ## Details
 
-See "Setup" and "Tests" in the [README](https://github.com/ward-desk/ward-desk#readme).
+See "Setup" and "Tests" in the [README](https://github.com/rhartleyC4/ward-desk#readme).

@@ -34,4 +34,4 @@ Dailies expire after 30 days and monthlies after 90, and `npm run backup:lifecyc
 
 ## Details
 
-See "Google sign-in", "Notifications", "Health checks and alerts" and "Backups and restore" in the [README](https://github.com/ward-desk/ward-desk#readme).
+See "Google sign-in", "Notifications", "Health checks and alerts" and "Backups and restore" in the [README](https://github.com/rhartleyC4/ward-desk#readme).

@@ -14,7 +14,7 @@ export default defineConfig({
       description: 'Ward administration in one place: agendas, callings, sacrament meeting, appointments and requests.',
       logo: { src: './src/assets/logo.svg', alt: 'Ward Desk' },
       favicon: '/favicon.svg',
-      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/ward-desk/ward-desk' }], // keep in sync with REPO_URL in src/site.config.ts
+      social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/rhartleyC4/ward-desk' }], // keep in sync with REPO_URL in src/site.config.ts
       customCss: ['@fontsource-variable/lexend', './src/styles/tokens.css', './src/styles/starlight.css'],
       sidebar: [
         { label: 'Getting started', items: [{ autogenerate: { directory: 'docs/getting-started' } }] },
