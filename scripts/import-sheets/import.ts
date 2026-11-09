@@ -14,6 +14,11 @@
 // write inside a transaction and rolls it back, so its counts match what --apply would save.
 // Running it again is safe: rows that already exist are skipped.
 //
+// --apply prints a run id. To take that run back out (see undo.ts):
+//
+//   npm run import-sheets -- --undo <run id>                            # dry run: counts only
+//   npm run import-sheets -- --undo <run id> --apply                    # remove
+//
 // The output never shows names or other cell contents, only counts and cell references,
 // so it can be shared when something needs fixing.
 
@@ -40,6 +45,7 @@ import {
   type SectionRow,
   type Sheet,
 } from './parse'
+import { insertPrayerName, isRunId, startRun, undoImport, undoReport, undoTotal } from './undo'
 
 const envFile = new URL('../../.env', import.meta.url)
 if (existsSync(envFile)) process.loadEnvFile(envFile)
@@ -56,10 +62,15 @@ const { values: args } = parseArgs({
     all: { type: 'boolean', default: false },
     'db-url': { type: 'string' },
     apply: { type: 'boolean', default: false },
+    undo: { type: 'string' },
   },
 })
 
-if (!args.bishopric && !args['ward-council']) {
+if (args.undo !== undefined && (args.bishopric || args['ward-council'])) {
+  console.error('--undo takes only the run id, not the sheets.')
+  process.exit(1)
+}
+if (args.undo === undefined && !args.bishopric && !args['ward-council']) {
   console.error('Give --bishopric and/or --ward-council with the path to each downloaded .xlsx file.')
   process.exit(1)
 }
@@ -68,6 +79,42 @@ if (!dbUrl) {
   console.error('Set SUPABASE_DB_URL (npm run db:env writes it for local Supabase) or pass --db-url.')
   process.exit(1)
 }
+
+let host = '(unknown host)'
+try {
+  host = new URL(dbUrl).host
+} catch {
+  // keep the placeholder
+}
+
+if (args.undo !== undefined) {
+  if (!isRunId(args.undo)) {
+    console.error('That is not a run id. It looks like 2026-11-09T18:22:01.123456Z, and --apply printed it.')
+    process.exit(1)
+  }
+  const undoSql = postgres(dbUrl, { max: 1, prepare: false, onnotice: () => {} })
+  let code = 0
+  try {
+    const result = await undoImport(undoSql, args.undo, args.apply)
+    console.log(`Database: ${host}`)
+    console.log(`Run: ${args.undo}`)
+    if (undoTotal(result) === 0) {
+      console.error('Nothing from that run is in this database.')
+      code = 1
+    } else {
+      for (const line of undoReport(result, args.apply)) console.log(line)
+    }
+  } catch (err) {
+    // Print only the error's codes, as the import does.
+    const e = err as { code?: string; table_name?: string; constraint_name?: string; name?: string }
+    console.error('Stopped. Nothing was removed.')
+    console.error(`  ${[e.name, e.code, e.table_name, e.constraint_name].filter(Boolean).join(' / ')}`)
+    code = 1
+  }
+  await undoSql.end()
+  process.exit(code)
+}
+
 const timeZone = process.env.WARD_TIME_ZONE || process.env.VITE_WARD_TIME_ZONE || 'America/Denver'
 const today = args.today ?? wardNow(new Date(), timeZone).date
 let cutoff: string | null
@@ -196,16 +243,12 @@ if (args['ward-council']) {
 class DryRun extends Error {}
 
 const sql = postgres(dbUrl, { max: 1, prepare: false, onnotice: () => {} })
-let host = '(unknown host)'
-try {
-  host = new URL(dbUrl).host
-} catch {
-  // keep the placeholder
-}
 
 let step = 'connecting'
+let runId = ''
 try {
   await sql.begin(async (tx) => {
+    runId = await startRun(tx)
     step = 'reading people and agenda sections'
     const people = await tx<PersonRow[]>`select id, short_name, display_name, email from public.profiles`
     const sectionRows = await tx<(SectionRow & { slug: string; template_id: string })[]>`
@@ -379,7 +422,7 @@ try {
       for (const name of prayerNames.values()) {
         const [dupe] = await tx`select 1 from public.prayer_roll where lower(name) = lower(${name}) and removed_on is null`
         if (dupe) continue
-        await tx`insert into public.prayer_roll (name) values (${name})`
+        await insertPrayerName(tx, runId, name)
         added++
       }
       say(`  Prayer roll: ${prayerNames.size} names across both sheets, ${added} added`)
@@ -401,6 +444,7 @@ await sql.end()
 
 console.log(`Database: ${host}`)
 console.log(args.apply ? 'Saved.' : 'Dry run: nothing was saved. Add --apply to save.')
+if (args.apply) console.log(`Run id: ${runId} (to take it back out: npm run import-sheets -- --undo ${runId})`)
 console.log(cutoff ? `Going back to ${cutoff} (change with --months, --since or --all).` : 'Going back to the start of each sheet (--all).')
 console.log()
 for (const l of lines) console.log(l)
