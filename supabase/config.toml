@@ -433,8 +433,7 @@ project_id = "mpzwseusjpgpotwgcobh"
 
 [remotes.staging.auth]
 site_url = "https://demo.warddesk.app"
-# The old address stays until it redirects to the new one, so sign-in links already sent still work.
-additional_redirect_urls = ["https://demo.warddesk.app", "https://gp7-training.warddesk.app"]
+additional_redirect_urls = ["https://demo.warddesk.app"]
 
 [remotes.staging.auth.email]
 enable_confirmations = true
