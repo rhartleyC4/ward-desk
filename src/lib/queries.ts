@@ -971,11 +971,16 @@ export async function signInWithPasskey(client: Client): Promise<string> {
   return data.user?.id ?? ''
 }
 
-/** Saves a passkey on this device for the signed-in user, named after the device. */
-export async function registerPasskey(client: Client, name: string) {
+/** Saves a passkey on this device for the signed-in user, named after the device. Returns its id. */
+export async function registerPasskey(client: Client, name: string): Promise<string> {
   const { data, error } = await client.auth.registerPasskey()
   if (error) throw toPasskeyError(error)
-  if (!data.friendly_name) check(await client.auth.passkey.update({ passkeyId: data.id, friendlyName: name }))
+  await renamePasskey(client, data.id, name)
+  return data.id
+}
+
+export async function renamePasskey(client: Client, id: string, name: string) {
+  check(await client.auth.passkey.update({ passkeyId: id, friendlyName: name }))
 }
 
 export async function listPasskeys(client: Client): Promise<Passkey[]> {

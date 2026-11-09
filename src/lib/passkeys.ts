@@ -32,15 +32,66 @@ export function passkeysSupported(): boolean {
   return typeof window !== 'undefined' && typeof window.PublicKeyCredential === 'function'
 }
 
-/** A short name for a passkey made on this device, so the list of devices is readable. */
-export function deviceLabel(userAgent: string): string {
+/** The longest name Supabase accepts for a passkey. */
+export const PASSKEY_NAME_MAX = 120
+
+/** What the browser can say about the device beyond its user agent. */
+export type DeviceHints = { touchPoints?: number; model?: string; platformVersion?: string }
+
+function browserName(userAgent: string): string | null {
+  // Most browsers also claim to be Chrome or Safari, so the specific ones come first.
+  if (/Edg(e|A|iOS)?\//.test(userAgent)) return 'Edge'
+  if (/SamsungBrowser\//.test(userAgent)) return 'Samsung Internet'
+  if (/OPR\/|OPiOS\//.test(userAgent)) return 'Opera'
+  if (/Firefox\/|FxiOS\//.test(userAgent)) return 'Firefox'
+  if (/Chrome\/|CriOS\//.test(userAgent)) return 'Chrome'
+  // An app installed to the iPhone Home Screen names no browser at all.
+  if (/Safari\//.test(userAgent)) return 'Safari'
+  return null
+}
+
+function deviceKind(userAgent: string, hints: DeviceHints): string {
   if (/iPhone/.test(userAgent)) return 'iPhone'
-  if (/iPad/.test(userAgent)) return 'iPad'
-  if (/Android/.test(userAgent)) return /Mobile/.test(userAgent) ? 'Android phone' : 'Android tablet'
+  // iPads ask for desktop sites by default and report themselves as Macs, but no Mac has a touch screen.
+  if (/iPad/.test(userAgent) || (/Macintosh/.test(userAgent) && (hints.touchPoints ?? 0) > 1)) return 'iPad'
+  if (/Android/.test(userAgent)) return hints.model || (/Mobile/.test(userAgent) ? 'Android phone' : 'Android tablet')
   if (/Macintosh/.test(userAgent)) return 'Mac'
   if (/Windows/.test(userAgent)) return 'Windows PC'
   if (/CrOS/.test(userAgent)) return 'Chromebook'
-  return 'This device'
+  if (/Linux/.test(userAgent)) return 'Linux computer'
+  return 'Unknown device'
+}
+
+function systemVersion(device: string, browser: string | null, userAgent: string, hints: DeviceHints): string | null {
+  // iOS 26 froze the system version in the user agent. Safari's own version still matches the system.
+  if ((device === 'iPhone' || device === 'iPad') && browser === 'Safari') {
+    const version = /Version\/(\d+)/.exec(userAgent)?.[1]
+    return version ? `${device === 'iPhone' ? 'iOS' : 'iPadOS'} ${version}` : null
+  }
+  // Chrome reports every Android as version 10 in the user agent, so only the hint can be trusted.
+  const android = /Android/.test(userAgent) && hints.platformVersion?.split('.')[0]
+  return android ? `Android ${android}` : null
+}
+
+/** A name for a passkey made on this device, as detailed as the browser allows: "iPhone · Safari · iOS 26". */
+export function deviceLabel(userAgent: string, hints: DeviceHints = {}): string {
+  const device = deviceKind(userAgent, hints)
+  const browser = browserName(userAgent)
+  return [device, browser, systemVersion(device, browser, userAgent, hints)].filter(Boolean).join(' · ')
+}
+
+type UserAgentData = { getHighEntropyValues(hints: string[]): Promise<{ model?: string; platformVersion?: string }> }
+
+/** Names this device, asking browsers that support it (Chrome and Edge) for the model and system version. */
+export async function describeThisDevice(): Promise<string> {
+  const { userAgent, maxTouchPoints, userAgentData } = navigator as Navigator & { userAgentData?: UserAgentData }
+  let details: DeviceHints = {}
+  try {
+    details = (await userAgentData?.getHighEntropyValues(['model', 'platformVersion'])) ?? {}
+  } catch {
+    // The name is only less detailed without these.
+  }
+  return deviceLabel(userAgent, { ...details, touchPoints: maxTouchPoints })
 }
 
 // Whether this device already has a passkey or the person said "not now", remembered per user.
@@ -62,6 +113,25 @@ function passkeyChoice(userId: string): DeviceChoice | null {
   } catch {
     // Can't remember a "not now" here, so don't nag on every visit.
     return 'dismissed'
+  }
+}
+
+const thisDeviceKey = (userId: string) => `ward-desk:passkey-here:${userId}`
+
+/** Remembers which saved passkey was made here, so the list can point it out. */
+export function rememberThisDevicePasskey(userId: string, passkeyId: string) {
+  try {
+    localStorage.setItem(thisDeviceKey(userId), passkeyId)
+  } catch {
+    // Storage blocked (private browsing): the list just won't mark this device.
+  }
+}
+
+export function thisDevicePasskey(userId: string): string | null {
+  try {
+    return localStorage.getItem(thisDeviceKey(userId))
+  } catch {
+    return null
   }
 }
 

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { PasskeyCancelled } from '../lib/passkeys'
+import { PasskeyCancelled, thisDevicePasskey } from '../lib/passkeys'
 import { PasskeyOffer } from './PasskeyOffer'
 
 const registerPasskey = vi.hoisted(() => vi.fn())
@@ -19,11 +19,12 @@ afterEach(() => vi.unstubAllGlobals())
 
 describe('PasskeyOffer', () => {
   it('saves a passkey and stops offering', async () => {
-    registerPasskey.mockResolvedValue(undefined)
+    registerPasskey.mockResolvedValue('p1')
     const { unmount } = render(<PasskeyOffer />)
     await userEvent.click(screen.getByRole('button', { name: 'Turn on' }))
     expect(registerPasskey).toHaveBeenCalledOnce()
     expect(screen.getByText(/All set/)).toBeInTheDocument()
+    expect(thisDevicePasskey('u1')).toBe('p1')
     unmount()
     render(<PasskeyOffer />)
     expect(screen.queryByRole('button', { name: 'Turn on' })).not.toBeInTheDocument()

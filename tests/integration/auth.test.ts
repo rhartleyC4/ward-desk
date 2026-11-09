@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { friendlyAuthError } from '../../src/lib/authErrors'
-import { deletePasskey, listPasskeys, loadMe, updateMyName } from '../../src/lib/queries'
+import { deletePasskey, listPasskeys, loadMe, renamePasskey, updateMyName } from '../../src/lib/queries'
 import { anonClient, signIn } from './helpers'
 
 describe('sign-in', () => {
@@ -34,6 +34,7 @@ describe('sign-in', () => {
     // Only the signed-in user's own passkeys come back; trying one locally can leave some behind.
     expect(Array.isArray(await listPasskeys(bishop))).toBe(true)
     await expect(deletePasskey(bishop, '00000000-0000-0000-0000-000000000000')).rejects.toThrow()
+    await expect(renamePasskey(bishop, '00000000-0000-0000-0000-000000000000', 'Not mine')).rejects.toThrow()
   })
 
   it('lets people change their own name, trimmed and within 60 characters', async () => {

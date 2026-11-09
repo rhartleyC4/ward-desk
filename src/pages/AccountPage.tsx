@@ -1,8 +1,11 @@
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined'
 import FingerprintIcon from '@mui/icons-material/Fingerprint'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import Chip from '@mui/material/Chip'
 import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
@@ -17,7 +20,14 @@ import { NotificationChoices, type ChoiceActions } from '../components/Notificat
 import { NotificationsCard, type NotificationActions } from '../components/NotificationsCard'
 import { longDate, todayIso } from '../lib/dates'
 import { cleanName, NAME_MAX, nameProblem } from '../lib/names'
-import { deviceLabel, passkeysSupported, rememberPasskeyChoice } from '../lib/passkeys'
+import {
+  describeThisDevice,
+  PASSKEY_NAME_MAX,
+  passkeysSupported,
+  rememberPasskeyChoice,
+  rememberThisDevicePasskey,
+  thisDevicePasskey,
+} from '../lib/passkeys'
 import { currentSubscription, showTestNotification, subscribeDevice, subscriptionParts } from '../lib/push'
 import {
   deletePasskey,
@@ -26,9 +36,11 @@ import {
   listPasskeys,
   loadMutedNotifications,
   registerPasskey,
+  renamePasskey,
   savePushSubscription,
   setNotificationOn,
   updateMyName,
+  type Passkey,
 } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -87,6 +99,77 @@ function YourName() {
 /** A timestamp as a date in this device's time zone. */
 const localDate = (timestamp: string) => longDate(todayIso(new Date(timestamp)))
 
+type PasskeyRowProps = {
+  passkey: Passkey
+  isThisDevice: boolean
+  busy: boolean
+  onRename: (id: string, name: string) => Promise<boolean>
+  onRemove: (id: string) => void
+}
+
+/** One device that can sign in, which turns into a small form while it's being renamed. */
+function PasskeyRow({ passkey: p, isThisDevice, busy, onRename, onRemove }: PasskeyRowProps) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const label = p.friendly_name || 'Passkey'
+
+  if (draft !== null) {
+    const name = draft.trim()
+    const submit = async (e: FormEvent) => {
+      e.preventDefault()
+      if (!name || busy) return
+      if (name === p.friendly_name || (await onRename(p.id, name))) setDraft(null)
+    }
+    return (
+      <TableRow>
+        <TableCell colSpan={2}>
+          <Box component="form" onSubmit={submit} noValidate onKeyDown={(e) => e.key === 'Escape' && setDraft(null)} sx={{ py: 0.5 }}>
+            <TextField
+              label="Device name"
+              size="small"
+              fullWidth
+              autoFocus
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              slotProps={{ htmlInput: { maxLength: PASSKEY_NAME_MAX } }}
+            />
+            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+              <Button type="submit" variant="contained" size="small" aria-label="Save device name" disabled={busy || !name}>
+                Save
+              </Button>
+              <Button size="small" disabled={busy} onClick={() => setDraft(null)}>
+                Cancel
+              </Button>
+            </Stack>
+          </Box>
+        </TableCell>
+      </TableRow>
+    )
+  }
+
+  return (
+    <TableRow>
+      <TableCell>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+          <Typography>{label}</Typography>
+          {isThisDevice && <Chip size="small" label="This device" />}
+        </Box>
+        <Muted>
+          Added {localDate(p.created_at)}
+          {p.last_used_at && ` · last used ${localDate(p.last_used_at)}`}
+        </Muted>
+      </TableCell>
+      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+        <IconButton aria-label={`Rename ${p.friendly_name || 'passkey'}`} disabled={busy} onClick={() => setDraft(p.friendly_name ?? '')}>
+          <EditOutlinedIcon />
+        </IconButton>
+        <IconButton aria-label={`Remove ${p.friendly_name || 'passkey'}`} disabled={busy} onClick={() => onRemove(p.id)}>
+          <DeleteOutlinedIcon />
+        </IconButton>
+      </TableCell>
+    </TableRow>
+  )
+}
+
 export function AccountPage() {
   const { session, roles, office, actingFor } = useAuth()
   const { data, error, reload } = useAsync(() => listPasskeys(supabase), [])
@@ -96,15 +179,27 @@ export function AccountPage() {
   if (!data) return <Loading />
 
   const add = async () => {
-    if (await save.act(() => registerPasskey(supabase, deviceLabel(navigator.userAgent)))) {
+    const ok = await save.act(async () => {
+      const id = await registerPasskey(supabase, await describeThisDevice())
+      if (session) rememberThisDevicePasskey(session.user.id, id)
+    })
+    if (ok) {
       if (session) rememberPasskeyChoice(session.user.id, 'ready')
       reload()
     }
   }
 
+  const rename = async (id: string, name: string) => {
+    const ok = await save.act(() => renamePasskey(supabase, id, name))
+    if (ok) reload()
+    return ok
+  }
+
   const remove = async (id: string) => {
     if (await save.act(() => deletePasskey(supabase, id))) reload()
   }
+
+  const here = session ? thisDevicePasskey(session.user.id) : null
 
   return (
     <>
@@ -119,7 +214,7 @@ export function AccountPage() {
       </Typography>
       <SectionCard title="Face ID and fingerprint">
         <Muted>
-          Devices that can sign you in without an email. Remove one if it's lost or no longer yours. You can still sign in with an
+          Devices that can sign you in without an email. Rename one to tell it apart, or remove it if it's lost or no longer yours. You can still sign in with an
           email link{import.meta.env.VITE_ENABLE_GOOGLE === 'true' ? ' or Google' : ''}.
         </Muted>
         <ErrorNote error={save.error} />
@@ -129,20 +224,7 @@ export function AccountPage() {
           <Table size="small" sx={{ my: 1 }}>
             <TableBody>
               {data.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <Typography>{p.friendly_name || 'Passkey'}</Typography>
-                    <Muted>
-                      Added {localDate(p.created_at)}
-                      {p.last_used_at && ` · last used ${localDate(p.last_used_at)}`}
-                    </Muted>
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton aria-label={`Remove ${p.friendly_name || 'passkey'}`} disabled={save.busy} onClick={() => void remove(p.id)}>
-                      <DeleteOutlinedIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
+                <PasskeyRow key={p.id} passkey={p} isThisDevice={p.id === here} busy={save.busy} onRename={rename} onRemove={(id) => void remove(id)} />
               ))}
             </TableBody>
           </Table>

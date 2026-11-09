@@ -4,7 +4,7 @@ import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { deviceLabel, rememberPasskeyChoice, shouldOfferPasskey } from '../lib/passkeys'
+import { describeThisDevice, rememberPasskeyChoice, rememberThisDevicePasskey, shouldOfferPasskey } from '../lib/passkeys'
 import { registerPasskey } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction } from '../lib/useAsync'
@@ -28,7 +28,9 @@ export function PasskeyOffer() {
   }
 
   const setUp = async () => {
-    const ok = await save.act(() => registerPasskey(supabase, deviceLabel(navigator.userAgent)))
+    const ok = await save.act(async () => {
+      rememberThisDevicePasskey(user.id, await registerPasskey(supabase, await describeThisDevice()))
+    })
     if (ok) {
       rememberPasskeyChoice(user.id, 'ready')
       setOpen(false)

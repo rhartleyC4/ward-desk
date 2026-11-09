@@ -16,7 +16,13 @@ vi.mock('../lib/supabase', () => ({ supabase: { client: true }, WARD_TIME_ZONE: 
 vi.mock('../lib/errorReport')
 vi.mock('../lib/queries')
 vi.mock('../lib/push')
-vi.mock('../lib/passkeys', async (original) => ({ ...(await original<object>()), passkeysSupported: vi.fn(), rememberPasskeyChoice: vi.fn() }))
+vi.mock('../lib/passkeys', async (original) => ({
+  ...(await original<object>()),
+  passkeysSupported: vi.fn(),
+  rememberPasskeyChoice: vi.fn(),
+  rememberThisDevicePasskey: vi.fn(),
+  thisDevicePasskey: vi.fn(),
+}))
 vi.mock('../components/NotificationsCard', () => ({
   NotificationsCard: (p: Record<string, unknown>) => {
     stub.cards.notifications = p
@@ -139,11 +145,83 @@ describe('AccountPage', () => {
     })
 
     it('sets up this device and remembers the choice', async () => {
+      vi.mocked(q.registerPasskey).mockResolvedValue('p9')
       await open()
       await userEvent.click(screen.getByRole('button', { name: 'Set up this device' }))
       expect(q.registerPasskey).toHaveBeenCalledWith(supabase, expect.any(String))
       expect(passkeys.rememberPasskeyChoice).toHaveBeenCalledWith('me', 'ready')
+      expect(passkeys.rememberThisDevicePasskey).toHaveBeenCalledWith('me', 'p9')
       await waitFor(() => expect(q.listPasskeys).toHaveBeenCalledTimes(2))
+    })
+
+    it('marks the one made on this device', async () => {
+      vi.mocked(passkeys.thisDevicePasskey).mockReturnValue('p2')
+      vi.mocked(q.listPasskeys).mockResolvedValue([passkey, { id: 'p2', friendly_name: 'Mac', created_at: '2026-03-01T12:00:00Z' }] as never)
+      await open()
+      const tagged = screen.getByText('This device').closest('tr')
+      expect(tagged).toHaveTextContent('Mac')
+      expect(tagged).not.toHaveTextContent('iPhone')
+      expect(screen.getAllByText('This device')).toHaveLength(1)
+    })
+
+    describe('renaming', () => {
+      const box = () => screen.getByRole('textbox', { name: 'Device name' })
+      const saveName = () => screen.getByRole('button', { name: 'Save device name' })
+      const startRename = async () => {
+        await open()
+        await userEvent.click(screen.getByRole('button', { name: 'Rename iPhone' }))
+      }
+
+      it('saves the new name, trimmed, and refreshes', async () => {
+        await startRename()
+        expect(box()).toHaveValue('iPhone')
+        await userEvent.clear(box())
+        await userEvent.type(box(), '  Work phone {Enter}')
+        expect(q.renamePasskey).toHaveBeenCalledWith(supabase, 'p1', 'Work phone')
+        await waitFor(() => expect(q.listPasskeys).toHaveBeenCalledTimes(2))
+        expect(screen.queryByRole('textbox', { name: 'Device name' })).not.toBeInTheDocument()
+      })
+
+      it('needs a name', async () => {
+        await startRename()
+        await userEvent.clear(box())
+        expect(saveName()).toBeDisabled()
+        await userEvent.type(box(), '   {Enter}')
+        expect(q.renamePasskey).not.toHaveBeenCalled()
+      })
+
+      it('closes without saving when nothing changed', async () => {
+        await startRename()
+        await userEvent.click(saveName())
+        expect(q.renamePasskey).not.toHaveBeenCalled()
+        expect(screen.queryByRole('textbox', { name: 'Device name' })).not.toBeInTheDocument()
+      })
+
+      it('can be cancelled with the button or Escape', async () => {
+        await startRename()
+        await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+        expect(screen.getByText('iPhone')).toBeInTheDocument()
+        await userEvent.click(screen.getByRole('button', { name: 'Rename iPhone' }))
+        await userEvent.type(box(), 'x{Escape}')
+        expect(screen.getByText('iPhone')).toBeInTheDocument()
+        expect(q.renamePasskey).not.toHaveBeenCalled()
+      })
+
+      it('keeps the form open and says why when saving fails', async () => {
+        vi.mocked(q.renamePasskey).mockRejectedValue(new Error('refused'))
+        await startRename()
+        await userEvent.type(box(), ' 2{Enter}')
+        expect(await screen.findByText('refused')).toBeInTheDocument()
+        expect(box()).toHaveValue('iPhone 2')
+        expect(q.listPasskeys).toHaveBeenCalledOnce()
+      })
+
+      it('starts empty for one with no name', async () => {
+        vi.mocked(q.listPasskeys).mockResolvedValue([{ id: 'p2', created_at: '2026-03-01T12:00:00Z' }] as never)
+        await open()
+        await userEvent.click(screen.getByRole('button', { name: 'Rename passkey' }))
+        expect(box()).toHaveValue('')
+      })
     })
 
     it('shows why a device could not be set up', async () => {

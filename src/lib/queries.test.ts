@@ -372,17 +372,17 @@ describe('passkeys', () => {
     await expect(q.signInWithPasskey(c.fake)).rejects.toThrow('bad')
   })
 
-  it('keeps the name the browser gave', async () => {
-    const c = client()
-    await q.registerPasskey(c.fake, 'iPhone')
-    expect(c.passkey.update).not.toHaveBeenCalled()
-  })
-
-  it('names the passkey after the device when the browser gave none', async () => {
+  it('names a new passkey after the device and returns its id', async () => {
     const c = client()
     c.auth.registerPasskey.mockResolvedValue({ data: { id: 'p9' }, error: null })
-    await q.registerPasskey(c.fake, 'iPhone')
-    expect(c.passkey.update).toHaveBeenCalledWith({ passkeyId: 'p9', friendlyName: 'iPhone' })
+    await expect(q.registerPasskey(c.fake, 'iPhone · Safari')).resolves.toBe('p9')
+    expect(c.passkey.update).toHaveBeenCalledWith({ passkeyId: 'p9', friendlyName: 'iPhone · Safari' })
+  })
+
+  it('renames a passkey', async () => {
+    const c = client()
+    await q.renamePasskey(c.fake, 'p1', 'Work phone')
+    expect(c.passkey.update).toHaveBeenCalledWith({ passkeyId: 'p1', friendlyName: 'Work phone' })
   })
 
   it('turns a failed registration into a readable error', async () => {
