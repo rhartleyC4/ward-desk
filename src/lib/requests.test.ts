@@ -52,8 +52,9 @@ describe('sentBy', () => {
 
 describe('flags', () => {
   it('flags a request still unread two days on', () => {
-    expect(isOverlooked(req({ created_at: '2026-11-02T22:00:00Z' }), '2026-11-04')).toBe(true)
-    expect(isOverlooked(req({ created_at: '2026-11-03T09:00:00Z' }), '2026-11-04')).toBe(false)
+    // Late on the 2nd and early on the 3rd on this device: today and dayOf() share its calendar.
+    expect(isOverlooked(req({ created_at: new Date(2026, 10, 2, 23).toISOString() }), '2026-11-04')).toBe(true)
+    expect(isOverlooked(req({ created_at: new Date(2026, 10, 3, 1).toISOString() }), '2026-11-04')).toBe(false)
     expect(isOverlooked(req({ status: 'seen', created_at: '2026-10-01T09:00:00Z' }), '2026-11-04')).toBe(false)
   })
 

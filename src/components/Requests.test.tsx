@@ -6,7 +6,8 @@ import type { MyAssignment } from '../lib/assignments'
 import type { CallingRequest, MyCallingRequest, Request } from '../lib/requests'
 import { RequestsView, type RequestsActions, type RequestsData } from './Requests'
 
-const ts = '2026-11-03T15:00:00Z'
+// Noon on November 3rd on this device: dayOf() reads the device's calendar, as today does.
+const ts = new Date(2026, 10, 3, 12).toISOString()
 const profile = (id: string, display_name: string) => ({ id, email: `${id}@ward.test`, display_name, short_name: null })
 const people = [profile('bishop', 'Bishop Avery'), profile('sec', 'Brother Quinn'), profile('second', 'Brother Ortiz'), profile('leader', 'Sister Reyes')]
 
