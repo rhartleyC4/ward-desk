@@ -5,7 +5,7 @@ sidebar:
   order: 1
 ---
 
-Ward Desk is open source (Apache-2.0). Any ward can run its own copy. This section is a short guide for the person who will do that.
+Ward Desk is open source (Apache-2.0). Any ward can run its own copy: a fork of the code, on accounts the ward owns. This section is a short guide for the person who will do that.
 
 :::caution[Please read this first]
 Ward Desk is provided **as is**, with **no support**. Each ward that runs a copy is **responsible for its own copy and its own data**: where it is hosted, who has access, backups, and keeping it secure and up to date. The project and the hosted copy at warddesk.app have no access to your ward's data and can't help you recover it.
@@ -16,24 +16,23 @@ Ward Desk is an independent project. It is not affiliated with or endorsed by Th
 ## What you need
 
 - A few free or low-cost accounts: **Supabase** (database, sign-in and background jobs), **Cloudflare** (hosting the app on Pages), **GitHub** (the code and automatic deploys), and **Resend** (sign-in emails). **Google Cloud** is optional, for "Sign in with Google".
-- A domain name you control.
+- A domain name you control, or a subdomain of warddesk.app if the maintainer agrees to add its DNS records.
 - A computer with Node.js, Docker and the command line. This is a technical job. Plan on a few hours, and ask a ward member who builds software if that is not you.
 - Someone to be the ward's **admin**.
 
 ## The guide
 
 1. [Run it on your computer](/docs/self-hosting/run-locally/): try the whole app with practice data first.
-2. [Set up hosting](/docs/self-hosting/set-up-hosting/): Supabase, Cloudflare Pages, Resend, and the environment commands.
+2. [Set up hosting](/docs/self-hosting/set-up-hosting/): your fork, Supabase, Cloudflare Pages, Resend, and the environment commands.
 3. [Optional extras](/docs/self-hosting/optional-extras/): Google sign-in, notifications, alert emails and nightly backups.
 4. [Keep it running](/docs/self-hosting/keep-it-running/): updates and your responsibilities.
 
 The full, always-current instructions are in the repository's README: **[Ward Desk on GitHub](https://github.com/rhartleyC4/ward-desk#readme)**. These pages are a summary. If they disagree, the README is right.
 
-## Services, handover and more wards
+## Services and handover
 
 - [Services used and free-tier capacity](/docs/operations/services/)
 - [Handing the accounts to a new owner](/docs/operations/handover/)
-- [Adding another ward](/docs/operations/new-ward/)
 
 ## A note on privacy
 

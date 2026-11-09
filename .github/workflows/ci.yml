@@ -236,11 +236,13 @@ jobs:
 
   # The overview site (warddesk.app). Pushes to main deploy its production (the Pages project's
   # production branch is main); other branches deploy previews. Same DEPLOY_ENABLED switch as above.
+  # Only this repository publishes it: a ward's own copy has no ward-desk-site project.
   deploy-site:
     name: Deploy overview site (${{ github.ref_name == 'main' && 'production' || 'preview' }})
     needs: [guard, site]
     if: >-
-      always() && vars.DEPLOY_ENABLED == 'true' && github.event_name == 'push' &&
+      always() && github.repository == 'rhartleyC4/ward-desk' &&
+      vars.DEPLOY_ENABLED == 'true' && github.event_name == 'push' &&
       github.ref != 'refs/heads/gp7' &&
       needs.guard.result == 'success' && needs.site.result == 'success'
     runs-on: ubuntu-latest

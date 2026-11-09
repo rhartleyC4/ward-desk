@@ -53,7 +53,7 @@ Source: [supabase.com/pricing](https://supabase.com/pricing), checked 2026-11.
 
 Two of these deserve a closer look.
 
-**Project count is the real ceiling.** Staging and production already take both free slots. A third database, whether another ward or a private test copy, means a paid plan. Paused projects do not count toward the two, but a paused project is not running.
+**Project count is the real ceiling.** Staging and production already take both free slots. A third database in this account, such as a private test copy, means a paid plan. Another ward uses its own Supabase account, so it doesn't count here. Paused projects do not count toward the two, but a paused project is not running.
 
 **Pausing.** Supabase pauses a free project that gets too little database activity for a week. It emails the owners about a week before. A paused project can be resumed from the dashboard for up to a year, after which the backups it relies on may be gone ([pausing docs](https://supabase.com/docs/guides/platform/pausing)). A ward in daily use stays active. The 10-minute `notify` job and the hourly health check run inside the database, but Supabase does not say in writing that a `pg_cron` job counts as activity, so do not rely on them alone. The training site is the likely one to pause during a quiet stretch. Resume it from the dashboard, then run **Reset training site** (a pause or a reset can clear the Vault, so also run `npm run notify:setup -- staging`).
 
@@ -157,11 +157,11 @@ The GitHub row is the surprise. A private repository on the Free plan gives abou
 
 | Order | Upgrade | Cost | When |
 |---|---|---|---|
-| 1 | **Supabase Pro** | From $25 a month per organization. Includes 8 GB of disk per project, 250 GB egress, 2 million function calls, 7 days of daily backups, and no pausing. A Micro-size project is covered by a $10 compute credit; each further project is billed for its own compute (about $10 a month for Micro, so check the pricing page) | Before a second real ward, or if a project must never pause |
+| 1 | **Supabase Pro** | From $25 a month per organization. Includes 8 GB of disk per project, 250 GB egress, 2 million function calls, 7 days of daily backups, and no pausing. A Micro-size project is covered by a $10 compute credit; each further project is billed for its own compute (about $10 a month for Micro, so check the pricing page) | If a project must never pause, or you need a third one in the account |
 | 2 | **Resend Pro** | $20 a month for 50,000 emails | When a launch day goes past 100 emails, or you pass about 50 wards |
 | 3 | **GitHub** | Make the repository public (free), or pay about $0.006 a minute over 2,000 | If the private repo's minutes run out |
 | 4 | Cloudflare R2 | $0.015 per GB-month over 10 GB | Not for a long time |
 
-Rough totals: one ward and a training site, **$0 a month** plus the domain. Five wards, each its own Supabase project on one Pro organization, about **$65 to $85 a month**.
+Rough total: one ward and a training site, **$0 a month** plus the domain. Each other ward runs on its own accounts and pays its own costs, so it adds nothing here.
 
-For what adding a ward takes, and a comparison with putting several wards in one database, see [Adding a new ward](/docs/operations/new-ward/). To pass the project to someone else, see [Handing the project to a new owner](/docs/operations/handover/).
+For what the project does when another ward joins, see [Adding a new ward](/docs/operations/new-ward/). To pass the project to someone else, see [Handing the project to a new owner](/docs/operations/handover/).

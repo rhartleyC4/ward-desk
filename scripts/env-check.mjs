@@ -319,8 +319,8 @@ async function checkHosted() {
     const redirects = get('auth.additional_redirect_urls') ?? []
     auth.check(redirects.some((u) => u === expected.url || u.startsWith(`${expected.url}/`)), `redirect URLs include ${expected.url}`, { detail: redirects.includes(expected.url) ? undefined : redirects.join(', ') || 'none', fix: fixAuth })
     const smtp = { enabled: get('auth.email.smtp.enabled'), host: get('auth.email.smtp.host'), port: get('auth.email.smtp.port'), user: get('auth.email.smtp.user'), sender: get('auth.email.smtp.admin_email') }
-    const smtpOk = smtp.enabled === true && smtp.host === 'smtp.resend.com' && Number(smtp.port) === 465 && smtp.user === 'resend' && smtp.sender === 'noreply@warddesk.app'
-    auth.check(smtpOk, 'email sends through Resend (smtp.resend.com:465, from noreply@warddesk.app)', { detail: smtpOk ? undefined : smtp.enabled ? `${smtp.host}:${smtp.port}, user ${smtp.user}, from ${smtp.sender}` : 'custom SMTP is off', fix: fixAuth })
+    const smtpOk = smtp.enabled === true && smtp.host === 'smtp.resend.com' && Number(smtp.port) === 465 && smtp.user === 'resend' && smtp.sender === expected.sender
+    auth.check(smtpOk, `email sends through Resend (smtp.resend.com:465, from ${expected.sender})`, { detail: smtpOk ? undefined : smtp.enabled ? `${smtp.host}:${smtp.port}, user ${smtp.user}, from ${smtp.sender}` : 'custom SMTP is off', fix: fixAuth })
   }
   if (authSettings.error) {
     auth.check(false, 'passkeys are on', { detail: `couldn’t read ${ref}.supabase.co/auth/v1/settings: ${authSettings.error}`, fix: fixGithub })

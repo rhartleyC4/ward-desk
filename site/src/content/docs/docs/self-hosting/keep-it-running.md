@@ -18,8 +18,28 @@ There is **no support**. The software is provided as is. You are free to read an
 
 ## Updates
 
-New versions are changes to the code. Pull them into your copy and push. Deploys apply the database migrations first, then publish the app. Look at the checks after a deploy: `npm run env:check -- production` should show all ✓.
+New versions are changes to the code in the original repository. Nothing reaches your copy until you bring it in. `upstream/gp7` is the version running on the original project's real site, so it has been through its training site first:
 
-## Free tiers, handover and more wards
+```bash
+git fetch upstream
+```
 
-See [Services used and free-tier capacity](/docs/operations/services/), [Handing the accounts to a new owner](/docs/operations/handover/) and [Adding another ward](/docs/operations/new-ward/).
+```bash
+git merge upstream/gp7
+```
+
+If `supabase/config.toml` conflicts, keep your own values. Then push to `main`, and update the real site:
+
+```bash
+git push origin main
+```
+
+```bash
+git push origin main:gp7
+```
+
+Deploys apply the database migrations first, then publish the app. Look at the checks after a deploy: `npm run env:check -- production` should show all ✓.
+
+## Free tiers and handover
+
+See [Services used and free-tier capacity](/docs/operations/services/) and [Handing the accounts to a new owner](/docs/operations/handover/).

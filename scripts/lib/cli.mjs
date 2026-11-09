@@ -5,18 +5,22 @@
 // the output would change depending on who runs the script. `rowsOf` accepts both shapes anyway.
 
 import { execFile, execFileSync, spawnSync } from 'node:child_process'
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { promisify } from 'node:util'
+import { hostedSettings } from './hosted-config.mjs'
 
 const execFileAsync = promisify(execFile)
 
+const supabaseConfig = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8')
+
+// url and sender come from each [remotes.<env>] block in supabase/config.toml.
 // branch: the git branch that deploys there (ci.yml). Promote to production with git push origin main:gp7.
 export const ENVIRONMENTS = {
-  staging: { url: 'https://demo.warddesk.app', branch: 'main' },
-  production: { url: 'https://gp7.warddesk.app', branch: 'gp7' },
+  staging: { ...hostedSettings(supabaseConfig, 'staging'), branch: 'main' },
+  production: { ...hostedSettings(supabaseConfig, 'production'), branch: 'gp7' },
 }
 
 export const step = (text) => console.log(`\n▸ ${text}`)

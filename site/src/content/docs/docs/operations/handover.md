@@ -272,7 +272,7 @@ Today each ward is its own deployment: its own Supabase project, Cloudflare Page
 
 The cleanest way:
 
-1. **They fork** (or you transfer a copy of) the repository, so they own their code and CI. Their fork needs its own `ENVIRONMENTS` entry (see [Adding a new ward](/docs/operations/new-ward/)).
+1. **They fork** (or you transfer a copy of) the repository, so they own their code and CI. Their fork needs its own details in `supabase/config.toml` (see [Set up hosting](/docs/self-hosting/set-up-hosting/)).
 2. **They create their own accounts** for Supabase, Cloudflare, Resend and, if wanted, Google, and follow the README setup for a single environment.
 3. **Move the data.** Take a backup (the nightly one, or `pg_dump` by hand), and restore it into their new Supabase project with `pg_restore`. `npm run backup:restore` refuses anything but local Supabase on purpose, so this part is a manual step done after a drill. Migrations are in the backup (`supabase_migrations`), so check versions match.
 4. **Domain.** If they keep a subdomain of yours (`gp7.warddesk.app`), they depend on you for DNS. A domain of their own is cleaner. **Changing the address breaks passkeys and push subscriptions**, because both are tied to the exact domain: everyone must turn on Face ID and notifications again, and the Google client's redirect addresses and the `[remotes.*.auth.webauthn]` values need updating.

@@ -203,6 +203,8 @@ Integration tests refuse to run against anything but a local Supabase. They clea
 
 There are two hosted copies of the app. Each has its own Supabase project and Cloudflare Pages project.
 
+**Running your own copy:** fork this repository and use accounts of your own, following [Set up hosting](https://warddesk.app/docs/self-hosting/set-up-hosting/). The names and addresses below are this project's. Before the setup commands, put your own project IDs, site addresses, email sender and passkey values in the `[remotes.*]` blocks of `supabase/config.toml`. The scripts read each site's address and sender from there. The Pages project for the real site still needs production branch `gp7`.
+
 | | Training site (staging) | Real site (production) |
 |---|---|---|
 | URL | https://demo.warddesk.app | https://gp7.warddesk.app |
