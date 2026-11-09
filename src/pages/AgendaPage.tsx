@@ -9,11 +9,12 @@ import { useAuth } from '../auth/AuthProvider'
 import { AgendaView, type AgendaActions } from '../components/AgendaView'
 import { ErrorNote, Loading } from '../components/Layout'
 import { canSeeCallings } from '../lib/access'
-import { shortDate, sustainingSunday, todayIso } from '../lib/dates'
+import { shortDate, sustainingSunday } from '../lib/dates'
 import * as q from '../lib/queries'
 import { followingMeeting, nextMeeting, previousMeeting } from '../lib/schedule'
 import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 
 const isIsoDate = (s: string | undefined) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s)
 
@@ -23,7 +24,7 @@ export function AgendaPage() {
   // Links from before templates were /agenda/:date and meant the bishopric meeting.
   const legacyDate = isIsoDate(params.slug) ? params.slug : undefined
   const template = (!legacyDate && templates.find((t) => t.slug === params.slug)) || templates[0]
-  const date = params.date ?? legacyDate ?? nextMeeting(template, todayIso())
+  const date = params.date ?? legacyDate ?? nextMeeting(template, wardToday())
   const { data, error, reload } = useAsync(() => q.loadAgenda(supabase, template, date), [template, date])
   const save = useAction()
 
@@ -61,8 +62,8 @@ export function AgendaPage() {
     deleteNeed: (id) => run(() => q.deleteNeed(supabase, id)),
     addCandidate: (needId, name) => run(() => q.addCandidate(supabase, { need_id: needId, person_name: name, status: 'discussing' })),
     updateCandidate: (id, changes) => run(() => q.updateCandidate(supabase, id, changes)),
-    setApart: (candidate) => run(() => q.setApart(supabase, candidate.id, todayIso())),
-    acceptCandidate: (candidate) => run(() => q.acceptCandidate(supabase, candidate, sustainingSunday(todayIso()))),
+    setApart: (candidate) => run(() => q.setApart(supabase, candidate.id, wardToday())),
+    acceptCandidate: (candidate) => run(() => q.acceptCandidate(supabase, candidate, sustainingSunday(wardToday()))),
     approveCandidate: (candidate, leaderId) =>
       run(async () => {
         await q.updateCandidate(supabase, candidate.id, { status: 'approved' })

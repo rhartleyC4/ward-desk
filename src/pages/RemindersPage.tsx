@@ -5,12 +5,13 @@ import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted } from '../components/Layout'
 import { Reminders, type RemindersActions } from '../components/Reminders'
 import { WEEKDAYS } from '../lib/availability'
-import { addDays, longDate, todayIso, weekday } from '../lib/dates'
+import { addDays, longDate, weekday } from '../lib/dates'
 import { myLeaderIds } from '../lib/appointments'
 import { appointmentsOn, meetingsToRemind } from '../lib/followUp'
 import * as q from '../lib/queries'
 import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 
 /**
  * The reminders to send for a day, tomorrow unless the link says otherwise. The day-before
@@ -21,7 +22,7 @@ export function RemindersPage() {
   const userId = profile?.id ?? ''
   const [params] = useSearchParams()
   const asked = params.get('date')
-  const date = asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : addDays(todayIso(), 1)
+  const date = asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? asked : addDays(wardToday(), 1)
   const { data, error, reload } = useAsync(async () => {
     const [appointments, templates, reminders] = await Promise.all([q.loadAppointments(supabase), q.loadTemplates(supabase), q.loadMeetingReminders(supabase, date)])
     return { ...appointments, templates, ...reminders }
@@ -41,7 +42,7 @@ export function RemindersPage() {
   }
   const { leaderIds } = myLeaderIds(userId, data)
   const leaderName = (id: string | null) => data.bishopric.find((l) => l.id === id)?.display_name ?? 'Unassigned'
-  const day = date === addDays(todayIso(), 1) ? 'tomorrow' : date === todayIso() ? 'today' : `${WEEKDAYS[weekday(date)]}, ${longDate(date)}`
+  const day = date === addDays(wardToday(), 1) ? 'tomorrow' : date === wardToday() ? 'today' : `${WEEKDAYS[weekday(date)]}, ${longDate(date)}`
 
   return (
     <>

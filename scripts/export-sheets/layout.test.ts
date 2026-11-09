@@ -5,7 +5,8 @@ import { agendaDates, agendaTab, agendaTitle, buildWorkbooks, sacramentTab, sche
 // Every name here is invented.
 
 const today = '2026-11-04'
-const range = { from: '2026-10-01', today }
+const timeZone = 'America/Denver'
+const range = { from: '2026-10-01', today, timeZone }
 
 /** A tab as the import's parser sees a sheet, so each test checks the export reads back. */
 function asSheet(tab: Tab): Sheet {
@@ -198,7 +199,7 @@ describe('meeting tabs', () => {
   })
 
   it('writes a bishopric agenda that reads back the same', () => {
-    const tab = agendaTab(data().templates[0], '2026-11-08', data())
+    const tab = agendaTab(data().templates[0], '2026-11-08', data(), timeZone)
     expect(tab.name).toBe('November 8th')
     expect(cellText(tab).slice(0, 2)).toEqual(['Ward Bishopric Meeting Agenda', 'Date: November 8th - 8:30'])
 
@@ -223,16 +224,16 @@ describe('meeting tabs', () => {
   })
 
   it('shows each date as it stood then', () => {
-    const oct11 = cellText(agendaTab(data().templates[0], '2026-10-11', data()))
+    const oct11 = cellText(agendaTab(data().templates[0], '2026-10-11', data(), timeZone))
     expect(oct11).toContain('Order new hymnbooks')
     expect(oct11).not.toContain('Gray family')
-    const oct25 = cellText(agendaTab(data().templates[0], '2026-10-25', data()))
+    const oct25 = cellText(agendaTab(data().templates[0], '2026-10-25', data(), timeZone))
     expect(oct25).toContain('Gray family')
     expect(oct25).not.toContain('Order new hymnbooks')
   })
 
   it('moves an accepted name to Sustainings on their Sunday', () => {
-    const lines = cellText(agendaTab(data().templates[0], '2026-11-15', data()))
+    const lines = cellText(agendaTab(data().templates[0], '2026-11-15', data(), timeZone))
     expect(lines).toContain('Releases today (11/15):')
     expect(lines).toContain('Brother Pike, Ward Librarian')
     expect(lines).toContain('Sustainings today (11/15):')
@@ -241,7 +242,7 @@ describe('meeting tabs', () => {
   })
 
   it('writes a ward council agenda with gray headings and no callings', () => {
-    const tab = agendaTab(data().templates[1], '2026-11-08', data())
+    const tab = agendaTab(data().templates[1], '2026-11-08', data(), timeZone)
     const lines = cellText(tab)
     expect(lines[0]).toBe('Ward Council Meeting Agenda')
     expect(lines).toContain('PPIs — Bishop')
@@ -264,10 +265,16 @@ describe('workbooks', () => {
     expect(council.tabs.map((t) => t.name)).toEqual(['November 8th', 'October 25th', 'October 11th'])
   })
 
+  it("starts from the ward's date of the first item, not UTC's", () => {
+    // 7 PM on Sunday, October 4th in Denver, already the 5th in UTC.
+    const d = { ...data(), agendas: [], agendaItems: [{ id: 'i', section_id: 's-items', body: 'First', event_date: null, resolved_on: null, created_at: '2026-10-05T01:00:00Z' }] }
+    expect(agendaDates(d.templates[0], d, { from: null, today, timeZone }).at(-1)).toBe('2026-10-04')
+  })
+
   it('adds the year to tab names only when a longer export repeats a date', () => {
     const d = data()
     d.agendas.push({ template_id: 't-w', meeting_date: '2025-11-08', start_time: null, opening_prayer: null, spiritual_thought: null, closing_prayer: null })
-    const council = buildWorkbooks(d, { from: null, today })[1]
+    const council = buildWorkbooks(d, { from: null, today, timeZone })[1]
     const names = council.tabs.map((t) => t.name)
     expect(names).toContain('November 8th 2026')
     expect(names).toContain('November 8th 2025')

@@ -21,7 +21,7 @@ describe('tab counts', () => {
     await addAppointment(bishop, { interviewer_id: bishop.userId, person_name: `${TAG} Over`, purpose: 'ppi', scheduled_at: twoHoursAgo })
     const after = await loadTabCounts(bishop, bishopTabs(bishop.userId))
     expect(after['/home']).toBe((before['/home'] ?? 0) + 1)
-    expect(after['/requests']).toBe(await countWaiting(bishop, bishop.userId, true))
+    expect(after['/requests']).toBe(await countWaiting(bishop, bishop.userId, true, todayIso()))
     expect([0, 1]).toContain(after['/sacrament'])
   })
 

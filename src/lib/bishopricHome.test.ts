@@ -84,7 +84,7 @@ describe('writableSections', () => {
   })
 
   it('counts open items across those sections only', () => {
-    expect(openItemCount(bishopricTemplate, '2026-11-08', [item('a', 'bishopric-s1'), item('b', 'bishopric-s3', { event_date: '2026-11-20' }), item('past event', 'bishopric-s3', { event_date: '2026-11-01' })])).toBe(2)
+    expect(openItemCount(bishopricTemplate, '2026-11-08', [item('a', 'bishopric-s1'), item('b', 'bishopric-s3', { event_date: '2026-11-20' }), item('past event', 'bishopric-s3', { event_date: '2026-11-01' })], 'America/Denver')).toBe(2)
   })
 })
 

@@ -3,14 +3,15 @@ import { useAuth } from '../auth/AuthProvider'
 import { DAYS_AHEAD, HoursView, type HoursActions } from '../components/HoursView'
 import { ErrorNote, Loading } from '../components/Layout'
 import { keepsHours } from '../lib/availability'
-import { addDays, todayIso } from '../lib/dates'
+import { addDays } from '../lib/dates'
 import * as q from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 
 export function HoursPage() {
   const { profile, office, hasHours, setHasHours } = useAuth()
-  const today = todayIso()
+  const today = wardToday()
   const { data, error, reload } = useAsync(() => q.loadHours(supabase, today, addDays(today, DAYS_AHEAD - 1)), [today])
   const save = useAction()
   // A leader sees his own hours; a secretary starts on the first leader and can switch.

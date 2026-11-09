@@ -66,12 +66,12 @@ describe('editing the agenda', () => {
 
     let data = await loadAgenda(bishop, bishopric, DATE)
     expect(data.agenda?.opening_prayer).toBe('Brother Lane')
-    const item = openItems(DATE, data.agendaItems, discussion).find((i) => i.body === `${TAG} Fifth Sunday plan`)!
+    const item = openItems(DATE, data.agendaItems, discussion, 'America/Denver').find((i) => i.body === `${TAG} Fifth Sunday plan`)!
     expect(item).toBeDefined()
 
     await resolveAgendaItem(bishop, item.id, DATE)
     data = await loadAgenda(bishop, bishopric, '2030-06-09')
-    expect(openItems('2030-06-09', data.agendaItems, discussion).map((i) => i.id)).not.toContain(item.id)
+    expect(openItems('2030-06-09', data.agendaItems, discussion, 'America/Denver').map((i) => i.id)).not.toContain(item.id)
   })
 
   it('records prayer roll names for the bishopric only', async () => {
@@ -108,7 +108,7 @@ describe('ward council agenda', () => {
 
     const data = await loadAgenda(rs, council, DATE)
     expect(data.agenda?.opening_prayer).toBe('Sister Young')
-    expect(openItems(DATE, data.agendaItems, reliefSociety).map((i) => i.body)).toContain(`${TAG} Teacher council room`)
+    expect(openItems(DATE, data.agendaItems, reliefSociety, 'America/Denver').map((i) => i.body)).toContain(`${TAG} Teacher council room`)
     expect(data.prayerRoll.map((p) => p.name)).toContain(`${TAG} Council family`)
     expect(data.appointments).toEqual([])
     expect(data.needs).toEqual([])

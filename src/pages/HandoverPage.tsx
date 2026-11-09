@@ -21,7 +21,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import { PersonPick } from '../components/PersonPick'
 import { Choices, StepFrame } from '../components/Steps'
-import { addDays, longDate, todayIso, type IsoDate } from '../lib/dates'
+import { addDays, longDate, type IsoDate } from '../lib/dates'
 import {
   currentSeats,
   describeWork,
@@ -45,6 +45,7 @@ import {
 import * as q from '../lib/queries'
 import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 import { nativeSelect } from '../theme'
 
 type Step = 'bishop' | 'first_counselor' | 'second_counselor' | 'others' | 'leaving' | 'mentor' | 'check'
@@ -71,7 +72,7 @@ export function HandoverPage() {
   const [seats, setSeats] = useState<Seats | null>(null)
   const [leaving, setLeaving] = useState<Record<string, Leaving>>({})
   const [mentor, setMentor] = useState(true)
-  const [mentorDay, setMentorDay] = useState<IsoDate>(addDays(todayIso(), MENTOR_DEFAULT_DAYS))
+  const [mentorDay, setMentorDay] = useState<IsoDate>(addDays(wardToday(), MENTOR_DEFAULT_DAYS))
   const [mentorCallings, setMentorCallings] = useState(false)
   const [at, setAt] = useState(0)
   const [confirming, setConfirming] = useState(false)
@@ -116,7 +117,7 @@ export function HandoverPage() {
     second_counselor: pickReady(current.second_counselor),
     others: OTHER_OFFICES.every((o) => pickReady(current[o])),
     leaving: leavers.every((p) => leavingOf(p.id).becomes === 'released' || !!leavingOf(p.id).organization),
-    mentor: !mentor || !canMentor || mentorDayAllowed(mentorDay, todayIso()),
+    mentor: !mentor || !canMentor || mentorDayAllowed(mentorDay, wardToday()),
     check: !doubleBooked(current),
   }
 
@@ -259,9 +260,9 @@ export function HandoverPage() {
                     label="Last day"
                     value={mentorDay}
                     onChange={(e) => setMentorDay(e.target.value as IsoDate)}
-                    error={!mentorDayAllowed(mentorDay, todayIso())}
+                    error={!mentorDayAllowed(mentorDay, wardToday())}
                     helperText={`Up to 12 weeks. The new bishop can end it sooner or move the date.`}
-                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: todayIso(), max: addDays(todayIso(), MENTOR_MAX_DAYS) } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: wardToday(), max: addDays(wardToday(), MENTOR_MAX_DAYS) } }}
                   />
                   <FormControlLabel control={<Switch checked={mentorCallings} onChange={(e) => setMentorCallings(e.target.checked)} />} label="Include callings" />
                   <Muted>Off keeps calling discussions between the new bishopric. The new bishop can change this later on his Account page.</Muted>

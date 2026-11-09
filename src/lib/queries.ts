@@ -6,7 +6,7 @@ import type { Block, DayChange, UsualHours } from './availability'
 import { tidyTitle, type ListedCalling } from './callings'
 import type { MessageTemplate } from './messages'
 import type { NotificationKind } from './notifications'
-import { addDays, todayIso, upcomingSunday, type IsoDate } from './dates'
+import { addDays, upcomingSunday, type IsoDate } from './dates'
 import { cleanName } from './names'
 import type { ErrorReport } from './errorReport'
 import { toPasskeyError } from './passkeys'
@@ -443,7 +443,7 @@ export async function loadMyCallingRequests(client: Client): Promise<MyCallingRe
  * Unread requests for this person, meeting assignments they haven't answered, plus (bishopric)
  * calling requests sent to them and not received.
  */
-export async function countWaiting(client: Client, userId: string, bishopric: boolean, today: IsoDate = todayIso()): Promise<number> {
+export async function countWaiting(client: Client, userId: string, bishopric: boolean, today: IsoDate): Promise<number> {
   const [requests, assignments, calling] = await Promise.all([
     client.from('requests').select('id', { count: 'exact', head: true }).eq('to_id', userId).eq('status', 'sent'),
     client.from('agenda_assignments').select('id', { count: 'exact', head: true }).eq('assignee_id', userId).eq('status', 'asked').gte('meeting_date', today),
@@ -473,7 +473,7 @@ export type TabCountsFor = {
 export async function loadTabCounts(client: Client, who: TabCountsFor): Promise<TabCounts> {
   const sunday = upcomingSunday(who.today)
   const [requests, home, meetings, sacrament] = await Promise.all([
-    countWaiting(client, who.userId, who.bishopric),
+    countWaiting(client, who.userId, who.bishopric, who.today),
     who.home === 'leader'
       ? client
           .from('interviews')

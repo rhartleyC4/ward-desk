@@ -15,16 +15,17 @@ import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import { ShortSundaysNote } from '../components/ShortSundays'
 import { personLabel } from '../lib/agenda'
 import { shortSundays, shortSundaysWith } from '../lib/coverage'
-import { longDate, todayIso } from '../lib/dates'
+import { longDate } from '../lib/dates'
 import { addAbsence, deleteAbsence, loadAbsences, loadBishopric, loadProfiles } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 
 const shrink = { inputLabel: { shrink: true } } as const
 
 export function AwayPage() {
   const { session } = useAuth()
-  const today = todayIso()
+  const today = wardToday()
   const { data, error, reload } = useAsync(async () => {
     const [absences, profiles, bishopric] = await Promise.all([loadAbsences(supabase, today), loadProfiles(supabase), loadBishopric(supabase)])
     return { absences, profiles, leaderIds: bishopric.map((p) => p.id) }

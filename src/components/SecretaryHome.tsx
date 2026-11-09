@@ -16,7 +16,7 @@ import { NavLink } from 'react-router'
 import { appointmentPurpose, myLeaderIds, splitAppointments } from '../lib/appointments'
 import { appointmentsOn, meetingsToRemind, toConfirm, type MeetingReminder, type RemindedEvent } from '../lib/followUp'
 import { dayLabel, daysFor, WEEKDAYS } from '../lib/availability'
-import { addDays, daysBetween, longDate, todayIso, weekday, type IsoDate } from '../lib/dates'
+import { addDays, daysBetween, longDate, weekday, type IsoDate } from '../lib/dates'
 import { audienceFor, type MessageTemplate } from '../lib/messages'
 import type { Enums } from '../lib/database.types'
 import type { Appointment, AppointmentLength, AppointmentsData } from '../lib/queries'
@@ -240,7 +240,7 @@ function TimePicker({ appointment: a, ctx }: { appointment: Appointment; ctx: Ct
 function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx }) {
   const [open, setOpen] = useState(false)
   const name = a.person_name ?? 'Unnamed'
-  const waiting = daysBetween(todayIso(new Date(a.created_at)), ctx.today)
+  const waiting = daysBetween(wardParts(a.created_at, ctx.timeZone).date, ctx.today)
   const holding = isHolding(a, ctx.now)
 
   return (

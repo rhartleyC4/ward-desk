@@ -1,7 +1,8 @@
 // Requests between people, and ward leaders' calling requests. Pure so it can be unit tested.
 
-import { addDays, longDate, todayIso, type IsoDate } from './dates'
+import { addDays, longDate, type IsoDate } from './dates'
 import type { Database, Enums, Tables } from './database.types'
+import { wardParts } from './slots'
 
 export type Request = Tables<'requests'>
 export type RequestStatus = Enums<'request_status'>
@@ -14,8 +15,8 @@ type MaybeEmpty = 'organization' | 'release_name' | 'needed_by' | 'notes' | 'rec
 export type MyCallingRequest = Omit<MyCallingRequestRow, MaybeEmpty> & { [K in MaybeEmpty]: MyCallingRequestRow[K] | null }
 export type CallingStage = 'sent' | 'received' | 'in_progress' | 'finished'
 
-/** The local day a timestamp falls on, the same way todayIso() reads today. */
-export const dayOf = (timestamp: string): IsoDate => todayIso(new Date(timestamp))
+/** The ward's date a timestamp falls on, to compare with the ward's today and meeting dates. */
+export const dayOf = (timestamp: string, timeZone: string): IsoDate => wardParts(timestamp, timeZone).date
 
 /** Shown in place of someone whose account was deleted: their requests stay with the sender id or recipient id blank. */
 export const FORMER_MEMBER = 'Former member'
@@ -51,7 +52,7 @@ function byUrgency(a: Pick<Request, 'status' | 'due_on' | 'created_at'>, b: Pick
 export const UNSEEN_AFTER_DAYS = 2
 
 /** Sent at least two days ago and still not opened. */
-export const isOverlooked = (r: Pick<Request, 'status' | 'created_at'>, today: IsoDate) => r.status === 'sent' && dayOf(r.created_at) <= addDays(today, -UNSEEN_AFTER_DAYS)
+export const isOverlooked = (r: Pick<Request, 'status' | 'created_at'>, today: IsoDate, timeZone: string) => r.status === 'sent' && dayOf(r.created_at, timeZone) <= addDays(today, -UNSEEN_AFTER_DAYS)
 
 export const isOverdue = (r: Pick<Request, 'status' | 'due_on'>, today: IsoDate) => isOpen(r) && !!r.due_on && r.due_on < today
 
@@ -59,10 +60,10 @@ export const isOverdue = (r: Pick<Request, 'status' | 'due_on'>, today: IsoDate)
  * The agenda's Follow-ups: requests still open, plus those closed in the week before the meeting so
  * the bishopric hears they're done. Open first, oldest first.
  */
-export function followUps<T extends Pick<Request, 'status' | 'closed_at' | 'created_at' | 'due_on'>>(date: IsoDate, requests: T[]): T[] {
+export function followUps<T extends Pick<Request, 'status' | 'closed_at' | 'created_at' | 'due_on'>>(date: IsoDate, requests: T[], timeZone: string): T[] {
   const since = addDays(date, -7)
   return requests
-    .filter((r) => isOpen(r) || (r.closed_at && dayOf(r.closed_at) >= since && dayOf(r.closed_at) <= date))
+    .filter((r) => isOpen(r) || (r.closed_at && dayOf(r.closed_at, timeZone) >= since && dayOf(r.closed_at, timeZone) <= date))
     .sort((a, b) => Number(isOpen(b)) - Number(isOpen(a)) || byUrgency(a, b))
 }
 

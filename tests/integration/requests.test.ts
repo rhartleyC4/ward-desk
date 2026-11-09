@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest'
+import { todayIso } from '../../src/lib/dates'
 import {
   answerRequest,
   countWaiting,
@@ -33,12 +34,12 @@ describe('requests', () => {
     expect(people.map((p) => p.id)).toContain(secretary.userId)
     expect(people.map((p) => p.id)).not.toContain(bishop.userId)
 
-    const before = await countWaiting(secretary, secretary.userId, true)
+    const before = await countWaiting(secretary, secretary.userId, true, todayIso())
     const id = await sendRequest(bishop, { to_id: secretary.userId, title: `${TAG} Call the Lees`, details: 'About Sunday', due_on: '2026-11-12', agenda_item_id: null })
-    expect(await countWaiting(secretary, secretary.userId, true)).toBe(before + 1)
+    expect(await countWaiting(secretary, secretary.userId, true, todayIso())).toBe(before + 1)
 
     await answerRequest(secretary, id, 'seen')
-    expect(await countWaiting(secretary, secretary.userId, true)).toBe(before)
+    expect(await countWaiting(secretary, secretary.userId, true, todayIso())).toBe(before)
     await answerRequest(secretary, id, 'done', '  Called them ')
 
     const seen = (await loadRequests(bishop)).find((r) => r.id === id)
@@ -107,7 +108,7 @@ describe('calling requests', () => {
     const second = await signIn('second') // assigned to Primary in the seed
     const request = (await loadCallingRequests(second)).find((r) => r.id === id)!
     expect(request.routed_to).toEqual([second.userId])
-    expect(await countWaiting(second, second.userId, true)).toBeGreaterThan(0)
+    expect(await countWaiting(second, second.userId, true, todayIso())).toBeGreaterThan(0)
 
     const { needs, candidates } = await loadCallings(second)
     const need = needs.find((n) => n.id === request.need_id)!

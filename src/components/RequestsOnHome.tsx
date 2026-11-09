@@ -7,11 +7,11 @@ import { Link } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { canSendRequests } from '../lib/access'
 import { meetingLine, PART_LABELS, waitingAnswer } from '../lib/assignments'
-import { todayIso } from '../lib/dates'
 import * as q from '../lib/queries'
 import { FORMER_MEMBER, callingRequestSummary, requestStatusLine, unreceived, waitingOn } from '../lib/requests'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 import { ErrorNote, Muted, SectionCard } from './Layout'
 import { useRefreshWaiting } from './WaitingCount'
 
@@ -42,7 +42,7 @@ export function RequestsOnHome() {
   const save = useAction()
   if (!data) return null
 
-  const today = todayIso()
+  const today = wardToday()
   const mine = waitingOn(userId, data.requests)
   const calling = unreceived(data.callingRequests, userId)
   const parts = waitingAnswer(data.assignments, today)

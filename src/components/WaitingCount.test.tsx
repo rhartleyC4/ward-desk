@@ -9,7 +9,7 @@ import { useRefreshWaiting, useTabCounts, WaitingProvider } from './WaitingCount
 const stub = vi.hoisted(() => ({ auth: {} as Record<string, unknown> }))
 
 vi.mock('../auth/AuthProvider', () => ({ useAuth: () => stub.auth }))
-vi.mock('../lib/supabase', () => ({ supabase: { client: true } }))
+vi.mock('../lib/supabase', () => ({ supabase: { client: true }, WARD_TIME_ZONE: 'America/Denver' }))
 vi.mock('../lib/appBadge')
 vi.mock('../lib/queries')
 
@@ -60,6 +60,15 @@ describe('WaitingProvider', () => {
     show()
     await waitFor(() => expect(screen.getByTestId('counts')).toHaveTextContent('{"/requests":2,"/home":1}'))
     await waitFor(() => expect(showOnAppIcon).toHaveBeenLastCalledWith(3))
+  })
+
+  it("counts from the ward's date, not the device's", async () => {
+    // 8 PM on the 8th in Denver, the mocked ward's zone, and already the 9th in UTC.
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-09T03:00:00Z') })
+    show()
+    await waitFor(() => expect(loadTabCounts).toHaveBeenCalled())
+    vi.useRealTimers()
+    expect(asked().today).toBe('2026-11-08')
   })
 
   it('clears the app icon when it goes away', async () => {

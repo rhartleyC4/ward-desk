@@ -3,6 +3,7 @@
 
 import { addDays, shortDate, type IsoDate } from './dates'
 import type { Enums, Tables } from './database.types'
+import { wardParts } from './slots'
 
 export type Meeting = Pick<Tables<'meetings'>, 'id' | 'meeting_date' | 'meeting_type' | 'title' | 'conducting_id'>
 export type ProgramItem = Pick<Tables<'program_items'>, 'meeting_id' | 'position' | 'kind' | 'person_name' | 'note'>
@@ -66,10 +67,10 @@ export function upcomingMeetings(date: IsoDate, meetings: Meeting[], weeks = 9):
 }
 
 /** A section's items still open on this date: created on or before it and not resolved before it. */
-export function openItems(date: IsoDate, items: AgendaItem[], section: AgendaSection): AgendaItem[] {
+export function openItems(date: IsoDate, items: AgendaItem[], section: AgendaSection, timeZone: string): AgendaItem[] {
   return items
     .filter((i) => i.section_id === section.id)
-    .filter((i) => i.created_at.slice(0, 10) <= date && (!i.resolved_on || i.resolved_on >= date))
+    .filter((i) => wardParts(i.created_at, timeZone).date <= date && (!i.resolved_on || i.resolved_on >= date))
     .filter((i) => section.kind !== 'calendar' || !i.event_date || i.event_date >= date)
     .sort((a, b) => (a.event_date ?? a.created_at).localeCompare(b.event_date ?? b.created_at))
 }

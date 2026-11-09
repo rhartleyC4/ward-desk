@@ -127,8 +127,8 @@ export function IncomingRequest({ request: r, people, today, onAnswer, busy }: {
 // A request you sent
 // ---------------------------------------------------------------------------
 
-export function SentRequest({ request: r, people, today, onTakeBack, busy }: { request: Request; people: Profile[]; today: IsoDate; onTakeBack: (id: string) => void; busy: boolean }) {
-  const overlooked = isOverlooked(r, today)
+export function SentRequest({ request: r, people, today, timeZone, onTakeBack, busy }: { request: Request; people: Profile[]; today: IsoDate; timeZone: string; onTakeBack: (id: string) => void; busy: boolean }) {
+  const overlooked = isOverlooked(r, today, timeZone)
   return (
     <Box component="article" aria-label={r.title} sx={{ py: 1 }}>
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
@@ -136,7 +136,7 @@ export function SentRequest({ request: r, people, today, onTakeBack, busy }: { r
         <Chip size="small" label={r.status === 'sent' ? 'Not seen yet' : r.status === 'seen' ? 'Seen' : r.status === 'done' ? 'Done' : "Can't do it"} color={r.status === 'done' ? 'success' : r.status === 'declined' ? 'error' : r.status === 'seen' ? 'info' : 'default'} />
       </Stack>
       <Muted>
-        To {nameOf(r.to_id, people)} · sent {shortDate(dayOf(r.created_at))}
+        To {nameOf(r.to_id, people)} · sent {shortDate(dayOf(r.created_at, timeZone))}
         {r.due_on && isOpen(r) ? ` · due ${longDate(r.due_on)}` : ''}
       </Muted>
       {overlooked && (
@@ -281,6 +281,7 @@ export function NewRequest({ recipients, onSend, onClose, busy }: { recipients: 
 export function CallingRequestRow({
   request: r,
   people,
+  timeZone,
   candidates,
   onReceive,
   busy,
@@ -288,6 +289,7 @@ export function CallingRequestRow({
 }: {
   request: CallingRequest
   people: Profile[]
+  timeZone: string
   candidates: Pick<Candidate, 'request_id' | 'person_name'>[]
   onReceive?: (id: string) => void
   busy: boolean
@@ -296,7 +298,7 @@ export function CallingRequestRow({
   const names = candidates.filter((c) => c.request_id === r.id).map((c) => c.person_name)
   const details = [
     `From ${nameOf(r.requested_by, people)}${r.organization ? ` (${r.organization})` : ''}`,
-    `sent ${shortDate(dayOf(r.created_at))}`,
+    `sent ${shortDate(dayOf(r.created_at, timeZone))}`,
     r.needed_by && `needed by ${longDate(r.needed_by)}`,
   ].filter(Boolean)
   return (
@@ -310,7 +312,7 @@ export function CallingRequestRow({
       {r.notes && <Typography sx={{ mt: 0.5, whiteSpace: 'pre-line' }}>{r.notes}</Typography>}
       {r.received_at ? (
         <Muted>
-          Received by {nameOf(r.received_by, people)} {shortDate(dayOf(r.received_at))}
+          Received by {nameOf(r.received_by, people)} {shortDate(dayOf(r.received_at, timeZone))}
         </Muted>
       ) : (
         <Muted>Sent to {r.routed_to.map((id) => nameOf(id, people)).join(' and ') || 'the bishopric'}</Muted>
@@ -342,7 +344,7 @@ const STAGE_COLORS: Record<CallingStage, 'default' | 'info' | 'warning' | 'succe
   finished: 'success',
 }
 
-export function MyCallingRequestRow({ request: r }: { request: MyCallingRequest }) {
+export function MyCallingRequestRow({ request: r, timeZone }: { request: MyCallingRequest; timeZone: string }) {
   const stage = asStage(r.stage)
   return (
     <Box component="article" aria-label={callingRequestSummary(r)} sx={{ py: 1 }}>
@@ -351,7 +353,7 @@ export function MyCallingRequestRow({ request: r }: { request: MyCallingRequest 
         <Chip size="small" color={STAGE_COLORS[stage]} label={STAGE_LABELS[stage]} />
       </Stack>
       <Muted>
-        Sent {shortDate(dayOf(r.created_at))}
+        Sent {shortDate(dayOf(r.created_at, timeZone))}
         {r.received_at && r.received_by_name ? ` · received by ${r.received_by_name}` : ''}
       </Muted>
       {r.names.length > 0 && <Muted>You suggested {r.names.join(', ')}</Muted>}
@@ -528,6 +530,7 @@ export function RequestsView({
   data,
   userId,
   today,
+  timeZone,
   canSend,
   canAskCallings,
   startWith = null,
@@ -538,6 +541,7 @@ export function RequestsView({
   data: RequestsData
   userId: string
   today: IsoDate
+  timeZone: string
   /** The bishopric sends requests and works calling requests. */
   canSend: boolean
   /** Ward leaders ask for calling changes. */
@@ -549,12 +553,12 @@ export function RequestsView({
   organization?: string | null
 }) {
   const [open, setOpen] = useState<'request' | 'calling' | null>(startWith)
-  const recent = (r: Request) => isOpen(r) || (!!r.closed_at && dayOf(r.closed_at) >= addDays(today, -KEEP_CLOSED_DAYS))
+  const recent = (r: Request) => isOpen(r) || (!!r.closed_at && dayOf(r.closed_at, timeZone) >= addDays(today, -KEEP_CLOSED_DAYS))
   const waiting = waitingOn(userId, data.requests)
   const finished = data.requests.filter((r) => r.to_id === userId && !isOpen(r) && recent(r))
   const sent = sentBy(userId, data.requests).filter(recent)
   const newCalling = data.callingRequests.filter((r) => !r.received_at).sort((a, b) => Number(b.routed_to.includes(userId)) - Number(a.routed_to.includes(userId)))
-  const receivedCalling = data.callingRequests.filter((r) => r.received_at && dayOf(r.received_at) >= addDays(today, -KEEP_CLOSED_DAYS))
+  const receivedCalling = data.callingRequests.filter((r) => r.received_at && dayOf(r.received_at, timeZone) >= addDays(today, -KEEP_CLOSED_DAYS))
 
   return (
     <>
@@ -613,10 +617,10 @@ export function RequestsView({
             {newCalling.length === 0 && receivedCalling.length === 0 && <Muted>None right now.</Muted>}
             <Stack divider={<Divider flexItem />}>
               {newCalling.map((r) => (
-                <CallingRequestRow key={r.id} request={r} people={data.people} candidates={data.candidates} onReceive={actions.receive} busy={busy} />
+                <CallingRequestRow key={r.id} request={r} people={data.people} timeZone={timeZone} candidates={data.candidates} onReceive={actions.receive} busy={busy} />
               ))}
               {receivedCalling.map((r) => (
-                <CallingRequestRow key={r.id} request={r} people={data.people} candidates={data.candidates} busy={busy} showAgendaLink={false} />
+                <CallingRequestRow key={r.id} request={r} people={data.people} timeZone={timeZone} candidates={data.candidates} busy={busy} showAgendaLink={false} />
               ))}
             </Stack>
           </SectionCard>
@@ -628,7 +632,7 @@ export function RequestsView({
               {data.myCallingRequests.length ? (
                 <Stack divider={<Divider flexItem />}>
                   {data.myCallingRequests.map((r) => (
-                    <MyCallingRequestRow key={r.id} request={r} />
+                    <MyCallingRequestRow key={r.id} request={r} timeZone={timeZone} />
                   ))}
                 </Stack>
               ) : (
@@ -644,7 +648,7 @@ export function RequestsView({
               {sent.length ? (
                 <Stack divider={<Divider flexItem />}>
                   {sent.map((r) => (
-                    <SentRequest key={r.id} request={r} people={data.people} today={today} onTakeBack={actions.takeBack} busy={busy} />
+                    <SentRequest key={r.id} request={r} people={data.people} today={today} timeZone={timeZone} onTakeBack={actions.takeBack} busy={busy} />
                   ))}
                 </Stack>
               ) : (

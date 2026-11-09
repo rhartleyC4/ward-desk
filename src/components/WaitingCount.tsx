@@ -6,10 +6,10 @@ import { useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { canPlanMeetings, canSeeCallings, canSendRequests, hasBishopricHome, hasSecretaryHome } from '../lib/access'
 import { showOnAppIcon } from '../lib/appBadge'
-import { todayIso } from '../lib/dates'
 import { loadTabCounts } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { totalCount, type TabCounts } from '../lib/tabCounts'
+import { wardToday } from '../lib/wardToday'
 
 const WaitingContext = createContext<{ counts: TabCounts; refresh: () => void }>({ counts: {}, refresh: () => {} })
 
@@ -30,7 +30,7 @@ export function WaitingProvider({ children }: { children: ReactNode }) {
     if (!userId || !roles.length) return
     let live = true
     // The badges are a nudge; if they can't load, the pages themselves still show everything.
-    loadTabCounts(supabase, { userId, bishopric, home, callings, sacrament, today: todayIso(), now: new Date() }).then(
+    loadTabCounts(supabase, { userId, bishopric, home, callings, sacrament, today: wardToday(), now: new Date() }).then(
       (c) => live && setCounts(c),
       () => {},
     )

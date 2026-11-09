@@ -9,17 +9,18 @@ import { ErrorNote, Loading, SectionCard, Tiles } from '../components/Layout'
 import { MeetingEditor } from '../components/MeetingEditor'
 import { meetingLabel, MeetingSummary } from '../components/MeetingSummary'
 import { canPlanMeetings } from '../lib/access'
-import { longDate, sundaysFrom, todayIso } from '../lib/dates'
+import { longDate, sundaysFrom } from '../lib/dates'
 import { loadBishopric, loadProfiles, loadSacrament, saveMeeting } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 
 const WEEKS = 12
 
 export function SacramentPage() {
   const { roles } = useAuth()
   const canEdit = canPlanMeetings(roles)
-  const sundays = sundaysFrom(todayIso(), WEEKS)
+  const sundays = sundaysFrom(wardToday(), WEEKS)
   const [editing, setEditing] = useState<string | null>(null)
   const save = useAction()
 

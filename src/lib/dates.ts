@@ -14,6 +14,8 @@ export function toIso(date: Date): IsoDate {
   return date.toISOString().slice(0, 10)
 }
 
+// The device's calendar. For labels about the person's own account; anything compared with ward dates
+// needs wardToday() or wardParts() instead.
 export function todayIso(now: Date = new Date()): IsoDate {
   return toIso(new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())))
 }

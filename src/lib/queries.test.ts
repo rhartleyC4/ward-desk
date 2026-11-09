@@ -161,6 +161,12 @@ describe('loadTabCounts', () => {
     expect(c.ops('interviews')).toEqual([])
   })
 
+  it("counts open assignments from the caller's date", async () => {
+    const c = zero()
+    await q.loadTabCounts(c.fake, { ...who, today: '2030-01-06' })
+    expect(c.ops('agenda_assignments')).toContainEqual(['gte', 'meeting_date', '2030-01-06'])
+  })
+
   it('counts Home for a leader from their own appointments', async () => {
     const c = zero()
     await expect(q.loadTabCounts(c.fake, { ...who, home: 'leader' })).resolves.toEqual({ '/requests': 0, '/home': 0 })

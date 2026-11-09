@@ -85,12 +85,21 @@ describe('openItems', () => {
   ]
 
   it('carries unresolved items forward until resolved', () => {
-    expect(openItems('2026-11-01', items, discussion).map((i) => i.body)).toEqual(['Carried over', 'Resolved this week'])
-    expect(openItems('2026-11-08', items, discussion).map((i) => i.body)).toEqual(['Carried over', 'Added later'])
+    expect(openItems('2026-11-01', items, discussion, 'America/Denver').map((i) => i.body)).toEqual(['Carried over', 'Resolved this week'])
+    expect(openItems('2026-11-08', items, discussion, 'America/Denver').map((i) => i.body)).toEqual(['Carried over', 'Added later'])
+  })
+
+  it("dates an item by the ward's calendar, not UTC's", () => {
+    // 7 PM on Sunday the 8th in Denver, already the 9th in UTC.
+    const evening = [{ id: 'e', section_id: 'talk', body: 'Added Sunday evening', event_date: null, resolved_on: null, created_at: '2026-11-09T02:00:00Z' }]
+    expect(openItems('2026-11-08', evening, discussion, 'America/Denver').map((i) => i.body)).toEqual(['Added Sunday evening'])
+    // 5 AM on the 8th in Tokyo, still the 7th in UTC.
+    const morning = [{ ...evening[0], created_at: '2026-11-07T20:00:00Z' }]
+    expect(openItems('2026-11-07', morning, discussion, 'Asia/Tokyo')).toEqual([])
   })
 
   it('drops calendar items whose date has passed', () => {
-    expect(openItems('2026-11-01', items, calendar).map((i) => i.body)).toEqual(['Christmas party'])
+    expect(openItems('2026-11-01', items, calendar, 'America/Denver').map((i) => i.body)).toEqual(['Christmas party'])
   })
 })
 

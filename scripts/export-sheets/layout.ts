@@ -6,6 +6,7 @@ import { callingsNeeded, openItems, personLabel, releasesOn, sacramentLine, sust
 import { addDays, longDate, shortDate, upcomingSunday, weekday, type IsoDate } from '../../src/lib/dates'
 import { FORMER_MEMBER, followUps, requestStatusLine, type Request } from '../../src/lib/requests'
 import { formatTime, hasDay, meetsOn, nextMeeting, rotationDayLabel, rotationsDue, type RecurringEvent, type Rotation } from '../../src/lib/schedule'
+import { wardParts } from '../../src/lib/slots'
 import type { Enums } from '../../src/lib/database.types'
 import { columnLetter, parseMonthDay, type Cell } from '../import-sheets/parse'
 
@@ -95,6 +96,8 @@ export interface Range {
   /** First date to include; null for everything. */
   from: IsoDate | null
   today: IsoDate
+  /** The ward's zone, for the day a timestamp falls on. */
+  timeZone: string
 }
 
 const GRAY = 'FFCCCCCC'
@@ -287,7 +290,7 @@ export function scheduleTab(data: ExportData): Tab {
 export function agendaDates(template: ExportTemplate, data: ExportData, range: Range): IsoDate[] {
   const saved = data.agendas.filter((a) => a.template_id === template.id).map((a) => a.meeting_date)
   const sectionIds = new Set(template.sections.map((s) => s.id))
-  const firstItem = data.agendaItems.filter((i) => sectionIds.has(i.section_id)).map((i) => i.created_at.slice(0, 10))
+  const firstItem = data.agendaItems.filter((i) => sectionIds.has(i.section_id)).map((i) => wardParts(i.created_at, range.timeZone).date)
   const from = range.from ?? earliest([...saved, ...firstItem], range.today)
   const to = nextMeeting(template, range.today)
   const dates = new Set(saved.filter((d) => d >= from && d <= to))
@@ -312,7 +315,7 @@ const STATUS_MARKS: Partial<Record<Enums<'candidate_status'>, [boolean, boolean,
   set_apart: [true, true, true],
 }
 
-export function agendaTab(template: ExportTemplate, date: IsoDate, data: ExportData): Tab {
+export function agendaTab(template: ExportTemplate, date: IsoDate, data: ExportData, timeZone: string): Tab {
   const agenda = data.agendas.find((a) => a.template_id === template.id && a.meeting_date === date)
   const fill = template.slug === 'bishopric' ? YELLOW : SECTION_GRAY
   const time = formatTime(agenda?.start_time ?? template.start_time)
@@ -334,14 +337,14 @@ export function agendaTab(template: ExportTemplate, date: IsoDate, data: ExportD
       case 'items':
       case 'calendar': {
         header(section.title)
-        const items = openItems(date, data.agendaItems, section)
+        const items = openItems(date, data.agendaItems, section, timeZone)
         lines(items.map((i) => (section.kind === 'calendar' ? calendarLine(i.body, i.event_date) : i.body)))
         break
       }
       case 'follow_ups':
         header(section.title)
         lines(
-          followUps(date, data.requests).map((r) =>
+          followUps(date, data.requests, timeZone).map((r) =>
             [`${r.title} — ${fullName(r.from_id)} asked ${fullName(r.to_id)}`, requestStatusLine(r, date), r.reply && `“${r.reply}”`].filter(Boolean).join(' · '),
           ),
         )
@@ -409,7 +412,7 @@ export function buildWorkbooks(data: ExportData, range: Range): Workbook[] {
   return data.templates.map((template) => {
     const dates = agendaDates(template, data, range)
     const tabs = dates.map((date) => {
-      const tab = agendaTab(template, date, data)
+      const tab = agendaTab(template, date, data, range.timeZone)
       // Tab names leave off the year, as the sheets did, unless a longer export repeats one.
       const repeats = dates.some((d) => d !== date && longDate(d) === longDate(date))
       return repeats ? { ...tab, name: `${tab.name} ${date.slice(0, 4)}` } : tab

@@ -46,8 +46,8 @@ export const writableSections = <S extends Pick<HomeSection, 'kind' | 'position'
   template.sections.filter((s) => s.kind === 'items' || s.kind === 'calendar').sort((a, b) => a.position - b.position)
 
 /** Items still open for a meeting on this date, across its sections. */
-export function openItemCount(template: HomeTemplate, date: IsoDate, items: AgendaItem[]): number {
-  return writableSections(template).reduce((n, s) => n + openItems(date, items, s).length, 0)
+export function openItemCount(template: HomeTemplate, date: IsoDate, items: AgendaItem[], timeZone: string): number {
+  return writableSections(template).reduce((n, s) => n + openItems(date, items, s, timeZone).length, 0)
 }
 
 /**
@@ -73,7 +73,7 @@ export function planDays<A extends HomeAppointment, T extends HomeTemplate>({ us
       meetings: templates
         .filter((t) => meetsOn(t, date))
         .sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
-        .map((template) => ({ template, openItems: openItemCount(template, date, agendaItems) })),
+        .map((template) => ({ template, openItems: openItemCount(template, date, agendaItems, timeZone) })),
       sacrament: sunday ? { ...sunday, conducting: sunday.conducting_id === userId } : null,
       rotations: rotationsOn(date, mine),
     }

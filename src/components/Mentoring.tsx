@@ -10,12 +10,13 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { addDays, longDate, todayIso, type IsoDate } from '../lib/dates'
+import { addDays, longDate, type IsoDate } from '../lib/dates'
 import { MENTOR_MAX_DAYS, mentorDayAllowed, mentorEndsAt } from '../lib/leadership'
 import { updateMentoring, type MentoredBy } from '../lib/queries'
 import { WARD_TIME_ZONE, supabase } from '../lib/supabase'
 import { wardParts } from '../lib/slots'
 import { useAction } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 import { ErrorNote, Muted, SectionCard } from './Layout'
 import { Choices } from './Steps'
 
@@ -48,7 +49,7 @@ export function MentorChoice() {
 function MentorCard({ m }: { m: MentoredBy }) {
   const { reloadMentoring } = useAuth()
   const save = useAction()
-  const today = todayIso()
+  const today = wardToday()
   const startedOn = wardParts(m.starts_at, WARD_TIME_ZONE).date
   const [day, setDay] = useState<IsoDate>(lastDay(m.ends_at))
   const allowed = mentorDayAllowed(day, today, startedOn)

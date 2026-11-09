@@ -1,13 +1,14 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { addDays, todayIso, upcomingSunday } from '../lib/dates'
+import { addDays, upcomingSunday } from '../lib/dates'
+import { wardToday } from '../lib/wardToday'
 import { addAbsence, deleteAbsence, loadAbsences, loadBishopric, loadProfiles } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { AwayPage } from './AwayPage'
 
 vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ session: { user: { id: 'me' } } }) }))
-vi.mock('../lib/supabase', () => ({ supabase: { client: true } }))
+vi.mock('../lib/supabase', () => ({ supabase: { client: true }, WARD_TIME_ZONE: 'America/Denver' }))
 vi.mock('../lib/errorReport')
 vi.mock('../lib/queries')
 
@@ -17,7 +18,7 @@ const people = [
   { id: 'ortiz', display_name: 'Ortiz', short_name: null, email: 'o@ward.test' },
 ]
 // Far enough ahead that it's always in the future, whatever day the tests run.
-const SUNDAY = upcomingSunday(addDays(todayIso(), 30))
+const SUNDAY = upcomingSunday(addDays(wardToday(), 30))
 const absence = (user_id: string, starts_on: string, ends_on = starts_on, location: string | null = null) => ({ id: `${user_id}-${starts_on}`, user_id, starts_on, ends_on, location })
 
 const open = async () => {

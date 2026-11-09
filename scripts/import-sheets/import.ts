@@ -23,6 +23,7 @@ import { parseArgs } from 'node:util'
 import ExcelJS from 'exceljs'
 import postgres from 'postgres'
 import { sustainingSunday } from '../../src/lib/dates'
+import { wardNow } from '../../src/lib/followUp'
 import {
   cutoffDate,
   latestAgendaTab,
@@ -67,8 +68,8 @@ if (!dbUrl) {
   console.error('Set SUPABASE_DB_URL (npm run db:env writes it for local Supabase) or pass --db-url.')
   process.exit(1)
 }
-const now = new Date()
-const today = args.today ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+const timeZone = process.env.WARD_TIME_ZONE || process.env.VITE_WARD_TIME_ZONE || 'America/Denver'
+const today = args.today ?? wardNow(new Date(), timeZone).date
 let cutoff: string | null
 try {
   cutoff = cutoffDate(today, args)

@@ -3,16 +3,16 @@ import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading } from '../components/Layout'
 import { RequestsView, type RequestsActions } from '../components/Requests'
 import { canAskForCallings, canSendRequests } from '../lib/access'
-import { todayIso } from '../lib/dates'
 import * as q from '../lib/queries'
-import { supabase } from '../lib/supabase'
+import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 import { useRefreshWaiting } from '../components/WaitingCount'
 
 export function RequestsPage() {
   const { roles, profile, organization } = useAuth()
   const userId = profile?.id ?? ''
-  const today = todayIso()
+  const today = wardToday()
   const canSend = canSendRequests(roles)
   const canAsk = canAskForCallings(roles)
   const [params] = useSearchParams()
@@ -79,7 +79,7 @@ export function RequestsPage() {
   return (
     <>
       <ErrorNote error={save.error} />
-      <RequestsView data={data} userId={userId} today={today} canSend={canSend} canAskCallings={canAsk} startWith={startWith} actions={actions} busy={save.busy} organization={organization} />
+      <RequestsView data={data} userId={userId} today={today} timeZone={WARD_TIME_ZONE} canSend={canSend} canAskCallings={canAsk} startWith={startWith} actions={actions} busy={save.busy} organization={organization} />
     </>
   )
 }

@@ -2,7 +2,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { addDays, todayIso } from '../lib/dates'
+import { addDays } from '../lib/dates'
+import { wardToday } from '../lib/wardToday'
 import { updateMentoring } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { MentorBanner } from './MentorBanner'
@@ -17,7 +18,7 @@ vi.mock('../lib/queries')
 const switchActing = vi.fn(async () => {})
 const reloadMentoring = vi.fn(async () => {})
 const mid = (date: string) => `${date}T18:00:00Z`
-const today = todayIso()
+const today = wardToday()
 
 const mentee = { for_id: 'new', name: 'Bishop Lane', ends_at: mid(addDays(today, 20)), sees_callings: true }
 const mentor = { id: 'd1', name: 'Bishop Avery', starts_at: mid(addDays(today, -3)), ends_at: mid(addDays(today, 20)), sees_callings: false }

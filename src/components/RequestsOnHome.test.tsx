@@ -2,7 +2,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { addDays, todayIso } from '../lib/dates'
+import { addDays } from '../lib/dates'
+import { wardToday } from '../lib/wardToday'
 import * as q from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { RequestsOnHome } from './RequestsOnHome'
@@ -10,13 +11,13 @@ import { RequestsOnHome } from './RequestsOnHome'
 const stub = vi.hoisted(() => ({ roles: ['bishopric'] as string[], refresh: vi.fn() }))
 
 vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ profile: { id: 'me' }, roles: stub.roles }) }))
-vi.mock('../lib/supabase', () => ({ supabase: { client: true } }))
+vi.mock('../lib/supabase', () => ({ supabase: { client: true }, WARD_TIME_ZONE: 'America/Denver' }))
 vi.mock('../lib/errorReport')
 vi.mock('../lib/queries')
 vi.mock('./WaitingCount', () => ({ useRefreshWaiting: () => stub.refresh }))
 
-const later = addDays(todayIso(), 5)
-const request = (over = {}) => ({ id: 'r1', from_id: 'lane', to_id: 'me', title: 'Call the stake', status: 'sent', created_at: `${todayIso()}T12:00:00Z`, updated_at: `${todayIso()}T12:00:00Z`, due_on: null, reply: null, ...over })
+const later = addDays(wardToday(), 5)
+const request = (over = {}) => ({ id: 'r1', from_id: 'lane', to_id: 'me', title: 'Call the stake', status: 'sent', created_at: `${wardToday()}T12:00:00Z`, updated_at: `${wardToday()}T12:00:00Z`, due_on: null, reply: null, ...over })
 const calling = (over = {}) => ({ id: 'c1', kind: 'fill', calling_title: 'Primary Teacher', organization: 'Primary', requested_by: 'lane', routed_to: ['me'], received_at: null, release_name: null, names: [], ...over })
 const part = (over = {}) => ({ id: 'a1', part: 'opening_prayer', status: 'asked', meeting_date: later, template_name: 'Bishopric', ...over })
 

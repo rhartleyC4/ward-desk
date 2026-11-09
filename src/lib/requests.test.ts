@@ -50,12 +50,18 @@ describe('sentBy', () => {
   })
 })
 
+const TZ = 'America/Denver'
+
 describe('flags', () => {
   it('flags a request still unread two days on', () => {
-    // Late on the 2nd and early on the 3rd on this device: today and dayOf() share its calendar.
-    expect(isOverlooked(req({ created_at: new Date(2026, 10, 2, 23).toISOString() }), '2026-11-04')).toBe(true)
-    expect(isOverlooked(req({ created_at: new Date(2026, 10, 3, 1).toISOString() }), '2026-11-04')).toBe(false)
-    expect(isOverlooked(req({ status: 'seen', created_at: '2026-10-01T09:00:00Z' }), '2026-11-04')).toBe(false)
+    expect(isOverlooked(req({ created_at: '2026-11-02T22:00:00Z' }), '2026-11-04', TZ)).toBe(true)
+    expect(isOverlooked(req({ created_at: '2026-11-03T09:00:00Z' }), '2026-11-04', TZ)).toBe(false)
+    expect(isOverlooked(req({ status: 'seen', created_at: '2026-10-01T09:00:00Z' }), '2026-11-04', TZ)).toBe(false)
+  })
+
+  it('counts days on the ward\'s calendar, whatever the device reads', () => {
+    // 8 PM on the 2nd in Denver, already the 3rd in UTC.
+    expect(isOverlooked(req({ created_at: '2026-11-03T03:00:00Z' }), '2026-11-04', TZ)).toBe(true)
   })
 
   it('calls an open request past its date overdue', () => {
@@ -79,7 +85,13 @@ describe('followUps', () => {
       req({ id: 'open', status: 'seen' }),
       req({ id: 'closed-after', status: 'declined', closed_at: '2026-11-09T12:00:00Z' }),
     ]
-    expect(followUps('2026-11-08', rows).map((r) => r.id)).toEqual(['open', 'closed-last-week'])
+    expect(followUps('2026-11-08', rows, TZ).map((r) => r.id)).toEqual(['open', 'closed-last-week'])
+  })
+
+  it('keeps what closed on the evening of the meeting, on the ward\'s calendar', () => {
+    // 8 PM on the 8th in Denver, already the 9th in UTC.
+    const rows = [req({ id: 'that-evening', status: 'done', closed_at: '2026-11-09T03:00:00Z' })]
+    expect(followUps('2026-11-08', rows, TZ).map((r) => r.id)).toEqual(['that-evening'])
   })
 })
 

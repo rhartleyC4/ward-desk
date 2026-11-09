@@ -116,9 +116,9 @@ function AddLine({ label, name = label, onAdd, withDate }: { label: string; name
   )
 }
 
-function ItemList({ date, data, section, actions }: { date: IsoDate; data: AgendaData; section: AgendaSection; actions: AgendaActions }) {
+function ItemList({ date, data, section, actions, timeZone }: { date: IsoDate; data: AgendaData; section: AgendaSection; actions: AgendaActions; timeZone: string }) {
   const [assigning, setAssigning] = useState<string | null>(null)
-  const items = openItems(date, data.agendaItems, section)
+  const items = openItems(date, data.agendaItems, section, timeZone)
   const dated = section.kind === 'calendar'
   // Only the bishopric gets a list of people to ask.
   const canAssign = data.recipients.length > 0
@@ -345,14 +345,14 @@ function Section({
     case 'calendar':
       return (
         <SectionCard title={section.title}>
-          <ItemList date={date} data={data} section={section} actions={actions} />
+          <ItemList date={date} data={data} section={section} actions={actions} timeZone={timeZone} />
         </SectionCard>
       )
 
     case 'follow_ups':
       return (
         <SectionCard title={section.title}>
-          <FollowUps date={date} data={data} />
+          <FollowUps date={date} data={data} timeZone={timeZone} />
         </SectionCard>
       )
 
@@ -473,8 +473,8 @@ function Section({
 }
 
 /** Open requests, and ones finished in the week before, so the meeting can follow up on each. */
-function FollowUps({ date, data }: { date: IsoDate; data: AgendaData }) {
-  const rows = followUps(date, data.requests)
+function FollowUps({ date, data, timeZone }: { date: IsoDate; data: AgendaData; timeZone: string }) {
+  const rows = followUps(date, data.requests, timeZone)
   if (!rows.length) return <Muted>Nothing to follow up on.</Muted>
   const line = (r: Request) => [`${fullName(r.from_id, data)} asked ${fullName(r.to_id, data)}`, requestStatusLine(r, date), r.reply && `“${r.reply}”`].filter(Boolean).join(' · ')
   return (

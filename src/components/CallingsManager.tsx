@@ -405,7 +405,7 @@ export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDa
           <Muted>Mark each one received so the leader knows the bishopric has it. The callings are already on the list below.</Muted>
           <Stack divider={<Divider flexItem />}>
             {newRequests.map((r) => (
-              <CallingRequestRow key={r.id} request={r} people={data.profiles} candidates={data.candidates} onReceive={actions.receiveCallingRequest} busy={false} showAgendaLink={false} />
+              <CallingRequestRow key={r.id} request={r} people={data.profiles} timeZone={timeZone} candidates={data.candidates} onReceive={actions.receiveCallingRequest} busy={false} showAgendaLink={false} />
             ))}
           </Stack>
         </Box>

@@ -5,8 +5,9 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactElement } from 'react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
-import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
-import { sustainingSunday, todayIso, addDays } from '../lib/dates'
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
+import { sustainingSunday, addDays } from '../lib/dates'
+import { wardToday } from '../lib/wardToday'
 import * as queries from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { AgendaPage } from './AgendaPage'
@@ -166,8 +167,8 @@ const pages: Page[] = [
       c('deletes a need', (a) => a.deleteNeed('n'), 'deleteNeed', ['n']),
       c('adds a candidate under discussion', (a) => a.addCandidate('n', 'Name'), 'addCandidate', [{ need_id: 'n', person_name: 'Name', status: 'discussing' }]),
       c('updates a candidate', (a) => a.updateCandidate('k', { s: 1 }), 'updateCandidate', ['k', { s: 1 }]),
-      c('sets someone apart today', (a) => a.setApart(candidate), 'setApart', ['k1', todayIso()]),
-      c('accepts for the next sustaining Sunday', (a) => a.acceptCandidate(candidate), 'acceptCandidate', [candidate, sustainingSunday(todayIso())]),
+      c('sets someone apart today', (a) => a.setApart(candidate), 'setApart', ['k1', wardToday()]),
+      c('accepts for the next sustaining Sunday', (a) => a.acceptCandidate(candidate), 'acceptCandidate', [candidate, sustainingSunday(wardToday())]),
       c('approves a candidate', (a) => a.approveCandidate(candidate), 'updateCandidate', ['k1', { status: 'approved' }]),
       c('assigns the appointment when approving with a leader', (a) => a.approveCandidate(candidate, 'l1'), 'assignCallingAppointment', [candidate, 'l1']),
       c('assigns an appointment', (a) => a.assignAppointment(candidate, 'l1'), 'assignCallingAppointment', [candidate, 'l1']),
@@ -317,7 +318,7 @@ describe('Home', () => {
     q.loadMeetingReminders.mockResolvedValue({ events: ['e'], sent: ['m'] })
     show(<HomePage />)
     await screen.findByTestId('SecretaryHome')
-    expect(q.loadMeetingReminders).toHaveBeenCalledWith(supabase, addDays(todayIso(), 1))
+    expect(q.loadMeetingReminders).toHaveBeenCalledWith(supabase, addDays(wardToday(), 1))
     expect(stub.props.SecretaryHome.data).toMatchObject({ rotations: ['r'], stewardships: ['s'], events: ['e'], meetingsSent: ['m'] })
   })
 
@@ -512,7 +513,7 @@ describe('Reminders', () => {
     show(<RemindersPage />)
     await screen.findByTestId('Reminders')
     heading('Reminders for tomorrow')
-    expect(q.loadMeetingReminders).toHaveBeenCalledWith(supabase, addDays(todayIso(), 1))
+    expect(q.loadMeetingReminders).toHaveBeenCalledWith(supabase, addDays(wardToday(), 1))
   })
 
   it('ignores a date that is not one', async () => {
@@ -522,13 +523,13 @@ describe('Reminders', () => {
   })
 
   it('says today when it is', async () => {
-    show(<RemindersPage />, `/?date=${todayIso()}`)
+    show(<RemindersPage />, `/?date=${wardToday()}`)
     await screen.findByTestId('Reminders')
     heading('Reminders for today')
   })
 
   it('names any other day', async () => {
-    show(<RemindersPage />, `/?date=${addDays(todayIso(), 5)}`)
+    show(<RemindersPage />, `/?date=${addDays(wardToday(), 5)}`)
     await screen.findByTestId('Reminders')
     expect(screen.getByRole('heading').textContent).toMatch(/^Reminders for \w+, /)
   })
@@ -538,6 +539,40 @@ describe('Reminders', () => {
     await screen.findByTestId('Reminders')
     expect(stub.props.Reminders.leaderName('l1')).toBe('Leader')
     expect(stub.props.Reminders.leaderName(null)).toBe('Unassigned')
+  })
+})
+
+describe("on a device a day ahead of the ward", () => {
+  // 8 PM on the 8th in Denver, the mocked ward's zone, and already the 9th in UTC and Tokyo.
+  beforeEach(() => void vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-11-09T03:00:00Z') }))
+  afterEach(() => void vi.useRealTimers())
+
+  it("takes tomorrow's reminders from the ward's date", async () => {
+    show(<RemindersPage />)
+    await screen.findByTestId('Reminders')
+    expect(q.loadMeetingReminders).toHaveBeenCalledWith(supabase, '2026-11-09')
+    expect(screen.getByRole('heading', { name: 'Reminders for tomorrow' })).toBeInTheDocument()
+  })
+
+  it("says today on the ward's date", async () => {
+    show(<RemindersPage />, '/?date=2026-11-08')
+    await screen.findByTestId('Reminders')
+    expect(screen.getByRole('heading', { name: 'Reminders for today' })).toBeInTheDocument()
+  })
+
+  it("starts a leader's Home on the ward's date", async () => {
+    show(<HomePage />)
+    await screen.findByTestId('BishopricHome')
+    expect(stub.props.BishopricHome).toMatchObject({ today: '2026-11-08' })
+    expect(q.loadAbsences).toHaveBeenCalledWith(supabase, '2026-11-08')
+  })
+
+  it("starts a secretary's Home on the ward's date", async () => {
+    stub.auth.value = { ...stub.auth.value, office: 'executive_secretary' }
+    show(<HomePage />)
+    await screen.findByTestId('SecretaryHome')
+    expect(stub.props.SecretaryHome).toMatchObject({ today: '2026-11-08' })
+    expect(q.loadMeetingReminders).toHaveBeenCalledWith(supabase, '2026-11-09')
   })
 })
 

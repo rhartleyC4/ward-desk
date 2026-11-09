@@ -92,6 +92,12 @@ describe('SecretaryHome', () => {
     expect(within(needs).getAllByText(/waiting 3 days/)).toHaveLength(2)
   })
 
+  it("counts the days waiting on the ward's calendar", () => {
+    // 8 PM on the 7th in Denver, already the 8th in UTC: a day ago for the ward, not today.
+    view(data({ appointments: [appt('a1', 'b', 'Sister Nash', { created_at: '2026-11-08T03:00:00Z' })] }))
+    expect(within(section(/Needs an appointment/)).getByText(/waiting 1 day/)).toBeInTheDocument()
+  })
+
   it('offers open times around the booked ones and books the one picked at the length chosen', async () => {
     const a = view()
     const nash = screen.getByRole('article', { name: 'Sister Nash' })

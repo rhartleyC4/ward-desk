@@ -1,7 +1,8 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { longDate, sundaysFrom, todayIso } from '../lib/dates'
+import { longDate, sundaysFrom } from '../lib/dates'
+import { wardToday } from '../lib/wardToday'
 import { loadBishopric, loadProfiles, loadSacrament, saveMeeting } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { SacramentPage } from './SacramentPage'
@@ -9,7 +10,7 @@ import { SacramentPage } from './SacramentPage'
 const stub = vi.hoisted(() => ({ roles: ['bishopric'] as string[], editor: {} as Record<string, (arg?: unknown) => unknown> }))
 
 vi.mock('../auth/AuthProvider', () => ({ useAuth: () => ({ roles: stub.roles }) }))
-vi.mock('../lib/supabase', () => ({ supabase: { client: true } }))
+vi.mock('../lib/supabase', () => ({ supabase: { client: true }, WARD_TIME_ZONE: 'America/Denver' }))
 vi.mock('../lib/errorReport')
 vi.mock('../lib/queries')
 vi.mock('../components/MeetingEditor', () => ({
@@ -23,7 +24,7 @@ vi.mock('../components/MeetingSummary', () => ({
   MeetingSummary: ({ items }: { items: unknown[] }) => <div>{`summary of ${items.length}`}</div>,
 }))
 
-const [first, second] = sundaysFrom(todayIso(), 12)
+const [first, second] = sundaysFrom(wardToday(), 12)
 const meeting = { id: 'm1', meeting_date: first, label: 'Fast Sunday' }
 const form = { meeting: { id: 'm1' }, items: [{ id: 'i' }] }
 
@@ -50,7 +51,7 @@ describe('SacramentPage', () => {
 
   it('loads twelve Sundays from this one', async () => {
     await open()
-    const sundays = sundaysFrom(todayIso(), 12)
+    const sundays = sundaysFrom(wardToday(), 12)
     expect(loadSacrament).toHaveBeenCalledWith(supabase, sundays[0], sundays[11])
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(12)
   })

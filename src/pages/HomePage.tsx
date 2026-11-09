@@ -8,10 +8,11 @@ import { useRefreshWaiting } from '../components/WaitingCount'
 import { DAYS_AHEAD, SecretaryHome, type SecretaryHomeActions } from '../components/SecretaryHome'
 import { hasSecretaryHome } from '../lib/access'
 import { WEEK_AHEAD } from '../lib/bishopricHome'
-import { addDays, todayIso } from '../lib/dates'
+import { addDays } from '../lib/dates'
 import * as q from '../lib/queries'
 import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
+import { wardToday } from '../lib/wardToday'
 
 export function HomePage() {
   const { roles, office } = useAuth()
@@ -23,7 +24,7 @@ function BishopricHomePage() {
   // Times before this are past. Fixed for the visit; reopening the page moves it on.
   const [now] = useState(() => new Date())
   const userId = profile?.id ?? ''
-  const today = todayIso()
+  const today = wardToday()
   const { data, error, reload } = useAsync(async () => {
     // The bishopric attends every meeting in the database's eyes, so these are all of them.
     const [appointments, sacrament, agendaItems, rotations, absences] = await Promise.all([
@@ -69,7 +70,7 @@ function BishopricHomePage() {
 
 function SecretaryHomePage() {
   const { profile } = useAuth()
-  const today = todayIso()
+  const today = wardToday()
   const { data, error, reload } = useAsync(async () => {
     const [appointments, hours, templates, lengths, schedule, reminders] = await Promise.all([
       q.loadAppointments(supabase),
