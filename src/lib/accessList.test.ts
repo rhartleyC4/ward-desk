@@ -41,6 +41,12 @@ describe('accessPeople', () => {
     expect(people.map((p) => p.name)).toEqual(['Avery', 'Quinn'])
     expect(people[1].account?.id).toBe('q')
   })
+
+  it('counts someone as signed in only with an account that has been used', () => {
+    const invites = [invite('a@ward.test', { profile_id: 'a' }), invite('b@ward.test', { profile_id: 'b' }), invite('c@ward.test')]
+    const people = accessPeople(invites, [account('a', null), account('b', null)], ['b'])
+    expect(people.map((p) => p.signedIn)).toEqual([true, false, false])
+  })
 })
 
 describe('findPeople', () => {

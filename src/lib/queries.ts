@@ -862,15 +862,17 @@ export type Account = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' |
 
 /**
  * Everyone allowed to sign in, and every account. An account no entry links to belongs to someone
- * who was taken off the list; it stays until it's deleted.
+ * who was taken off the list; it stays until it's deleted. An account can exist before its owner
+ * has signed in, when the Sheets import made it for them; notSignedIn lists those.
  */
 export async function loadAccess(client: Client) {
-  const [invites, accounts, callings] = await Promise.all([
+  const [invites, accounts, callings, notSignedIn] = await Promise.all([
     client.from('allowlist').select('email, first_name, last_name, initial_roles, initial_office, initial_organization, created_at, profile_id').order('email'),
     client.from('profiles').select('id, email, display_name, removed_at').order('display_name'),
     client.from('callings').select('organization'),
+    client.rpc('accounts_not_signed_in'),
   ])
-  return { invites: must(invites) as Invite[], accounts: must(accounts) as Account[], organizations: organizationsOf(must(callings)) }
+  return { invites: must(invites) as Invite[], accounts: must(accounts) as Account[], organizations: organizationsOf(must(callings)), notSignedIn: must(notSignedIn) }
 }
 
 /**

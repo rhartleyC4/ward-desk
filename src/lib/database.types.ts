@@ -919,7 +919,10 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "acting_as":
+            "accounts_not_signed_in":
+{ Args: Record<PropertyKey, never>; Returns: string[]
+                           },
+"acting_as":
 { Args: Record<PropertyKey, never>; Returns: string
                            },
 "apply_waiting_seats":

@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(46);
+select plan(50);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -267,6 +267,23 @@ select is(public.create_waiting_accounts(), 0, 'running it again creates nothing
 
 select pg_temp.act_as('leader@ward.test');
 select throws_ok($$ select public.create_waiting_accounts() $$, '42501', null, 'the app cannot create waiting accounts');
+
+-- ---------------------------------------------------------------------------
+-- Who hasn't signed in yet, even with an account made for them
+-- ---------------------------------------------------------------------------
+
+select is((select count(*)::int from public.accounts_not_signed_in()), 0, 'only an admin can see who has not signed in');
+
+select pg_temp.act_as('bishop@ward.test');
+select ok(pg_temp.uid('waiting@ward.test') in (select public.accounts_not_signed_in()), 'an account made ahead of time counts as not signed in');
+
+select set_config('role', 'postgres', true);
+update auth.users set last_sign_in_at = now() where email = 'waiting@ward.test';
+select pg_temp.act_as('bishop@ward.test');
+select ok(pg_temp.uid('waiting@ward.test') not in (select public.accounts_not_signed_in()), 'signing in takes them off the list');
+
+select set_config('role', 'anon', true);
+select throws_ok($$ select public.accounts_not_signed_in() $$, '42501', null, 'someone signed out cannot ask');
 
 select * from finish();
 rollback;

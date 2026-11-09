@@ -25,6 +25,7 @@ const data = {
     { id: 'gone', email: 'gone@ward.test', display_name: 'Sister Gone', removed_at: '2026-01-15T12:00:00Z' },
     { id: 'gone2', email: 'gone2@ward.test', display_name: null, removed_at: null },
   ],
+  notSignedIn: [] as string[],
 }
 
 const open = async () => {
@@ -53,6 +54,13 @@ describe('AccessPage', () => {
     expect(screen.getByText('Avery (you)')).toBeInTheDocument()
     expect(screen.getByText("No roles · Hasn't signed in yet")).toBeInTheDocument()
     expect(screen.getByText('Who can sign in (3)')).toBeInTheDocument()
+  })
+
+  it('still says not signed in for an account made ahead of time', async () => {
+    vi.mocked(loadAccess).mockResolvedValue({ ...data, notSignedIn: ['quinn'] } as never)
+    await open()
+    expect(screen.getByText("Ward Clerk · Scouts leader · Hasn't signed in yet")).toBeInTheDocument()
+    expect(screen.queryByText("Admin · Hasn't signed in yet")).not.toBeInTheDocument()
   })
 
   describe('the list', () => {

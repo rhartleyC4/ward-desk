@@ -219,7 +219,7 @@ export function AccessPage() {
   const isMe = (inviteEmail: string) => inviteEmail.toLowerCase() === profile?.email.toLowerCase()
   const linked = new Set(data.invites.map((i) => i.profile_id))
   const removed = data.accounts.filter((a) => !linked.has(a.id))
-  const people = findPeople(accessPeople(data.invites, data.accounts), find)
+  const people = findPeople(accessPeople(data.invites, data.accounts, data.notSignedIn), find)
 
   const confirmDelete = async (id: string) => {
     if (await run(() => deleteAccount(supabase, id))) setDeleting(null)
@@ -260,7 +260,7 @@ export function AccessPage() {
         <TextField label="Find someone" type="search" size="small" fullWidth autoComplete="off" sx={{ mb: 1 }} value={find} onChange={(e) => setFind(e.target.value)} />
         {people.length === 0 && <Muted>Nobody matches that.</Muted>}
         <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />}>
-          {people.map(({ invite, account, name, summary }) => {
+          {people.map(({ invite, account, signedIn, name, summary }) => {
             const me = isMe(invite.email)
             const open = openEmail === invite.email
             const panelId = `access-${invite.email}`
@@ -279,7 +279,7 @@ export function AccessPage() {
                     </Typography>
                     <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block' }}>
                       {summary}
-                      {!account && " · Hasn't signed in yet"}
+                      {!signedIn && " · Hasn't signed in yet"}
                     </Typography>
                   </Box>
                   <ExpandMoreIcon fontSize="small" color="action" sx={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />

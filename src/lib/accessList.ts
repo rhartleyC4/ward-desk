@@ -18,14 +18,14 @@ export function accessSummary(invite: Invite) {
   return parts.join(' · ') || 'No roles'
 }
 
-export type AccessPerson = { invite: Invite; account?: Account; name: string; summary: string }
+export type AccessPerson = { invite: Invite; account?: Account; signedIn: boolean; name: string; summary: string }
 
-/** Everyone on the list, by name, each with an account if they've signed in. */
-export function accessPeople(invites: Invite[], accounts: Account[]): AccessPerson[] {
+/** Everyone on the list, by name, each with their account if they have one. notSignedIn holds accounts made ahead of a first sign-in. */
+export function accessPeople(invites: Invite[], accounts: Account[], notSignedIn: string[] = []): AccessPerson[] {
   return invites
     .map((invite) => {
       const account = accounts.find((a) => a.id === invite.profile_id)
-      return { invite, account, name: personName(invite, account), summary: accessSummary(invite) }
+      return { invite, account, signedIn: !!account && !notSignedIn.includes(account.id), name: personName(invite, account), summary: accessSummary(invite) }
     })
     .sort((a, b) => a.name.localeCompare(b.name))
 }
