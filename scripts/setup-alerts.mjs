@@ -20,7 +20,7 @@
 
 import { execFileSync } from 'node:child_process'
 import { parseArgs } from 'node:util'
-import { ask, confirmOrStop, environmentArg, fail, ghVar, quote, runSql, step } from './lib/cli.mjs'
+import { ask, confirmOrStop, ENVIRONMENTS, environmentArg, fail, ghVar, quote, runSql, step } from './lib/cli.mjs'
 
 const { values: flags, positionals } = parseArgs({
   allowPositionals: true,
@@ -66,7 +66,8 @@ await confirmOrStop(`Send ${env.toUpperCase()} (${ref}) alerts to ${email}?`, { 
 
 step('Saving the alert address and Resend key in the database’s Vault')
 const label = env === 'production' ? 'Ward Desk' : 'Ward Desk training site'
-runSql(`do $$ begin ${upsertVault('alert_email', email)} ${upsertVault('resend_api_key', key)} ${upsertVault('alert_label', label)} end $$;`, remote)
+const sender = `Ward Desk <${ENVIRONMENTS[env].sender}>`
+runSql(`do $$ begin ${upsertVault('alert_email', email)} ${upsertVault('resend_api_key', key)} ${upsertVault('alert_label', label)} ${upsertVault('alert_from', sender)} end $$;`, remote)
 
 // Nightly backups run for production only, once BACKUP_ENABLED is on (.github/workflows/backup.yml).
 const expectsBackups = env === 'production' && ghVar('BACKUP_ENABLED') === 'true'

@@ -155,19 +155,20 @@ jobs:
   # main deploys to the training site (staging); gp7 deploys to the real one (production).
   # Promote with `git push origin main:gp7`. Setup steps are in README.md under "Deploying".
   # Runs after the checks above pass or are skipped. Off until the DEPLOY_ENABLED repo variable is 'true'.
+  # A fork with no training site sets the DEPLOY_STAGING repo variable to 'false' so main doesn't try to deploy one.
   deploy:
     name: Deploy to ${{ github.ref_name == 'gp7' && 'production' || 'staging' }}
     needs: [guard, check, database]
     if: >-
       always() && vars.DEPLOY_ENABLED == 'true' && github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/gp7') &&
+      ((github.ref == 'refs/heads/main' && vars.DEPLOY_STAGING != 'false') || github.ref == 'refs/heads/gp7') &&
       needs.guard.result == 'success' &&
       !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment:
       name: ${{ github.ref_name == 'gp7' && 'production' || 'staging' }}
-      url: ${{ github.ref_name == 'gp7' && 'https://gp7.warddesk.app' || 'https://demo.warddesk.app' }}
+      url: ${{ github.repository != 'rhartleyC4/ward-desk' && format('https://github.com/{0}/deployments', github.repository) || (github.ref_name == 'gp7' && 'https://gp7.warddesk.app' || 'https://demo.warddesk.app') }}
     concurrency:
       group: deploy-${{ github.ref_name }}
       cancel-in-progress: false

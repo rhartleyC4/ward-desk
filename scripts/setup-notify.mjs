@@ -21,7 +21,7 @@ import { spawnSync } from 'node:child_process'
 import { createHash, randomBytes } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { parseArgs } from 'node:util'
-import { ask, confirmOrStop, environmentArg, fail, ghVar as ghEnvVar, quote, rowsOf, runSql, step, supabase, withPrivateFile } from './lib/cli.mjs'
+import { ask, confirmOrStop, ENVIRONMENTS, environmentArg, fail, ghVar as ghEnvVar, quote, rowsOf, runSql, step, supabase, withPrivateFile } from './lib/cli.mjs'
 
 const { values: flags, positionals } = parseArgs({
   allowPositionals: true,
@@ -78,7 +78,7 @@ if (local) {
   const publicMatches = has('VAPID_PUBLIC_KEY') && has('VAPID_PUBLIC_KEY').digest.toLowerCase() === sha(publicKey)
 
   const secrets = { NOTIFY_SECRET: (secret = randomBytes(24).toString('hex')), WARD_TIME_ZONE: timeZone }
-  if (!has('VAPID_SUBJECT')) secrets.VAPID_SUBJECT = 'mailto:noreply@warddesk.app'
+  if (!has('VAPID_SUBJECT')) secrets.VAPID_SUBJECT = `mailto:${ENVIRONMENTS[env].sender}`
   if (has('VAPID_PRIVATE_KEY') && (publicMatches || !/^[0-9a-f]{64}$/i.test(has('VAPID_PUBLIC_KEY')?.digest ?? ''))) {
     console.log('  The VAPID key pair is already set; keeping it.')
   } else {

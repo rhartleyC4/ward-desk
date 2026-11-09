@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(29);
+select plan(31);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -183,6 +183,18 @@ select is(
 select ok(
   (select convert_from(q.body, 'utf8')::jsonb ->> 'text' like '- 1 error in the app (1 different).%' from net.http_request_queue q where q.id = (select last_email_request from public.health_state)),
   'the email lists the problems'
+);
+select is(
+  (select convert_from(q.body, 'utf8')::jsonb ->> 'from' from net.http_request_queue q where q.id = (select last_email_request from public.health_state)),
+  'Ward Desk <noreply@warddesk.app>',
+  'with no sender saved, alerts keep the original address'
+);
+select vault.create_secret('Ward Desk <alerts@example.org>', 'alert_from');
+select set_config('test.alert_request', public.send_alert('a subject', 'a body')::text, true);
+select is(
+  (select convert_from(q.body, 'utf8')::jsonb ->> 'from' from net.http_request_queue q where q.id = current_setting('test.alert_request')::bigint),
+  'Ward Desk <alerts@example.org>',
+  'a ward''s saved sender is used for its alerts'
 );
 
 -- ---------------------------------------------------------------------------

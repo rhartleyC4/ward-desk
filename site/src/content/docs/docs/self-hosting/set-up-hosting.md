@@ -90,11 +90,19 @@ npm run env:auth -- production
 
 Applies the sign-in settings (site URL, redirects, Resend email) from `supabase/config.toml`. Edit settings there, never in the dashboard.
 
-Then turn deploys on and push your config:
+Then turn deploys on:
 
 ```bash
 gh variable set DEPLOY_ENABLED --body true
 ```
+
+If you have no training site, stop `main` from trying to deploy one:
+
+```bash
+gh variable set DEPLOY_STAGING --body false
+```
+
+Push your config:
 
 ```bash
 git push origin main
@@ -105,8 +113,6 @@ git push origin main
 ```bash
 git push origin main:gp7
 ```
-
-If you set up only `production`, the `staging` deploy that runs on each push to `main` fails because it has no settings. The real site isn't affected.
 
 Each deploy applies the database migrations and publishes the app. When you are ready:
 
@@ -135,6 +141,16 @@ npm run env:check -- production
 ```
 
 It checks every setting without changing anything and shows the command that fixes each problem. Backups show as problems until you set up [nightly backups](/docs/self-hosting/optional-extras/).
+
+## 8. Set up your ward
+
+Your database starts with no people in it, which is correct. Never load the practice data (`supabase/seed.sql`) into a real site. The calling list and agenda templates arrive with the app, so trim them to fit, then set:
+
+- The [standing schedule](/docs/settings/standing-schedule/).
+- [Appointment hours](/docs/settings/appointment-hours/), and who books for whom.
+- [Agendas](/docs/settings/agendas/) and the [calling list](/docs/settings/calling-list/).
+
+There is an optional one-off import from spreadsheets (`npm run import-sheets`). It is written around the original ward's two sheets, so expect to adjust it, and do a dry run first.
 
 ## Keep migrations safe
 
