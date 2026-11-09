@@ -14,6 +14,11 @@ begin
 end;
 $$;
 
+-- A bishopric agenda made while using the app locally would collide with the
+-- one the bishopric section creates on the seeded ward council date.
+delete from public.agendas a using public.agenda_templates t
+  where t.id = a.template_id and t.slug = 'bishopric' and a.meeting_date = '2026-11-08';
+
 select is(
   (select array_agg(p.office::text order by p.office)::text from public.profiles p join public.allowlist a using (email) where a.initial_office = p.office),
   '{bishop,first_counselor,second_counselor,executive_secretary,assistant_executive_secretary,ward_clerk}',
