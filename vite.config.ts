@@ -62,6 +62,15 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     test: {
+      // npm run test:coverage. Counts what ships, so it leaves out one-off tools like the screenshots script.
+      coverage: {
+        provider: 'v8',
+        reporter: ['text-summary', 'json-summary'],
+        include: ['src/**/*.{ts,tsx}', 'supabase/functions/**/*.ts', 'scripts/notify/**/*.ts'],
+        exclude: ['**/*.test.*', '**/*.d.ts', 'src/test/**', 'src/lib/database.types.ts'],
+        // Just below the current numbers, so coverage can't quietly drop. Raise them as it improves.
+        thresholds: { lines: 95, statements: 94, functions: 92, branches: 87 },
+      },
       projects: [
         {
           extends: true,

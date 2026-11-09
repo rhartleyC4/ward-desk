@@ -1,5 +1,7 @@
 # Ward Desk
 
+[![Test coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FrhartleyC4%2Fward-desk%2Fbadges%2Fcoverage.json)](https://github.com/rhartleyC4/ward-desk/actions/workflows/ci.yml)
+
 A mobile-first web app (PWA) for managing ward administration in one place: callings, appointments, meeting agendas, sacrament meeting planning, requests between people, and changes of leadership.
 
 > Contains no member data in this repo. All data lives in Supabase. Never commit real member names or data.

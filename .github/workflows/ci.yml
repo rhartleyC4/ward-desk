@@ -130,6 +130,77 @@ jobs:
         if: always()
         run: npm run db:stop
 
+  # One job for both test suites: the jobs above skip by path, and the number needs unit and
+  # integration tests together. Not in deploy's needs, so it can't hold up a deploy.
+  # Only this repository publishes a badge, so a ward's own copy skips it.
+  coverage:
+    name: Test coverage
+    needs: changes
+    if: >-
+      github.repository == 'rhartleyC4/ward-desk' && github.ref == 'refs/heads/main' &&
+      (needs.changes.outputs.check == 'true' || needs.changes.outputs.database == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      lines: ${{ steps.summary.outputs.lines }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Start local Supabase
+        run: npm run db:start
+
+      # The unit tests import the Supabase client, and the integration tests need the real local key.
+      - name: Point the tests at local Supabase
+        run: npx supabase status -o json --agent no | jq -r '"VITE_SUPABASE_URL=\(.API_URL)\nVITE_SUPABASE_ANON_KEY=\(.ANON_KEY)"' >> "$GITHUB_ENV"
+
+      # Fails if coverage drops below the thresholds in vite.config.ts.
+      - name: Run all tests with coverage
+        run: npm run test:coverage
+
+      - name: Read the line coverage
+        id: summary
+        run: echo "lines=$(jq .total.lines.pct coverage/coverage-summary.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Stop Supabase
+        if: always()
+        run: npm run db:stop
+
+  # Apart from the job above so the token that can write to the repository never runs npm
+  # packages or test code. The badges branch holds only coverage.json, replaced on each run.
+  # A push made with this token doesn't start another workflow run.
+  coverage-badge:
+    name: Publish coverage badge
+    needs: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    permissions:
+      contents: write
+    env:
+      LINE_COVERAGE: ${{ needs.coverage.outputs.lines }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - run: |
+          whole="${LINE_COVERAGE%.*}"
+          if [ "$whole" -ge 90 ]; then color=brightgreen
+          elif [ "$whole" -ge 75 ]; then color=green
+          elif [ "$whole" -ge 60 ]; then color=yellow
+          else color=red
+          fi
+          git checkout --orphan badges
+          git rm -rfq .
+          jq -n --arg message "$whole%" --arg color "$color" '{schemaVersion: 1, label: "coverage", $message, $color}' > coverage.json
+          git add coverage.json
+          git -c user.name='github-actions[bot]' -c user.email='41898583+github-actions[bot]@users.noreply.github.com' commit -qm 'chore: update coverage badge'
+          git push --force origin badges
+
   site:
     name: Overview site (check, build)
     needs: changes
