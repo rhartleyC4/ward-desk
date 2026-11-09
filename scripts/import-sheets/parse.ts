@@ -629,25 +629,88 @@ export interface PersonRow {
 
 const TITLES = new Set(['bishop', 'brother', 'sister', 'elder', 'president', 'bro', 'sis', 'pres'])
 
-/** Matches a short label like "Ortiz" or "Bishop" to exactly one person, or null. */
-export function matchPerson(label: string, people: PersonRow[]): string | null {
+export interface NameMatch {
+  /** Who the label links to, if exactly one person fits. */
+  person: PersonRow | null
+  fits: PersonRow[]
+  /** Why someone should look at this match. Empty when it looks sound. */
+  doubts: string[]
+}
+
+function nameWords(...names: (string | null)[]): string[] {
+  return names
+    .filter(Boolean)
+    .flatMap((s) => s!.toLowerCase().split(/\s+/))
+    .filter((w) => !TITLES.has(w))
+}
+
+function matchDoubts(words: string[], person: PersonRow): string[] {
+  const inName = nameWords(person.short_name, person.display_name)
+  if (words.some((w) => !inName.includes(w))) return ['matched using their email address, not their name']
+  if (words.length === 1 && words[0] !== nameWords(person.display_name).at(-1)) return ['one word that is not their last name']
+  return []
+}
+
+/** Finds who a short label like "Ortiz" or "Bishop" means, and how sure that is. */
+export function explainMatch(label: string, people: PersonRow[]): NameMatch {
+  const nobody = (doubt: string, fits: PersonRow[] = []): NameMatch => ({ person: null, fits, doubts: [doubt] })
+  const several = (fits: PersonRow[]) => nobody(`fits ${fits.length} people, so it links to no one`, fits)
+
   const l = label.toLowerCase().replace(/[.,]/g, '').trim()
-  if (!l) return null
+  if (!l) return nobody('blank')
   const exact = people.filter((p) => p.short_name?.toLowerCase() === l || p.display_name?.toLowerCase() === l)
-  if (exact.length === 1) return exact[0].id
-  if (exact.length > 1) return null
+  if (exact.length === 1) return { person: exact[0], fits: exact, doubts: [] }
+  if (exact.length > 1) return several(exact)
   const words = l.split(/\s+/).filter((w) => !TITLES.has(w))
-  if (!words.length) return null
-  const byWord = people.filter((p) => {
-    const theirs = new Set(
-      [p.short_name, p.display_name, p.email.split('@')[0].replace(/[._-]+/g, ' ')]
-        .filter(Boolean)
-        .flatMap((s) => s!.toLowerCase().split(/\s+/))
-        .filter((w) => !TITLES.has(w)),
-    )
+  if (!words.length) return nobody('only a title, so it links to no one')
+  const fits = people.filter((p) => {
+    const theirs = new Set(nameWords(p.short_name, p.display_name, p.email.split('@')[0].replace(/[._-]+/g, ' ')))
     return words.every((w) => theirs.has(w))
   })
-  return byWord.length === 1 ? byWord[0].id : null
+  if (!fits.length) return nobody('fits no one')
+  if (fits.length > 1) return several(fits)
+  return { person: fits[0], fits, doubts: matchDoubts(words, fits[0]) }
+}
+
+/** Matches a short label like "Ortiz" or "Bishop" to exactly one person, or null. */
+export function matchPerson(label: string, people: PersonRow[]): string | null {
+  return explainMatch(label, people).person?.id ?? null
+}
+
+export interface NameUse {
+  label: string
+  /** Sundays conducting, or trips in the column. */
+  count: number
+  /** The Travel column; absent for Conducting. */
+  column?: string
+  match: NameMatch
+}
+
+const account = (p: PersonRow) => `${p.display_name ?? p.short_name ?? '(no name)'} <${p.email}>`
+
+/** How each sheet name maps to an account, then the mappings worth a second look. Shows real names. */
+export function nameReport(uses: NameUse[]): string[] {
+  const where = (u: NameUse) => (u.column ? `Travel column ${u.column}` : 'Conducting')
+  const target = (m: NameMatch) => (m.person ? account(m.person) : m.fits.length ? m.fits.map(account).join(', ') : 'no one')
+
+  const questions = uses.flatMap((u) => u.match.doubts.map((d) => `  ${where(u)} "${u.label}" → ${target(u.match)}: ${d}`))
+  // Each Travel column is one person, so two columns reaching the same account means one is wrong.
+  const columnsByPerson = new Map<string, NameUse[]>()
+  for (const u of uses) {
+    if (!u.column || !u.match.person) continue
+    columnsByPerson.set(u.match.person.id, [...(columnsByPerson.get(u.match.person.id) ?? []), u])
+  }
+  for (const same of columnsByPerson.values()) {
+    if (same.length > 1) questions.push(`  Travel columns ${same.map((u) => u.column).join(' and ')} all link to ${target(same[0].match)}`)
+  }
+
+  return [
+    'Names (these are real names, so do not share this part):',
+    ...uses.map((u) => `  ${where(u)} "${u.label}" (${u.count} ${u.column ? 'trips' : 'Sundays'}) → ${target(u.match)}`),
+    '',
+    questions.length ? `Questionable (${questions.length}):` : 'Questionable: none',
+    ...questions,
+  ]
 }
 
 export interface SectionRow {

@@ -3,10 +3,12 @@ import {
   agendaDate,
   calendarDate,
   cutoffDate,
+  explainMatch,
   hymnNumber,
   latestAgendaTab,
   matchPerson,
   matchSection,
+  nameReport,
   parseAgendaTab,
   parseMonthDay,
   parseSacrament,
@@ -14,6 +16,7 @@ import {
   withYear,
   type Cell,
   type CellValue,
+  type PersonRow,
   type Sheet,
 } from './parse'
 
@@ -317,5 +320,55 @@ describe('tabs and people', () => {
     expect(matchPerson('Hale', people)).toBe('q')
     expect(matchPerson('Brother', people)).toBeNull()
     expect(matchPerson('Calder', people)).toBeNull()
+  })
+})
+
+describe('explainMatch and nameReport', () => {
+  const ada: PersonRow = { id: 'a', short_name: 'Fenwick', display_name: 'Ada Fenwick', email: 'ada.fenwick@ward.test' }
+  const milo: PersonRow = { id: 'm', short_name: null, display_name: 'Milo Brandt', email: 'mbrandt@ward.test' }
+  const wren: PersonRow = { id: 'w', short_name: null, display_name: 'Wren Calder', email: 'wren@ward.test' }
+  const june: PersonRow = { id: 'j', short_name: null, display_name: 'June Calder', email: 'jc@ward.test' }
+  const quill: PersonRow = { id: 'q', short_name: null, display_name: 'Tess Hale', email: 'quill@ward.test' }
+  const people = [ada, milo, wren, june, quill]
+
+  it('trusts a full name, a short name and a last name', () => {
+    expect(explainMatch('Ada Fenwick', people)).toEqual({ person: ada, fits: [ada], doubts: [] })
+    expect(explainMatch('Fenwick', people).doubts).toEqual([])
+    expect(explainMatch('Bishop Brandt', people)).toEqual({ person: milo, fits: [milo], doubts: [] })
+  })
+
+  it('doubts a first name alone and a match only through the email address', () => {
+    expect(explainMatch('Milo', people)).toMatchObject({ person: milo, doubts: ['one word that is not their last name'] })
+    expect(explainMatch('Quill', people)).toMatchObject({ person: quill, doubts: ['matched using their email address, not their name'] })
+  })
+
+  it('explains why a label links to no one', () => {
+    expect(explainMatch('Calder', people)).toMatchObject({ person: null, fits: [wren, june], doubts: ['fits 2 people, so it links to no one'] })
+    expect(explainMatch('Sister', people)).toMatchObject({ person: null, doubts: ['only a title, so it links to no one'] })
+    expect(explainMatch('Nobody Known', people)).toMatchObject({ person: null, fits: [], doubts: ['fits no one'] })
+  })
+
+  it('lists every mapping and only the doubtful ones as questionable', () => {
+    const report = nameReport([
+      { label: 'Fenwick', count: 12, match: explainMatch('Fenwick', people) },
+      { label: 'Calder', count: 2, column: 'D', match: explainMatch('Calder', people) },
+    ])
+    expect(report).toEqual([
+      'Names (these are real names, so do not share this part):',
+      '  Conducting "Fenwick" (12 Sundays) → Ada Fenwick <ada.fenwick@ward.test>',
+      '  Travel column D "Calder" (2 trips) → Wren Calder <wren@ward.test>, June Calder <jc@ward.test>',
+      '',
+      'Questionable (1):',
+      '  Travel column D "Calder" → Wren Calder <wren@ward.test>, June Calder <jc@ward.test>: fits 2 people, so it links to no one',
+    ])
+  })
+
+  it('questions two Travel columns reaching one account, but not a clean report', () => {
+    const fenwick = explainMatch('Fenwick', people)
+    expect(nameReport([{ label: 'Fenwick', count: 1, match: fenwick }]).at(-1)).toBe('Questionable: none')
+    expect(nameReport([
+      { label: 'Fenwick', count: 3, column: 'C', match: fenwick },
+      { label: 'Ada Fenwick', count: 1, column: 'E', match: explainMatch('Ada Fenwick', people) },
+    ]).at(-1)).toBe('  Travel columns C and E all link to Ada Fenwick <ada.fenwick@ward.test>')
   })
 })

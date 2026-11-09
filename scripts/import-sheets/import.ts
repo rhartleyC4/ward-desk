@@ -24,7 +24,8 @@
 // Undoing a run leaves those accounts in place; remove one with Delete account in the app.
 //
 // The output never shows names or other cell contents, only counts and cell references,
-// so it can be shared when something needs fixing.
+// so it can be shared when something needs fixing. The exception is --show-names, which adds how
+// each Conducting name and Travel heading maps to an account and which of those look doubtful.
 
 import { existsSync } from 'node:fs'
 import { basename } from 'node:path'
@@ -35,14 +36,17 @@ import { sustainingSunday } from '../../src/lib/dates'
 import { wardNow } from '../../src/lib/followUp'
 import {
   cutoffDate,
+  explainMatch,
   latestAgendaTab,
   matchPerson,
   matchSection,
+  nameReport,
   parseAgendaTab,
   parseSacrament,
   parseTravel,
   ref,
   type CellValue,
+  type NameUse,
   type PersonRow,
   type PlannedAgenda,
   type Problem,
@@ -67,6 +71,7 @@ const { values: args } = parseArgs({
     'db-url': { type: 'string' },
     apply: { type: 'boolean', default: false },
     undo: { type: 'string' },
+    'show-names': { type: 'boolean', default: false },
   },
 })
 
@@ -250,6 +255,7 @@ const sql = postgres(dbUrl, { max: 1, prepare: false, onnotice: () => {} })
 
 let step = 'connecting'
 let runId = ''
+let nameLines: string[] = []
 try {
   await sql.begin(async (tx) => {
     runId = await startRun(tx)
@@ -274,6 +280,8 @@ try {
         select lower(calling_title) || '|' || coalesce(release_name, '') as k from public.calling_needs where status = 'open'`).map((r) => r.k),
     )
 
+    const conductingNames: string[] = []
+
     if (sacrament) {
       step = 'sacrament meetings'
       const existing = new Set((await tx<{ d: string }[]>`select meeting_date::text as d from public.meetings`).map((r) => r.d))
@@ -287,6 +295,7 @@ try {
           continue
         }
         const conductingId = m.conducting ? matchPerson(m.conducting, people) : null
+        if (m.conducting) conductingNames.push(m.conducting)
         if (m.conducting && !conductingId) unmatchedConducting.add(m.conducting.toLowerCase())
         const [row] = await tx<{ id: string }[]>`
           insert into public.meetings (meeting_date, meeting_type, title, presiding, conducting_id,
@@ -439,6 +448,22 @@ try {
       say(`  Prayer roll: ${prayerNames.size} names across both sheets, ${added} added`)
     }
 
+    if (args['show-names']) {
+      const conducting = new Map<string, NameUse>()
+      for (const label of conductingNames) {
+        const use = conducting.get(label.toLowerCase())
+        if (use) use.count++
+        else conducting.set(label.toLowerCase(), { label, count: 1, match: explainMatch(label, people) })
+      }
+      const columns = new Map<string, NameUse>()
+      for (const a of travel?.absences ?? []) {
+        const use = columns.get(a.column)
+        if (use) use.count++
+        else columns.set(a.column, { label: a.person, count: 1, column: a.column, match: explainMatch(a.person, people) })
+      }
+      nameLines = nameReport([...conducting.values(), ...columns.values()])
+    }
+
     if (!args.apply) throw new DryRun()
   })
 } catch (err) {
@@ -463,4 +488,8 @@ if (problems.length) {
   console.log()
   console.log(`${problems.length} cells to check by hand:`)
   for (const p of problems) console.log(`  ${p.tab} ${p.cell}: ${p.reason}`)
+}
+if (nameLines.length) {
+  console.log()
+  for (const l of nameLines) console.log(l)
 }
