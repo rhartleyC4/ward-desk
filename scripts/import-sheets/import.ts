@@ -19,6 +19,10 @@
 //   npm run import-sheets -- --undo <run id>                            # dry run: counts only
 //   npm run import-sheets -- --undo <run id> --apply                    # remove
 //
+// Trips and Sundays conducting link to accounts. With --apply, anyone under Who can sign in who
+// has a first or last name but hasn't signed in gets their account now, and uses it when they do.
+// Undoing a run leaves those accounts in place; remove one with Delete account in the app.
+//
 // The output never shows names or other cell contents, only counts and cell references,
 // so it can be shared when something needs fixing.
 
@@ -249,6 +253,13 @@ let runId = ''
 try {
   await sql.begin(async (tx) => {
     runId = await startRun(tx)
+
+    step = 'creating accounts for people who have not signed in'
+    const [{ created }] = await tx<{ created: number }[]>`select public.create_waiting_accounts() as created`
+    const [{ nameless }] = await tx<{ nameless: number }[]>`select count(*)::int as nameless from public.allowlist where profile_id is null`
+    if (created) say(`Accounts: ${created} added for people who haven't signed in yet, from the names under Who can sign in`)
+    if (nameless) say(`Accounts: ${nameless} people under Who can sign in have no name or account, so nothing can link to them`)
+
     step = 'reading people and agenda sections'
     const people = await tx<PersonRow[]>`select id, short_name, display_name, email from public.profiles`
     const sectionRows = await tx<(SectionRow & { slug: string; template_id: string })[]>`
@@ -335,7 +346,7 @@ try {
           say(`    column ${column}: heading matches no one in the app, ${n} trips left out`)
         }
       }
-      if (unmatched) say('    (People appear in the app after their first sign-in. Run again later to add their trips.)')
+      if (unmatched) say('    (Enter their first and last name under Who can sign in, or check the heading, then run again to add their trips.)')
     }
 
     const prayerNames = new Map<string, string>()

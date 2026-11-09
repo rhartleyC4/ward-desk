@@ -189,14 +189,14 @@ isOneToOne: false
                   ]
                 },"allowlist": {
                   Row: {
-                    "created_at": string,"email": string,"initial_office": Database["public"]['Enums']["bishopric_office"] | null,"initial_organization": string | null,"initial_roles": (Database["public"]['Enums']["app_role"])[],"invited_by": string | null,"profile_id": string | null
+                    "created_at": string,"email": string,"first_name": string | null,"initial_office": Database["public"]['Enums']["bishopric_office"] | null,"initial_organization": string | null,"initial_roles": (Database["public"]['Enums']["app_role"])[],"invited_by": string | null,"last_name": string | null,"profile_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"email": string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_organization"?: string | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"profile_id"?: string | null
+                    "created_at"?: string,"email": string,"first_name"?: string | null,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_organization"?: string | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"last_name"?: string | null,"profile_id"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"email"?: string,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_organization"?: string | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"profile_id"?: string | null
+                    "created_at"?: string,"email"?: string,"first_name"?: string | null,"initial_office"?: Database["public"]['Enums']["bishopric_office"] | null,"initial_organization"?: string | null,"initial_roles"?: (Database["public"]['Enums']["app_role"])[],"invited_by"?: string | null,"last_name"?: string | null,"profile_id"?: string | null
                   }
                   Relationships: [
                     {
@@ -957,6 +957,9 @@ isOneToOne: false
                            },
 "change_leader":
 { Args: { "email"?: string,"org": string,"outgoing_becomes"?: string,"person"?: string }; Returns: string
+                           },
+"create_waiting_accounts":
+{ Args: Record<PropertyKey, never>; Returns: number
                            },
 "delete_account":
 { Args: { "person": string }; Returns: undefined

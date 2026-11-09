@@ -855,8 +855,9 @@ export async function removeAttendee(client: Client, templateId: string, userId:
 // Sign-in access (admins only)
 // ---------------------------------------------------------------------------
 
-export type Invite = Pick<Tables<'allowlist'>, 'email' | 'initial_roles' | 'initial_office' | 'initial_organization' | 'created_at' | 'profile_id'>
+export type Invite = Pick<Tables<'allowlist'>, 'email' | 'first_name' | 'last_name' | 'initial_roles' | 'initial_office' | 'initial_organization' | 'created_at' | 'profile_id'>
 export type InviteAccess = Pick<Invite, 'initial_roles' | 'initial_office'> & Partial<Pick<Invite, 'initial_organization'>>
+export type InviteName = { first: string; last: string }
 export type Account = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' | 'removed_at'>
 
 /**
@@ -865,7 +866,7 @@ export type Account = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' |
  */
 export async function loadAccess(client: Client) {
   const [invites, accounts, callings] = await Promise.all([
-    client.from('allowlist').select('email, initial_roles, initial_office, initial_organization, created_at, profile_id').order('email'),
+    client.from('allowlist').select('email, first_name, last_name, initial_roles, initial_office, initial_organization, created_at, profile_id').order('email'),
     client.from('profiles').select('id, email, display_name, removed_at').order('display_name'),
     client.from('callings').select('organization'),
   ])
@@ -880,8 +881,15 @@ export async function deleteAccount(client: Client, personId: string) {
   check(await client.rpc('delete_account', { person: personId }))
 }
 
-export async function addInvite(client: Client, email: string, access: InviteAccess) {
-  check(await client.from('allowlist').insert({ email: email.trim().toLowerCase(), ...access }))
+const nameColumns = ({ first, last }: InviteName) => ({ first_name: first.trim() || null, last_name: last.trim() || null })
+
+export async function addInvite(client: Client, email: string, access: InviteAccess, name: InviteName = { first: '', last: '' }) {
+  check(await client.from('allowlist').insert({ email: email.trim().toLowerCase(), ...access, ...nameColumns(name) }))
+}
+
+/** The name to use when this person's account is created. Has no effect on an existing account. */
+export async function updateInviteName(client: Client, email: string, name: InviteName) {
+  check(await client.from('allowlist').update(nameColumns(name)).eq('email', email))
 }
 
 /** Also changes the roles and position of an account that has already signed in. */

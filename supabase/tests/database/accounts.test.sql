@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(35);
+select plan(46);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -223,6 +223,50 @@ select lives_ok(
   $$ update public.profiles set email = 'corrected@ward.test' where id = (select leader from ids) $$,
   'the database owner can still correct an email'
 );
+
+-- ---------------------------------------------------------------------------
+-- Names entered before someone signs in
+-- ---------------------------------------------------------------------------
+
+set local role postgres;
+select set_config('request.jwt.claims', '', true);
+
+create function pg_temp.new_user(user_email text, full_name text) returns void language sql as $$
+  insert into auth.users (instance_id, id, aud, role, email, raw_user_meta_data)
+  values ('00000000-0000-0000-0000-000000000000', gen_random_uuid(), 'authenticated', 'authenticated', user_email, jsonb_build_object('full_name', full_name));
+$$;
+
+insert into public.allowlist (email, initial_roles, first_name, last_name) values
+  ('named@ward.test', '{leader}', 'Robin', 'Vale'),
+  ('blank@ward.test', '{leader}', '   ', null),
+  ('waiting@ward.test', '{bishopric}', 'Sky', 'Marsh'),
+  ('Mixed.Case@Ward.test', '{}', null, 'Tarn'),
+  ('nameless@ward.test', '{leader}', null, null);
+
+select pg_temp.new_user('named@ward.test', 'Name From Google');
+select is((select display_name from public.profiles where email = 'named@ward.test'), 'Robin Vale', 'a name an admin entered wins over the one from Google');
+select pg_temp.new_user('blank@ward.test', 'Name From Google');
+select is((select display_name from public.profiles where email = 'blank@ward.test'), 'Name From Google', 'a blank name falls back to the one from Google');
+
+select throws_ok(
+  $$ update public.allowlist set first_name = repeat('a', 40), last_name = repeat('b', 40) where email = 'nameless@ward.test' $$,
+  '23514', null,
+  'first and last name together must fit a display name'
+);
+
+select is(public.create_waiting_accounts(), 2, 'creates accounts only for named people who have none');
+select is((select display_name from public.profiles where email = 'waiting@ward.test'), 'Sky Marsh', 'the waiting account has the entered name');
+select ok(
+  (select profile_id is not null from public.allowlist where email = 'waiting@ward.test') and exists (select 1 from public.roles r join public.profiles p on p.id = r.user_id where p.email = 'waiting@ward.test' and r.role = 'bishopric'),
+  'the waiting account is linked and has its roles'
+);
+select is((select count(*)::int from auth.users where email = 'waiting@ward.test' and email_confirmed_at is not null), 1, 'its email counts as confirmed, so Google sign-in joins it');
+select is((select email::text from public.profiles where display_name = 'Tarn'), 'mixed.case@ward.test', 'a mixed-case email still gets its account');
+select is((select count(*)::int from public.profiles where email = 'nameless@ward.test'), 0, 'someone with no name gets no account');
+select is(public.create_waiting_accounts(), 0, 'running it again creates nothing');
+
+select pg_temp.act_as('leader@ward.test');
+select throws_ok($$ select public.create_waiting_accounts() $$, '42501', null, 'the app cannot create waiting accounts');
 
 select * from finish();
 rollback;

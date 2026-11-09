@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { addInvite, deleteAccount, loadAccess, removeInvite, updateInvite } from '../lib/queries'
+import { addInvite, deleteAccount, loadAccess, removeInvite, updateInvite, updateInviteName } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { AccessPage } from './AccessPage'
 
@@ -54,6 +54,57 @@ describe('AccessPage', () => {
     expect(screen.getByText('Who can sign in (3)')).toBeInTheDocument()
   })
 
+  describe('names before someone signs in', () => {
+    const who = 'new@ward.test'
+    const first = () => screen.getByRole('textbox', { name: `First name for ${who}` })
+    const last = () => screen.getByRole('textbox', { name: `Last name for ${who}` })
+
+    it('asks only for people who have no account yet', async () => {
+      await open()
+      expect(first()).toBeInTheDocument()
+      expect(screen.queryByRole('textbox', { name: 'First name for quinn@ward.test' })).not.toBeInTheDocument()
+    })
+
+    it('saves the name when you leave the field', async () => {
+      await open()
+      await userEvent.type(first(), 'Robin')
+      await userEvent.type(last(), ' Vale ')
+      await userEvent.tab()
+      await waitFor(() => expect(updateInviteName).toHaveBeenLastCalledWith(supabase, who, { first: 'Robin', last: ' Vale ' }))
+    })
+
+    it('saves nothing when the name did not change', async () => {
+      await open()
+      await userEvent.click(first())
+      await userEvent.tab()
+      expect(updateInviteName).not.toHaveBeenCalled()
+    })
+
+    it('fills in a name already saved', async () => {
+      vi.mocked(loadAccess).mockResolvedValue({ ...data, invites: [invite(who, null, { first_name: 'Robin', last_name: 'Vale' })] } as never)
+      await open()
+      expect(first()).toHaveValue('Robin')
+      expect(last()).toHaveValue('Vale')
+    })
+
+    it('can be given when adding someone', async () => {
+      await open()
+      await userEvent.type(screen.getByLabelText(/^Email/), 'x@ward.test')
+      await userEvent.type(screen.getByRole('textbox', { name: 'First name for the new email' }), 'Robin')
+      await userEvent.type(screen.getByRole('textbox', { name: 'Last name for the new email' }), 'Vale')
+      await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+      await waitFor(() => expect(addInvite).toHaveBeenCalledWith(supabase, 'x@ward.test', expect.anything(), { first: 'Robin', last: 'Vale' }))
+    })
+
+    it('explains a name that is too long', async () => {
+      vi.mocked(updateInviteName).mockRejectedValue(new Error('violates check constraint "allowlist_name_length"'))
+      await open()
+      await userEvent.type(first(), 'Robin')
+      await userEvent.tab()
+      expect(await screen.findByText('First and last name together need to fit in 60 characters.')).toBeInTheDocument()
+    })
+  })
+
   it('won\'t let you remove yourself or your own admin access, matching email in any case', async () => {
     await open()
     expect(screen.getByRole('button', { name: 'Remove me@ward.test' })).toBeDisabled()
@@ -72,7 +123,7 @@ describe('AccessPage', () => {
       await userEvent.click(chip('Ward leader for the new email'))
       await userEvent.selectOptions(screen.getByLabelText('Organization for the new email'), 'Primary')
       await userEvent.click(within(form()).getByRole('button', { name: 'Add' }))
-      expect(addInvite).toHaveBeenCalledWith(supabase, 'x@ward.test', { initial_roles: ['bishopric', 'leader'], initial_office: 'bishop', initial_organization: 'Primary' })
+      expect(addInvite).toHaveBeenCalledWith(supabase, 'x@ward.test', { initial_roles: ['bishopric', 'leader'], initial_office: 'bishop', initial_organization: 'Primary' }, { first: '', last: '' })
       await waitFor(() => expect(screen.getByLabelText(/Email/)).toHaveValue(''))
       expect(screen.queryByLabelText('Position for the new email')).not.toBeInTheDocument()
     })
@@ -87,7 +138,7 @@ describe('AccessPage', () => {
       await userEvent.selectOptions(screen.getByLabelText('Organization for the new email'), 'Primary')
       await userEvent.click(chip('Ward leader for the new email'))
       await userEvent.click(within(form()).getByRole('button', { name: 'Add' }))
-      expect(addInvite).toHaveBeenCalledWith(supabase, 'x@ward.test', { initial_roles: [], initial_office: null, initial_organization: null })
+      expect(addInvite).toHaveBeenCalledWith(supabase, 'x@ward.test', { initial_roles: [], initial_office: null, initial_organization: null }, { first: '', last: '' })
     })
 
     it('keeps the form and explains a duplicate', async () => {

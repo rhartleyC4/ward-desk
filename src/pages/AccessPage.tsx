@@ -18,7 +18,7 @@ import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import type { AppRole } from '../lib/access'
 import type { Enums } from '../lib/database.types'
 import { addDays, longDate, todayIso } from '../lib/dates'
-import { addInvite, deleteAccount, loadAccess, removeInvite, updateInvite, type Account, type InviteAccess } from '../lib/queries'
+import { addInvite, deleteAccount, loadAccess, removeInvite, updateInvite, updateInviteName, type Account, type Invite, type InviteAccess, type InviteName } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 import { nativeSelect } from '../theme'
@@ -42,6 +42,7 @@ const OFFICES: { office: Enums<'bishopric_office'>; label: string }[] = [
 const REMOVED_ACCOUNT_DAYS = 180
 
 const NOBODY: InviteAccess = { initial_roles: [], initial_office: null, initial_organization: null }
+const NO_NAME: InviteName = { first: '', last: '' }
 
 /** A position only goes with the bishopric role, and an organization with the leader role. */
 function toggleRole(access: InviteAccess, role: AppRole): InviteAccess {
@@ -119,6 +120,42 @@ function AccessFields({ who, access, onChange, locked, organizations }: { who: s
   )
 }
 
+function NameFields({ who, name, onChange, onBlur }: { who: string; name: InviteName; onChange: (name: InviteName) => void; onBlur?: () => void }) {
+  return (
+    <Stack direction={{ xs: 'column', sm: 'row' }} sx={{ gap: 1.5 }}>
+      <TextField
+        size="small"
+        fullWidth
+        label="First name"
+        autoComplete="off"
+        slotProps={{ htmlInput: { 'aria-label': `First name for ${who}`, maxLength: 60 } }}
+        value={name.first}
+        onChange={(e) => onChange({ ...name, first: e.target.value })}
+        onBlur={onBlur}
+      />
+      <TextField
+        size="small"
+        fullWidth
+        label="Last name"
+        autoComplete="off"
+        slotProps={{ htmlInput: { 'aria-label': `Last name for ${who}`, maxLength: 60 } }}
+        value={name.last}
+        onChange={(e) => onChange({ ...name, last: e.target.value })}
+        onBlur={onBlur}
+      />
+    </Stack>
+  )
+}
+
+/** The name of someone who hasn't signed in yet, saved when you leave a field. */
+function WaitingName({ invite, onSave }: { invite: Invite; onSave: (name: InviteName) => void }) {
+  const [name, setName] = useState<InviteName>({ first: invite.first_name ?? '', last: invite.last_name ?? '' })
+  const save = () => {
+    if (name.first.trim() !== (invite.first_name ?? '') || name.last.trim() !== (invite.last_name ?? '')) onSave(name)
+  }
+  return <NameFields who={invite.email} name={name} onChange={setName} onBlur={save} />
+}
+
 /** Asks before deleting an account, saying what goes and what stays. */
 function DeleteAccountDialog({ account, busy, error, onCancel, onDelete }: { account: Account | null; busy: boolean; error: string | null; onCancel: () => void; onDelete: (id: string) => void }) {
   const name = account?.display_name || account?.email
@@ -144,7 +181,11 @@ function DeleteAccountDialog({ account, busy, error, onCancel, onDelete }: { acc
   )
 }
 
-const friendly = (message: string) => (/duplicate key/i.test(message) ? 'That email can already sign in.' : message)
+const friendly = (message: string) => {
+  if (/duplicate key/i.test(message)) return 'That email can already sign in.'
+  if (/allowlist_name_length/i.test(message)) return 'First and last name together need to fit in 60 characters.'
+  return message
+}
 
 /** Admins decide which emails may sign in, and each person's roles and bishopric position. */
 export function AccessPage() {
@@ -153,6 +194,7 @@ export function AccessPage() {
   const save = useAction()
   const [email, setEmail] = useState('')
   const [access, setAccess] = useState<InviteAccess>(NOBODY)
+  const [name, setName] = useState<InviteName>(NO_NAME)
   const [deleting, setDeleting] = useState<Account | null>(null)
 
   if (error) return <ErrorNote error={error} />
@@ -172,9 +214,10 @@ export function AccessPage() {
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
-    if (await run(() => addInvite(supabase, email, access))) {
+    if (await run(() => addInvite(supabase, email, access, name))) {
       setEmail('')
       setAccess(NOBODY)
+      setName(NO_NAME)
     }
   }
 
@@ -208,6 +251,7 @@ export function AccessPage() {
       <SectionCard title="Add someone">
         <Stack component="form" spacing={1.5} onSubmit={submit}>
           <TextField label="Email" type="email" required autoComplete="off" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <NameFields who="the new email" name={name} onChange={setName} />
           <AccessFields who="the new email" access={access} onChange={setAccess} organizations={data.organizations} />
           <Box>
             <Button type="submit" variant="contained" disabled={save.busy}>
@@ -221,13 +265,18 @@ export function AccessPage() {
         <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />} spacing={1.5}>
           {data.invites.map((invite) => {
             const account = accountOf(invite.profile_id)
-            const name = account?.display_name
+            const accountName = account?.display_name
             const me = isMe(invite.email)
             return (
               <Stack key={invite.email} direction="row" sx={{ alignItems: 'flex-start', gap: 1 }}>
                 <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                   <Typography sx={{ overflowWrap: 'anywhere' }}>{invite.email}</Typography>
-                  <Muted>{account ? `${name || 'Signed in'}${me ? ' (you)' : ''}` : "Hasn't signed in yet"}</Muted>
+                  <Muted>{account ? `${accountName || 'Signed in'}${me ? ' (you)' : ''}` : "Hasn't signed in yet"}</Muted>
+                  {!account && (
+                    <Box sx={{ mt: 1.5 }}>
+                      <WaitingName invite={invite} onSave={(next) => void run(() => updateInviteName(supabase, invite.email, next))} />
+                    </Box>
+                  )}
                   <Box sx={{ mt: 1 }}>
                     <AccessFields
                       who={invite.email}

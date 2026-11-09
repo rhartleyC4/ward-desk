@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest'
-import { addInvite, deleteAccount, loadAccess, loadBishopric, removeInvite, updateInvite } from '../../src/lib/queries'
+import { addInvite, deleteAccount, loadAccess, loadBishopric, removeInvite, updateInvite, updateInviteName } from '../../src/lib/queries'
 import { anonClient, signIn } from './helpers'
 
 const EMAIL = `it-${Date.now()}@ward.test`
@@ -21,6 +21,18 @@ describe('sign-in access', () => {
 
     await removeInvite(admin, EMAIL)
     expect((await loadAccess(admin)).invites.map((i) => i.email)).not.toContain(EMAIL)
+  })
+
+  it('keeps a tidy name for someone who has not signed in', async () => {
+    const admin = await signIn('bishop')
+    await addInvite(admin, EMAIL, { initial_roles: [], initial_office: null }, { first: ' Robin ', last: '' })
+    expect((await loadAccess(admin)).invites.find((i) => i.email === EMAIL)).toMatchObject({ first_name: 'Robin', last_name: null })
+
+    await updateInviteName(admin, EMAIL, { first: 'Robin', last: 'Vale' })
+    expect((await loadAccess(admin)).invites.find((i) => i.email === EMAIL)).toMatchObject({ first_name: 'Robin', last_name: 'Vale' })
+
+    await expect(updateInviteName(admin, EMAIL, { first: 'R'.repeat(40), last: 'V'.repeat(40) })).rejects.toThrow(/allowlist_name_length/)
+    await removeInvite(admin, EMAIL)
   })
 
   it('refuses an email that is already on the list', async () => {
