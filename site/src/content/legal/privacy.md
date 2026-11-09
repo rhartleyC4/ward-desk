@@ -1,7 +1,7 @@
 ---
 title: Privacy Policy
 description: What Ward Desk stores, who can see it, where it lives and how long it is kept.
-lastUpdated: 2026-11-08
+lastUpdated: 2026-11-09
 ---
 
 <!-- DRAFT for the owner's review. Not legal advice. Have it checked before publishing. Every factual claim is listed with its source in README.md in this folder. -->
@@ -50,7 +50,7 @@ The app stores only what the ward's leaders need to do their work.
 
 - **Your email address and name**, to sign you in and show who did what. If you sign in with Google, Google gives the app your name and email address.
 - **Your role and position** (for example, bishopric or ward leader, an office such as first counselor, or the organization you lead, such as Primary), to decide what you can see and do and where requests go.
-- **Sign-in records** kept by our sign-in provider: sessions, the passkeys you add for Face ID or fingerprint sign-in (the public part only; your fingerprint or face never leaves your device), and technical details such as IP address and browser.
+- **Sign-in records** kept by our sign-in provider: sessions, the passkeys you add for Face ID or fingerprint sign-in (the public part only; your fingerprint or face never leaves your device), a name for each passkey, such as its device type and browser, which you can change, and technical details such as IP address and browser.
 - **Your notification settings and devices**: which notifications you turned off, and for each device where you turned notifications on, the address the browser's push service gave it.
 - **Leadership changes you're part of**: who left and who took each office or organization, and when, and any mentoring arrangement (see below).
 - **Your away dates** and, if you are the bishop or a counselor, your **appointment hours**.
@@ -163,7 +163,7 @@ The app does not use advertising or tracking cookies, and no analytics. It store
 
 - your sign-in session, so you stay signed in
 - your light or dark mode choice
-- whether you dismissed the "install the app" hint, or chose to set up Face ID or fingerprint sign-in on this device
+- whether you dismissed the "install the app" hint, or chose to set up Face ID or fingerprint sign-in on this device, and which of your saved devices this one is
 - on the demo, whether you hid its banner
 - the app's own files, so it opens quickly and can show notifications
 

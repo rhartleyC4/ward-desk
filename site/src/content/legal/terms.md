@@ -1,7 +1,7 @@
 ---
 title: Terms of Service
 description: The terms for using Ward Desk, a free service provided as is.
-lastUpdated: 2026-11-08
+lastUpdated: 2026-11-09
 ---
 
 <!-- DRAFT for the owner's review. Not legal advice. Have it checked before publishing, especially the warranty, liability and governing-law sections. -->

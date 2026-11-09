@@ -28,7 +28,7 @@
 | Profile keeps email and name (from Google `full_name`, else part of the email) | `20261101000000_initial_schema.sql` (`profiles`, `handle_new_user`) |
 | Office and organization stored on the profile | `20261102050216_add_bishopric_office.sql`, `20261108060300_leader_organizations.sql` |
 | Google sign-in uses only openid, email, profile scopes | README.md "Google sign-in" |
-| Passkeys held by Supabase Auth | README.md "Face ID and fingerprint sign-in", `src/lib/passkeys.ts` |
+| Passkeys held by Supabase Auth, each with a name the person can change | README.md "Face ID and fingerprint sign-in", `src/lib/passkeys.ts` (`deviceLabel`), `renamePasskey` in `src/lib/queries.ts` |
 | Sessions, IP, browser in sign-in records | Supabase Auth's own `auth` schema (`auth.sessions`, audit log); backed up per README.md "Backups and restore" |
 | People can change their own name, nothing else; nobody signed in changes an email | `20261108034742_profile_edits_and_allowlist_link.sql`; Account page (commit 4b24790) |
 | Admins delete accounts (not their own); profile and personal rows go; requests and other records stay as "Former member" | `20261108035016_delete_account.sql` (`delete_account`, `delete_person`) |
@@ -116,7 +116,7 @@
 | Session token in localStorage | `src/lib/supabase.ts` (supabase-js default storage) |
 | Theme choice | `src/theme.ts` (MUI color scheme) |
 | Install hint dismissed | `src/components/InstallPrompt.tsx` |
-| Passkey choice per device | `src/lib/passkeys.ts` |
+| Passkey choice per device, and which saved passkey was made here | `src/lib/passkeys.ts` |
 | Demo banner hidden (sessionStorage) | `src/components/EnvironmentBanner.tsx` |
 | Service worker caches app files | `vite.config.ts` (vite-plugin-pwa / Workbox) |
 | No analytics in the app | No analytics library in `package.json` or `src/` |

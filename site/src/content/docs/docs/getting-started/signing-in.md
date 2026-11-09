@@ -37,9 +37,9 @@ Why this matters on an iPhone: an email link always opens in Safari, not in the 
 
 Passkeys sync through iCloud Keychain or Google Password Manager, so a new phone usually has them already. They only work on the address they were made for.
 
-### See or remove your devices
+### See, rename or remove your devices
 
-Open **Settings**, tap your name at the top, and look under **Face ID and fingerprint**. Each device you set up is listed with the date it was added and last used. Tap the bin to remove one, for example if a phone is lost. You can always sign in with an email link instead. See [Your account](/docs/settings/your-account/).
+Open **Settings**, tap your name at the top, and look under **Face ID and fingerprint**. Each device you set up is listed with the date it was added and last used. Tap the pencil to give one a name you'll recognize. Tap the bin to remove one, for example if a phone is lost. You can always sign in with an email link instead. See [Your account](/docs/settings/your-account/).
 
 ## Sign out
 
