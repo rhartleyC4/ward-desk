@@ -1,6 +1,6 @@
 # Ward Desk
 
-A mobile-first web app (PWA) for managing ward administration in one place: callings (proposing names, discussion, appointments) and sacrament meeting planning (conducting assignments, speakers, talks).
+A mobile-first web app (PWA) for managing ward administration in one place: callings, appointments, meeting agendas, sacrament meeting planning, requests between people, and changes of leadership.
 
 > Contains no member data in this repo. All data lives in Supabase. Never commit real member names or data.
 
@@ -9,28 +9,36 @@ A mobile-first web app (PWA) for managing ward administration in one place: call
 **Callings**
 - Propose and discuss names for a calling, right on the bishopric meeting agenda
 - Assign the bishop or a counselor to meet with each approved name
-- Executive secretaries schedule those appointments for the leaders they cover
+
+**Appointments**
+- Executive secretaries book appointments for the leaders they cover, from each leader's hours
+- Messages offering times, confirmations and reminders the day before
+- Leaders report how each one went
 
 **Meetings**
-- Conducting assignments by date
-- Speakers, topics, and talk assignments
-- Reminders to the people assigned
+- A live agenda for each meeting, with open items carried forward until they're done
+- Prayers and spiritual thoughts assigned from the agenda
+- Sacrament meeting planning: conducting assignments, speakers, topics and talks
 
 **Requests**
 - The bishopric asks someone to do something. The person taps **Got it**, then **It's done** (or **I can't do this**), with an optional note. The sender sees each step, and a request unread after two days is flagged
 - An agenda item can be handed to someone the same way, and shows who has it and where it stands
 - Ward leaders ask for a calling change (fill a calling, release someone, both, or just suggest names). It goes onto the bishopric's callings list right away and to the bishop or counselor over that organization, who marks it received. The leader sees how far along it is (sent, received, being worked on, finished) but never names or decisions
 
-All three modules share the same users, roles, notifications, and calendar.
+**Leadership changes**
+- A guided change of bishopric or ward leader moves open work to whoever takes over
+- The outgoing bishop can stay on for a while to help the new one
 
-**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Meetings (each meeting's agenda), Sacrament, Appointments (executive secretaries only) and Requests. The Requests tab shows a count of what's waiting on you. Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, the day-ahead summary), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
+All of these share the same users, roles, notifications, and calendar.
+
+**Layout.** The tab bar (at the bottom on phones, the top on wider screens) holds only everyday work: Home, Meetings (each meeting's agenda), Sacrament, Appointments (executive secretaries only) and Requests. Each tab can show a count of what's waiting for you there (`src/lib/tabCounts.ts`). Everything set up once lives in **Settings**, opened from the initials button at the top right, and grouped into You, Appointments, Meetings and Ward (`settingsFor` in `src/lib/access.ts`). Each person sees only the settings their role can change. Until someone has finished the one-time steps that apply to them (appointment hours, Face ID, notifications), a "Finish setting up" card shows on Home, a red dot shows on the initials, and the checklist sits at the top of Settings (`src/lib/setup.ts`).
 
 ## Stack
 
 - **Frontend:** React + TypeScript PWA built with Vite and [MUI](https://mui.com/), hosted on Cloudflare Pages. Light and dark themes follow the device by default; Appearance in Settings overrides it (see `src/theme.ts`)
-- **Backend:** Supabase (Postgres, Auth, Realtime, Edge Functions)
-- **Auth:** Google sign-in and email magic links, invite-only via an allowlist table
-- **Notifications:** Web Push (VAPID). Day-ahead summaries come from a scheduled GitHub Actions job (`scripts/notify`); requests notify right away through a Supabase Edge Function (`supabase/functions/push`). See "Notifications" below
+- **Backend:** Supabase (Postgres, Auth, Edge Functions)
+- **Auth:** Google sign-in, email magic links and passkeys (Face ID or fingerprint), invite-only via an allowlist table
+- **Notifications:** Web Push (VAPID). Scheduled ones run from `pg_cron` in the database, which calls a Supabase Edge Function (`supabase/functions/notify`) every 10 minutes; requests notify right away through another (`supabase/functions/push`). See "Notifications" below
 
 ## Roles
 
@@ -56,7 +64,7 @@ Each appointment has a length (`interviews.duration_minutes`): 10 minutes unless
 
 The bishopric keeps the standing schedule in **Settings › Standing schedule**: regular meetings (`recurring_events`, every week or one week of the month, with an optional time), rotations (`rotations`) and each member's assignments (`stewardships`). A rotation is due in the months ticked and either falls on a set day ("3rd Sunday", `weekday` + `week_of_month`) or runs any time that month. It reminds whoever has the turn (`assignee_id`); one that names someone outside the app (`assignee_label`, like "EQ President") reminds the whole bishopric. Home shows a set-day rotation on its day and lists the month's under **This month**, for the bishop, counselors and secretaries alike. Assignments are picked from the calling list's organizations (or typed in for anything else). When a name is marked Approved, "Meets with" fills in with the bishop or counselor assigned to that calling's organization, unless someone already meets with them, the calling isn't on the list, or two leaders share the organization. The secretaries' Home has a folded **Who covers what** card listing each leader's areas.
 
-New appointments start at the usual length for their kind (`appointment_lengths`, one row per purpose, all 10 minutes to begin with), which the bishopric sets under **Usual lengths** on Home.
+New appointments start at the usual length for their kind (`appointment_lengths`, one row per purpose, all 10 minutes to begin with), which the bishopric sets in **Settings › Usual lengths**.
 
 The executive and assistant executive secretaries land on **Home**, "Your week": tomorrow's reminders to send; who needs an appointment with the leaders they schedule for, with open times by day at the chosen length and a button to book one; booked times still **To confirm**, with the length adjustable and a warning when one runs into the next; and each leader's hours for the next seven days. A secretary not yet assigned to any leader sees everyone.
 
@@ -64,7 +72,7 @@ Once a booked time is confirmed (`interviews.confirmed_at`, set by sending the c
 
 The day before, the secretary sends each person a reminder from a **Reminder the day before** template (`reminded_at`), and reminds everyone who attends a standing meeting they've been given in **Settings › Standing schedule** ("Who reminds people the day before", `recurring_events.reminder_by`) from a **Meeting reminder** template, which can use `{meeting}` and `{when}`. A meeting linked to its agenda ("Its agenda" in the same editor, `recurring_events.agenda_template_id`, filled in for meetings named like an agenda) can also name who is down on that day's agenda: `{opening_prayer}`, `{spiritual_thought}` and `{closing_prayer}` one at a time (to write to that person), or `{assignments}` for all of them, one per line (a line holding only `{assignments}` is dropped when no one is down yet). An assignment no one has shows as "(not assigned yet)", and the Reminders page warns about it with a link to fill it in on the agenda. Sent meeting reminders are kept in `meeting_reminders`. The **Reminders** page (`/reminders?date=…`) lists them with each message ready to copy, text or email.
 
-To reach someone, the secretary picks a few open times and writes a message from a template (`message_templates`, shared by the bishopric and edited on Home). Templates use variables such as `{first_name}`, `{leader}`, `{length}`, `{times}` and `{time}`, and should stay general rather than say what the appointment is for. Wording in braces with a bar, like `{this time|one of these times}`, uses the first part when one time is offered and the second when there are more; a single time is written without a bullet. **Copy** puts the text on the clipboard; **Open Messages** opens the phone's messaging app with the text filled in and no recipient, so no phone numbers are stored. Sending records `offered_at` and `offered_times`, so the list shows when times went out and the picker marks them when the reply comes in. Offered times are held for three days: no one else's picker offers them until that person is booked, the secretary presses **Release**, or the three days pass. Booked appointments have a confirmation message too.
+To reach someone, the secretary picks a few open times and writes a message from a template (`message_templates`, shared by the bishopric and edited in **Settings › Message templates**). Templates use variables such as `{first_name}`, `{leader}`, `{length}`, `{times}` and `{time}`, and should stay general rather than say what the appointment is for. Wording in braces with a bar, like `{this time|one of these times}`, uses the first part when one time is offered and the second when there are more; a single time is written without a bullet. **Copy** puts the text on the clipboard; **Open Messages** opens the phone's messaging app with the text filled in and no recipient, so no phone numbers are stored. Sending records `offered_at` and `offered_times`, so the list shows when times went out and the picker marks them when the reply comes in. Offered times are held for three days: no one else's picker offers them until that person is booked, the secretary presses **Release**, or the three days pass. Booked appointments have a confirmation message too.
 
 For a youth under 18 the secretary texts a parent instead. Ticking "Youth under 18" on an appointment (`interviews.is_youth`, set automatically for youth interviews) and entering the parent's name (`parent_name`) switches its messages to the templates written to a parent (`message_templates.audience = 'parent'`), where `{parent_name}` greets the parent and `{first_name}` is the youth's. Only the parent's name is kept, never a birthdate or phone number.
 
@@ -93,14 +101,14 @@ Besides the instant ones for requests (below), these are sent:
 - **Appointment changes**, as they happen:
   - To the secretaries who book for that leader: a new appointment to book (added, or handed to that leader), a missed one sent back for a new time, and away dates that cover appointments already booked.
   - To the leader: one booked for today, or for tomorrow after tomorrow's summary went out, one moved or cancelled, and one handed to them.
-  - To the whole bishopric: away dates that leave a Sunday with none of the bishop and counselors at church ("No bishopric on Sunday"), or only one of them ("Short-handed Sunday", naming which one by office). The Away page and bishopric Home show the same warning in the app.
+  - To the whole bishopric: away dates that leave a Sunday with none of the bishop and counselors at church ("No bishopric on Sunday"), or only one of them ("Short-handed Sunday", naming which one by office). The **Dates I'll be away** page and bishopric Home show the same warning in the app.
   - Nobody hears about their own change. A change a mentor made for the new bishop counts as the bishop's, so the others hear as usual and the bishop is told "Your mentor changed an appointment for you" (`notification_outbox.acted_by`). Triggers on `interviews` and `absences` write each change to `notification_outbox` and ask the `notify` function to run straight away; the 10-minute run picks up anything that call missed. Who hears what is in `src/lib/notices.ts`. Changes made as the database owner (seed, imports) notify no one.
 
 The scheduled ones go once per person and day (`notification_log`), and only when there's something to do. The timing and text are in `src/lib/followUp.ts` and `scripts/notify/`.
 
 The **day-ahead summary** lists that person's next day:
 
-- The standing meetings on the **Schedule** page (`recurring_events`) that fall on that day, with their times
+- The standing meetings in **Settings › Standing schedule** (`recurring_events`) that fall on that day, with their times
 - Their rotations: one with a set day on that day, and on the 1st of the month "This month: …" for each one due any time that month. Only the title is sent, never the label naming who it's with, so keep titles general
 - Conducting sacrament meeting, when they're down to conduct, with how many releases and sustainings there are to read
 - Their own booked appointments: how many, from the first start to the last end
@@ -116,7 +124,7 @@ Each device's push subscription lives in `push_subscriptions` (saved through `sa
 
 On iPhone, notifications only work from the Home Screen app (see "iPhone users"). The service worker that shows them is only in a built app, so locally use `npm run build && npm run preview`, not `npm run dev`.
 
-**Trying it locally:** `npm run db:env` writes a VAPID key pair for this machine into `.env`. Build and preview the app, sign in as a bishopric account, turn the summary on from the Account page, then:
+**Trying it locally:** `npm run db:env` writes a VAPID key pair for this machine into `.env`. Build and preview the app, sign in as a bishopric account, turn on notifications for the device from the Account page, then:
 
 ```bash
 npm run notify -- --date 2026-11-08 --dry-run
@@ -151,8 +159,8 @@ npx supabase functions serve --env-file supabase/functions/.env
 | Sheet tab | In the app |
 |-----------|------------|
 | Sacrament | **Sacrament** page (`meetings`, `program_items`) |
-| Bishopric Schedule | **Schedule** page (`recurring_events`, `rotations`, `stewardships`) |
-| Travel | **Away** page (`absences`). Warns when whoever is conducting is away |
+| Bishopric Schedule | **Settings › Standing schedule** (`recurring_events`, `rotations`, `stewardships`) |
+| Travel | **Settings › Dates I'll be away** (`absences`). Warns when whoever is conducting is away |
 | Weekly agenda tab (copied every Sunday) | **Meetings** tab, assembled live. Upcoming sacrament meetings, callings, releases, and sustainings fill in automatically. Discussion and calendar items carry forward until marked done. |
 | Ward council agenda sheet | **Meetings** tab, Ward Council tab. Same idea: the prayer roll and assignments fill in, and each organization's items carry forward until marked done. |
 | Callings Needed table | The callings section of the bishopric agenda on **Meetings** (`calling_needs`, `calling_candidates`). The bishopric adds callings and names, changes statuses, and picks who meets with each approved name. Marking a name Accepted sets the sustaining and the release for that Sunday (or the coming one), marks the appointment met, and from that Sunday on the calling shows under "Sustainings today" and "Releases today" instead of in the callings list. The bishopric can move either date from those sections |
@@ -256,7 +264,7 @@ Where the settings live, for reference (`env:github` fills them):
 
 | Where | Secrets | Variables |
 |---|---|---|
-| Repository | `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_ACCOUNT_ID`, `NOTIFY_ENABLED`, `DEPLOY_ENABLED` |
+| Repository | `CLOUDFLARE_API_TOKEN`, `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY`, `BACKUP_DB_URL_PRODUCTION`, `BACKUP_DB_URL_STAGING` | `CLOUDFLARE_ACCOUNT_ID`, `NOTIFY_ENABLED`, `DEPLOY_ENABLED`, `BACKUP_ENABLED`, `BACKUP_AGE_RECIPIENT`, `BACKUP_R2_BUCKET`, `BACKUP_R2_ENDPOINT`. A fork with no training site also sets `DEPLOY_STAGING` to `false` by hand |
 | Environment `staging` | `SUPABASE_DB_URL` (session pooler), `SUPABASE_ACCESS_TOKEN` (deploy bot), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_NAME`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY`, `STAGING_ADMIN_EMAILS` |
 | Environment `production` | `SUPABASE_DB_URL`, `SUPABASE_ACCESS_TOKEN`, `VAPID_PRIVATE_KEY` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-gp7` and no `STAGING_ADMIN_EMAILS` |
 
@@ -296,7 +304,7 @@ npm run notify:setup -- production
 
 It reads the project ref, VAPID public key and time zone from that GitHub environment and asks you to confirm. Then it makes a new `NOTIFY_SECRET`, sets the functions' secrets (asking for the VAPID private key if the project has none, since GitHub can't hand a secret back), builds and deploys both functions (`--skip-deploy` leaves them as they are), saves the function's address and the secret in the database's Vault (`notify_url`, `notify_secret`), and starts one run of the scheduled job to show it works. That run sends whatever happens to be due at that moment, as the schedule would. It prints the new secret once, for your password manager.
 
-Running it again is safe: it replaces the secret in both places and redeploys. Run it again after changing `supabase/functions/`, `scripts/notify/` or the `src/lib/` code they use, and after resetting the training site (a reset can clear the Vault). Do staging first. `npm run notify:setup -- local` does the Vault and test-run steps against the local stack, once `npx supabase functions serve --env-file supabase/functions/.env` is running.
+Running it again is safe: it replaces the secret in both places and redeploys. Run it again after resetting the training site (a reset can clear the Vault). Do staging first. `npm run notify:setup -- local` does the Vault and test-run steps against the local stack, once `npx supabase functions serve --env-file supabase/functions/.env` is running.
 
 If the job stops working later, `npm run env:check -- staging` shows the last answer. A `401` means the Vault secret and `NOTIFY_SECRET` differ, so run the setup again.
 
@@ -319,7 +327,7 @@ npm run alerts:setup -- staging
 npm run alerts:setup -- production
 ```
 
-It asks for the address (default: your git email; separate several with commas) and that project's Resend API key, saves them in Vault (`alert_email`, `resend_api_key`, and `alert_label`, which goes at the start of the subject), and sends a test email. On production it also turns the missing-backup alert on (`health_state.expects_backups`) once the `BACKUP_ENABLED` repository variable is true, so run it again after turning backups on. Staging never expects backups, since it only gets them when you run one by hand. Until it has run, `health_check()` only returns what it found, so local databases and fresh environments stay quiet. Run it again after resetting the training site. To try the check by hand, run `select public.health_check();` as the database owner. It returns the problem lines and moves the window forward.
+It asks for the address (default: your git email; separate several with commas) and that project's Resend API key, saves them in Vault (`alert_email`, `resend_api_key`, `alert_label`, which goes at the start of the subject, and `alert_from`, built from that environment's sender in `supabase/config.toml`), and sends a test email. On production it also turns the missing-backup alert on (`health_state.expects_backups`) once the `BACKUP_ENABLED` repository variable is true, so run it again after turning backups on. Staging never expects backups, since it only gets them when you run one by hand. Until it has run, `health_check()` only returns what it found, so local databases and fresh environments stay quiet. Run it again after resetting the training site. To try the check by hand, run `select public.health_check();` as the database owner. It returns the problem lines and moves the window forward.
 
 ### Face ID and fingerprint sign-in (passkeys)
 
@@ -365,7 +373,7 @@ Every night `.github/workflows/backup.yml` dumps the production database, encryp
 **What isn't, and why that's fine:**
 
 - The code, the Cloudflare Pages sites and their settings, and the GitHub variables can be rebuilt from this repo and `npm run env:github`.
-- Vault secrets (`notify_url`, `notify_secret`) and the functions' secrets: `npm run notify:setup -- production` creates fresh ones.
+- Vault secrets (`notify_url`, `notify_secret`) and the functions' secrets: `npm run notify:setup -- production` creates fresh ones. The alert settings in Vault (`alert_email`, `resend_api_key`, `alert_label`, `alert_from`) come back with `npm run alerts:setup -- production`.
 - Supabase's own schemas (`storage`, `realtime`, `cron`, `vault`, `extensions`): the platform or the migrations create them. The app stores no files.
 
 **Where:** `<bucket>/production/daily/<UTC time>.dump.age`, plus the month's first backup again as `production/monthly/<YYYY-MM>.dump.age`. R2 lifecycle rules delete dailies after 30 days and monthlies after 90, so there are about 30 dailies and 3 monthlies. The periods are set in `scripts/lib/backup-retention.mjs` (so deleted data is out of every backup within about three months), and `npm run backup:lifecycle -- production` applies them to the bucket; `npm run env:check` reads them back. A manual run can back up staging the same way (`gh workflow run backup.yml -f environment=staging`).
@@ -383,7 +391,7 @@ Every night `.github/workflows/backup.yml` dumps the production database, encryp
    It prints the public key (`age1…`). That's the only part that goes to GitHub. Without the private key the backups can't be read, so the password manager entry is the one thing you must not lose. The successor gets it in the handoff (step 7).
 2. **R2 bucket.** In Cloudflare, go to R2 → Create bucket `ward-desk-backups` (no public access). Expiry is set from the repo, not the dashboard, once step 4 has put the bucket and endpoint on GitHub: create an R2 API token with **Admin Read & Write** on the bucket (the lifecycle API needs it; the upload and restore tokens can't), then run `npm run backup:lifecycle -- production --dry-run` to see the change and `npm run backup:lifecycle -- production` to apply it (it asks first). It covers both environments' prefixes, since they share the bucket. Delete the Admin token afterwards, or keep it in your password manager for the next change.
 3. **R2 tokens.** R2 → Manage API tokens → Create: **Object Read & Write**, limited to that bucket, for GitHub. Make a second one with **Object Read** only for restores, and keep it in your password manager.
-4. **GitHub.** `npm run env:github -- production` asks for the age public key, the bucket, and the read/write token. It builds the R2 endpoint from `CLOUDFLARE_ACCOUNT_ID`, and asks for the database password to set `BACKUP_DB_URL_PRODUCTION`. That is a repository secret holding the same URL as the environment's `SUPABASE_DB_URL`, because the production environment only lets the `production` branch use its secrets, and scheduled runs start from `main`. Do the same for staging if you want staging backups. They're optional, so `env:check -- staging` lists the backup settings as notes, not failures.
+4. **GitHub.** `npm run env:github -- production` asks for the age public key, the bucket, and the read/write token. It builds the R2 endpoint from `CLOUDFLARE_ACCOUNT_ID`, and asks for the database password to set `BACKUP_DB_URL_PRODUCTION`. That is a repository secret holding the same URL as the environment's `SUPABASE_DB_URL`, because the production environment only lets the `gp7` branch use its secrets, and scheduled runs start from `main`. Do the same for staging if you want staging backups. They're optional, so `env:check -- staging` lists the backup settings as notes, not failures.
 5. **Turn it on and try it:**
 
    ```bash
@@ -460,14 +468,14 @@ It returns a count for each kind. The first run on a database deletes everything
 
 ## Handoff checklist
 
-Do these in order when passing the app to a successor:
+Do these in order when passing the app to a successor. The full walk-through is [Handing the project to a new owner](https://warddesk.app/docs/operations/handover/):
 
 1. Add the successor as **admin**: `npm run admin:add -- production <their email>`
 2. Transfer or share the **Supabase** organization/project ownership
 3. Add them as Owner on the **Google Cloud** project (IAM → Grant access) and have them accept. Change the consent screen's support and developer contact email to theirs, then remove yourself. Or have them create new OAuth credentials and update Supabase Auth
-4. Transfer the **Cloudflare** Pages projects and the **GitHub** repo
+4. Recreate the **Cloudflare** Pages projects in their account, since we found no documented way to move one between accounts, and transfer the **GitHub** repo
 5. Invite them to the **Resend** team (Settings → Team) and make them owner
-6. Transfer the **domain** `warddesk.app` to the successor's Cloudflare account (Domain Registration → Transfer, or move the zone with the Pages projects). Its DNS records for the Pages sites and Resend move with it, so nothing else needs updating
+6. Transfer the **domain** `warddesk.app` to the successor's Cloudflare account (Domain Registration → Transfer, or move the zone). Don't assume its DNS records came across: check the ones for the Pages sites, Resend and any other wards' subdomains, and re-create what's missing
 7. Hand over secrets securely (password manager, not email or chat), including the backup age key and the R2 read-only token
 8. Send alert emails to them: `npm run alerts:setup -- production --email <their email>` (and the same for staging)
 9. Confirm the successor can sign in, see the right data, and receive a test notification and sign-in email. `npm run env:check -- production` should be all ✓
@@ -487,10 +495,11 @@ Each meeting with an agenda is a row in `agenda_templates`: its name, URL slug, 
 | `releases`, `sustainings` | From the callings section |
 | `prayer_roll` | The prayer roll, shared by every agenda that shows it |
 | `closing_prayer` | The closing prayer from the agenda header |
+| `follow_ups` | Requests between bishopric members, still open or finished in the past week |
 
 Callings stay confidential: that section shows nothing to attendees outside the bishopric. Interviews and appointments aren't on any agenda; they live on the **Appointments** page. (The old `interviews` section kind is still in the enum but the database refuses it.)
 
-Manage them on the **Meetings** page. Anyone in the bishopric role (the bishop, counselors, executive secretary and ward clerk) and admins can use it; leaders can't. There you can:
+Manage them in **Settings › Agendas**. Anyone in the bishopric role (the bishop, counselors, executive secretary and ward clerk) and admins can use it; leaders can't. There you can:
 
 - create a meeting and set its day, weeks of the month and time
 - add sections, rename them, move them up or down, and remove them
@@ -505,8 +514,8 @@ A section's kind can't be changed after it's added. Add a new section and remove
 
 ## Maintenance notes
 
-- **Free-tier pause:** Supabase free projects pause after about a week of inactivity. A scheduled ping keeps it awake. If it pauses, restore it from the Supabase dashboard.
-- **Backups:** The free tier may not include automatic backups. Export the database on a regular schedule to a private location.
+- **Free-tier pause:** Supabase pauses a free project after about a week of too little database activity. A ward in daily use stays active, but Supabase doesn't say that scheduled database jobs count, so the quiet training site is the likely one to pause. Resume it from the Supabase dashboard, then run "Reset training site" and `npm run notify:setup -- staging`.
+- **Backups:** Nightly encrypted backups go to Cloudflare R2. See "Backups and restore".
 - **Dead push subscriptions:** The notification job deletes subscriptions that return 404 or 410.
 - **Privacy:** Notification text stays generic, with no names. Keep data retention minimal, and remove proposals once decisions are final.
 - **Branding:** Don't use the church's name or logos in the app. Check the church's guidance on third-party tools before sharing widely.
