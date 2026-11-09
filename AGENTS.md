@@ -65,6 +65,8 @@ npm run lint && npx tsc -b && npm run test:all
 
 `test:all` needs local Supabase running (`npm run db:start`).
 
+`npm run test:e2e` runs the Playwright journeys in `tests/e2e/` against local Supabase, at desktop and phone size. It's not part of `test:all`, but CI runs it and a failure blocks the deploy, so run it after changing a flow it covers. The first time, install the browser with `npx playwright install chromium`. Keep this suite to whole journeys that cross pages or people: permissions belong in pgTAP, queries in integration tests, and rules in unit tests. Each test adds its own uniquely named rows and removes them, because worktrees share one local database.
+
 ## Project conventions
 
 - **Data must stay private.** Never commit real member names or data. The seed, fixtures and tests use invented names only. Keep notification text generic.
@@ -87,15 +89,16 @@ CI (`.github/workflows/ci.yml`) runs on every push. Check it with `gh run list` 
 
 **Which jobs run is decided by the files changed, not the commit type.** A `docs:` commit can still touch code, and paths cannot be wrong. Don't use `[skip ci]`.
 
-| Changed files | `guard` (no tracked `.env`) | `check` (lint, build, unit tests) | `database` (Supabase, pgTAP, integration) |
-|---|---|---|---|
-| Only `*.md`, `.claude/**`, `.gitignore`, `.env.example`, `public/**` | runs | skipped | skipped |
-| `src/**` (UI, pages, components, tests) | runs | **runs** | skipped |
-| `src/lib/**` (queries, types, access, `supabase.ts`) | runs | **runs** | **runs** |
-| `supabase/**`, `tests/integration/**` | runs | skipped | **runs** |
-| `site/**` (overview and docs site) | runs | skipped | skipped (the `site` job runs: astro check, build) |
-| `supabase/functions/**` (the push Edge Function) | runs | **runs** | **runs** |
-| `package.json`, `package-lock.json`, `.nvmrc`, `tsconfig*.json`, `vite.config.ts`, `.oxlintrc.json`, `index.html`, `scripts/**`, `.github/workflows/**` | runs | **runs** | **runs** |
+| Changed files | `guard` (no tracked `.env`) | `check` (lint, build, unit tests) | `database` (Supabase, pgTAP, integration) | `e2e` (Playwright journeys) |
+|---|---|---|---|---|
+| Only `*.md`, `.claude/**`, `.gitignore`, `.env.example`, `public/**` | runs | skipped | skipped | skipped |
+| `src/**` (UI, pages, components, tests) | runs | **runs** | skipped | **runs** |
+| `src/lib/**` (queries, types, access, `supabase.ts`) | runs | **runs** | **runs** | **runs** |
+| `supabase/**`, `tests/integration/**` | runs | skipped | **runs** | **runs** for `supabase/**` and `tests/integration/helpers.ts`, otherwise skipped |
+| `tests/e2e/**` | runs | **runs** | skipped | **runs** |
+| `site/**` (overview and docs site) | runs | skipped | skipped (the `site` job runs: astro check, build) | skipped |
+| `supabase/functions/**` (the push Edge Function) | runs | **runs** | **runs** | **runs** |
+| `package.json`, `package-lock.json`, `.nvmrc`, `tsconfig*.json`, `vite.config.ts`, `playwright.config.ts`, `.oxlintrc.json`, `index.html`, `scripts/**`, `.github/workflows/**` | runs | **runs** | **runs** | **runs** |
 
 - `src/lib/**` also runs `database` because the integration tests call `queries.ts` and `database.types.ts` as real roles.
 - A commit that mixes docs and code runs whatever the code needs. A multi-commit push is judged on the whole push.

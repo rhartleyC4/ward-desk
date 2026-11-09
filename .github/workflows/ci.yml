@@ -41,6 +41,7 @@ jobs:
       check: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.check == 'true' }}
       database: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.database == 'true' }}
       site: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.site == 'true' }}
+      e2e: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.e2e == 'true' }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4.0.3
@@ -54,6 +55,7 @@ jobs:
               - '.nvmrc'
               - 'tsconfig*.json'
               - 'vite.config.ts'
+              - 'playwright.config.ts'
               - '.oxlintrc.json'
               - 'index.html'
               - 'scripts/**'
@@ -63,11 +65,20 @@ jobs:
               - 'src/**'
               # The push Edge Function's logic has unit tests.
               - 'supabase/functions/**'
+              # Linted and typechecked here; the e2e job only runs them.
+              - 'tests/e2e/**'
             database:
               - *shared
               - 'src/lib/**'
               - 'supabase/**'
               - 'tests/integration/**'
+            # The whole app in a browser, so any change to the UI or the database.
+            e2e:
+              - *shared
+              - 'src/**'
+              - 'supabase/**'
+              - 'tests/e2e/**'
+              - 'tests/integration/helpers.ts'
             # The overview and docs site (site/) is its own npm project.
             site:
               - 'site/**'
@@ -125,6 +136,44 @@ jobs:
       # Reads the URL and keys from `supabase status`; refuses to run against anything non-local.
       - name: Integration tests
         run: npm run test:integration
+
+      - name: Stop Supabase
+        if: always()
+        run: npm run db:stop
+
+  e2e:
+    name: End-to-end journeys
+    needs: changes
+    if: needs.changes.outputs.e2e == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Start local Supabase
+        run: npm run db:start
+
+      # Reads the URL and keys from `supabase status`; refuses to run against anything non-local.
+      - name: End-to-end tests
+        run: npm run test:e2e
+
+      # Traces and screenshots of what failed. The seed data is all invented.
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
 
       - name: Stop Supabase
         if: always()
@@ -229,7 +278,7 @@ jobs:
   # A fork with no training site sets the DEPLOY_STAGING repo variable to 'false' so main doesn't try to deploy one.
   deploy:
     name: Deploy to ${{ github.ref_name == 'gp7' && 'production' || 'staging' }}
-    needs: [guard, check, database]
+    needs: [guard, check, database, e2e]
     if: >-
       always() && vars.DEPLOY_ENABLED == 'true' && github.event_name == 'push' &&
       ((github.ref == 'refs/heads/main' && vars.DEPLOY_STAGING != 'false') || github.ref == 'refs/heads/gp7') &&
