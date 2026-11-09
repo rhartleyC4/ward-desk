@@ -27,7 +27,7 @@ Also in the pipeline, with no account of ours: the npm registry, Docker Hub (the
 | Service | What exists | Owner today | Plan assumed |
 |---|---|---|---|
 | Supabase | Two projects: training site and real site, plus a separate deploy-bot account | The maintainer's account | Free |
-| Cloudflare | Pages projects `ward-desk-staging`, `ward-desk`, `ward-desk-site`; the `warddesk.app` zone and registration; R2 bucket `ward-desk-backups` | The maintainer's account | Free (R2 free tier) |
+| Cloudflare | Pages projects `ward-desk-staging`, `ward-desk-gp7`, `ward-desk-site`; the `warddesk.app` zone and registration; R2 bucket `ward-desk-backups` | The maintainer's account | Free (R2 free tier) |
 | Resend | Domain `warddesk.app`, one sending-only key per Supabase project | The maintainer's account | Free |
 | GitHub | The private repository, two Environments (`staging`, `production`) | The maintainer's account | Free |
 | Google Cloud | One OAuth client shared by both environments | A personal Gmail account, with no organization | No billing account |

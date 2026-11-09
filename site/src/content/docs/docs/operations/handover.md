@@ -139,7 +139,7 @@ Cloudflare cannot move a Pages project from one account to another in a way we f
    ```
 
    ```bash
-   npx wrangler pages project create ward-desk --production-branch gp7
+   npx wrangler pages project create ward-desk-gp7 --production-branch gp7
    ```
 
    ```bash

@@ -29,7 +29,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { parseArgs } from 'node:util'
-import { ENVIRONMENTS, ask, confirmOrStop, environmentArg, fail, gh, rowsOf, step, supabase } from './lib/cli.mjs'
+import { ENVIRONMENTS, ask, confirmOrStop, environmentArg, fail, gh, pagesProjects, rowsOf, step, supabase } from './lib/cli.mjs'
 
 const { values: flags, positionals } = parseArgs({ allowPositionals: true, options: { 'dry-run': { type: 'boolean', default: false } } })
 const env = environmentArg(positionals, 'env:github')
@@ -156,7 +156,26 @@ if (secrets.SUPABASE_ACCESS_TOKEN) {
 // --- Build settings --------------------------------------------------------------
 
 step('Build settings')
-if (vars.CLOUDFLARE_PAGES_PROJECT !== expected.pagesProject) setVar('CLOUDFLARE_PAGES_PROJECT', expected.pagesProject, vars.CLOUDFLARE_PAGES_PROJECT ? `was "${vars.CLOUDFLARE_PAGES_PROJECT}"` : 'missing')
+// Whoever created the project chose its name, so it's asked for and looked up, never assumed.
+const cloudflareProjects = pagesProjects()
+const currentProject = vars.CLOUDFLARE_PAGES_PROJECT
+if (!currentProject || cloudflareProjects?.every((p) => p.name !== currentProject)) {
+  const host = new URL(expected.url).host
+  const suggested = cloudflareProjects?.find((p) => p.domains.includes(host))?.name ?? ''
+  if (currentProject) console.log(`  Cloudflare has no Pages project named "${currentProject}".`)
+  if (cloudflareProjects?.length) console.log(`  Your Pages projects: ${cloudflareProjects.map((p) => p.name).join(', ')}`)
+  else console.log(cloudflareProjects ? '  Your Cloudflare account has no Pages projects yet. Create one first (README, "One-time setup").' : '  Couldn’t list your Pages projects, so the name can’t be checked. Run npx wrangler login to have it checked.')
+  let name
+  do {
+    name = (await askFor(`Cloudflare Pages project for ${env}${suggested ? ` [${suggested}]` : ' (Enter to skip)'}: `)) || (dryRun ? '' : suggested)
+    if (name && cloudflareProjects?.every((p) => p.name !== name)) {
+      console.log(`  Cloudflare has no Pages project named "${name}".`)
+      name = null
+    }
+  } while (name === null)
+  if (name) setVar('CLOUDFLARE_PAGES_PROJECT', name, currentProject ? `was "${currentProject}"` : 'missing')
+  else if (!dryRun) console.log('  Skipped. Deploys to this environment will fail until it’s set.')
+}
 if (!vars.WARD_NAME?.trim()) {
   const name = (await askFor('Ward name, shown in the header and as the installed app’s name [Ward Desk]: ')) || 'Ward Desk'
   setVar('WARD_NAME', name, 'missing')

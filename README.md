@@ -234,7 +234,7 @@ A few steps need a person in a dashboard. Do these first:
    npx wrangler pages project create ward-desk-staging --production-branch main
    ```
    ```bash
-   npx wrangler pages project create ward-desk --production-branch gp7
+   npx wrangler pages project create ward-desk-gp7 --production-branch gp7
    ```
    Under Custom domains, add `demo.warddesk.app` to the staging project and `gp7.warddesk.app` to the other. Create a custom API token (or an account-owned token under Manage Account → Account API Tokens, which survives a handoff). Give it only **Account → Cloudflare Pages → Edit** on your account, with no zone permissions and no IP filtering.
 5. **Google Cloud** (optional, can wait): see "Google sign-in" below.
@@ -242,7 +242,7 @@ A few steps need a person in a dashboard. Do these first:
 
 Then sign in to both CLIs once on your machine: `gh auth login` and `npx supabase login`, with your own account. Run each command for staging first, then production:
 
-1. **`npm run env:github -- staging`** fills the GitHub environment, and any repository settings that are missing. It asks which Supabase project to use, reads the anon key from it, asks for the database password to build the session pooler URL (and tests it), asks for the deploy bot's access token (and checks it can see the project), sets the Pages project, ward name, time zone and Google flag, and makes a VAPID key pair if there isn't one. For production it also limits deploys to the `gp7` branch. It shows the changes and asks first, and prints a new VAPID private key once, for your password manager. `--dry-run` only shows what it would change.
+1. **`npm run env:github -- staging`** fills the GitHub environment, and any repository settings that are missing. It asks which Supabase project to use, reads the anon key from it, asks for the database password to build the session pooler URL (and tests it), asks for the deploy bot's access token (and checks it can see the project), asks which Cloudflare Pages project to deploy to (and checks it exists, if you've run `npx wrangler login`), sets the ward name, time zone and Google flag, and makes a VAPID key pair if there isn't one. For production it also limits deploys to the `gp7` branch. It shows the changes and asks first, and prints a new VAPID private key once, for your password manager. `--dry-run` only shows what it would change.
 2. **`npm run env:auth -- staging`** applies the Auth settings in `[remotes.staging]` of `supabase/config.toml`: site URL, redirect URLs, Resend SMTP and Google. It asks for the project's Resend key and the Google client secret (leave one blank to keep what's set), shows `supabase config diff`, and asks before `supabase config push`. `--diff` only shows the differences. `config push` sends every setting the file declares, so the remotes blocks restate the live values. Edit them there, never in the dashboard.
 3. **Deploy.** The first time, once both environments are filled, turn deploys on with `gh variable set DEPLOY_ENABLED --body true`. Then push to `main` for staging and run "Reset training site" once, since `db push` doesn't load the seed. For production, promote with `git push origin main:gp7`.
 4. **`npm run notify:setup -- staging`** deploys the notification functions and starts the schedule, once that environment's migrations have run. After that, each deploy redeploys the functions right after the migrations, so they never run against a schema they weren't written for. See "Notifications" below.
@@ -256,7 +256,7 @@ Where the settings live, for reference (`env:github` fills them):
 |---|---|---|
 | Repository | `CLOUDFLARE_API_TOKEN` | `CLOUDFLARE_ACCOUNT_ID`, `NOTIFY_ENABLED`, `DEPLOY_ENABLED` |
 | Environment `staging` | `SUPABASE_DB_URL` (session pooler), `SUPABASE_ACCESS_TOKEN` (deploy bot), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_NAME`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY`, `STAGING_ADMIN_EMAILS` |
-| Environment `production` | `SUPABASE_DB_URL`, `SUPABASE_ACCESS_TOKEN`, `VAPID_PRIVATE_KEY` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk` and no `STAGING_ADMIN_EMAILS` |
+| Environment `production` | `SUPABASE_DB_URL`, `SUPABASE_ACCESS_TOKEN`, `VAPID_PRIVATE_KEY` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-gp7` and no `STAGING_ADMIN_EMAILS` |
 
 ### Google sign-in
 

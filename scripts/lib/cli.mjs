@@ -15,8 +15,8 @@ const execFileAsync = promisify(execFile)
 
 // branch: the git branch that deploys there (ci.yml). Promote to production with git push origin main:gp7.
 export const ENVIRONMENTS = {
-  staging: { url: 'https://demo.warddesk.app', pagesProject: 'ward-desk-staging', branch: 'main' },
-  production: { url: 'https://gp7.warddesk.app', pagesProject: 'ward-desk', branch: 'gp7' },
+  staging: { url: 'https://demo.warddesk.app', branch: 'main' },
+  production: { url: 'https://gp7.warddesk.app', branch: 'gp7' },
 }
 
 export const step = (text) => console.log(`\n▸ ${text}`)
@@ -123,6 +123,23 @@ export async function ghTry(args) {
 
 /** A GitHub variable from an environment (or the repository, with no `env`), or '' if unset. */
 export const ghVar = (name, env) => gh(['variable', 'get', name, ...(env ? ['--env', env] : [])])
+
+/**
+ * The account's Cloudflare Pages projects as `[{ name, domains }]`, using this machine's Wrangler
+ * login. null when they can't be read, usually because nobody has run `npx wrangler login`.
+ */
+export function pagesProjects() {
+  const result = spawnSync('npx', ['wrangler', 'pages', 'project', 'list', '--json'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] })
+  if (result.status !== 0) return null
+  try {
+    return JSON.parse(result.stdout).map((p) => ({
+      name: p['Project Name'],
+      domains: String(p['Project Domains'] ?? '').split(',').map((d) => d.trim()).filter(Boolean),
+    }))
+  } catch {
+    return null
+  }
+}
 
 export function ask(question, { hidden = false } = {}) {
   if (hidden && process.stdin.isTTY) return askHidden(question)

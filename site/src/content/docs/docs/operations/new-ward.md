@@ -13,7 +13,7 @@ These are the gaps found in the repository. Until they are closed, a second real
 
 | Where | What it assumes | What to change |
 |---|---|---|
-| `scripts/lib/cli.mjs`, `ENVIRONMENTS` | Only `staging` and `production` exist, each with a URL, a Pages project and a branch | Add an entry per ward. Every script that takes an environment name (`env:github`, `env:auth`, `env:check`, `notify:setup`, `alerts:setup`, `admin:add`) accepts only the names it is given, so many have their own list of allowed names too |
+| `scripts/lib/cli.mjs`, `ENVIRONMENTS` | Only `staging` and `production` exist, each with a URL and a branch | Add an entry per ward. Every script that takes an environment name (`env:github`, `env:auth`, `env:check`, `notify:setup`, `alerts:setup`, `admin:add`) accepts only the names it is given, so many have their own list of allowed names too |
 | `.github/workflows/ci.yml`, `deploy` job | `main` is staging, `gp7` is production. The job name, GitHub environment and URL are all `gp7 ? production : staging` | Add a branch, or turn the job into a matrix over wards. The `deploy` guard on `refs/heads/gp7` and the "commit must be on `main`" check need the same treatment |
 | `ci.yml`, `deploy-site` | Skips only `gp7` | Skip each ward branch |
 | `.github/workflows/notify.yml` | Same two-way mapping, for the manual notify run | Same |
@@ -78,7 +78,7 @@ In the project's **Custom domains**, add `riverside.warddesk.app`. The DNS recor
 ### 5. Branch and GitHub environment
 
 1. Create the branch from `main`: `git push origin main:riverside`. **Do not do this until the secrets in the next step are set**, because pushing the branch starts a deploy.
-2. Run `npm run env:github -- riverside`. It asks for the Supabase project, builds the session pooler URL from the database password, asks for the deploy bot token, sets the Pages project, ward name and time zone, makes a VAPID key pair, and limits deploys to the ward's branch. It prints the VAPID private key once, so save it in the password manager.
+2. Run `npm run env:github -- riverside`. It asks for the Supabase project, builds the session pooler URL from the database password, asks for the deploy bot token, asks which Pages project to use, sets the ward name and time zone, makes a VAPID key pair, and limits deploys to the ward's branch. It prints the VAPID private key once, so save it in the password manager.
 3. Remember the key is **per ward**. A key from another ward must not be reused.
 
 ### 6. Auth settings

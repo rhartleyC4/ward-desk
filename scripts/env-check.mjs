@@ -20,7 +20,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { parseArgs } from 'node:util'
 import { diffRules, lifecycleClient, sameRules } from './lib/backup-retention.mjs'
-import { ask, ENVIRONMENTS, environmentArg, firstLine, ghTry, querySql, rowsOf, supabaseJson, supabaseTry, withPrivateFileAsync } from './lib/cli.mjs'
+import { ask, environmentArg, ENVIRONMENTS, firstLine, ghTry, pagesProjects, querySql, rowsOf, supabaseJson, supabaseTry, withPrivateFileAsync } from './lib/cli.mjs'
 
 const { positionals } = parseArgs({ allowPositionals: true })
 const env = environmentArg(positionals, 'env:check', ['staging', 'production', 'local'])
@@ -152,8 +152,17 @@ async function checkHosted() {
   const ref = vars.SUPABASE_PROJECT_REF
   ghEnv.check(/^[a-z]{20}$/.test(ref ?? ''), 'variable SUPABASE_PROJECT_REF', { detail: ref, fix: fixGithub })
   const anonCheck = ghEnv.later() // filled in once the project's keys are read
-  const cfOk = vars.CLOUDFLARE_PAGES_PROJECT === expected.pagesProject
-  ghEnv.check(cfOk, `variable CLOUDFLARE_PAGES_PROJECT is ${expected.pagesProject}`, { detail: cfOk ? undefined : vars.CLOUDFLARE_PAGES_PROJECT ? `it is "${vars.CLOUDFLARE_PAGES_PROJECT}"` : 'not set', fix: fixGithub })
+  const pagesProject = vars.CLOUDFLARE_PAGES_PROJECT
+  ghEnv.check(!!pagesProject, 'variable CLOUDFLARE_PAGES_PROJECT', { detail: pagesProject || 'not set', fix: fixGithub })
+  if (pagesProject) {
+    const projects = pagesProjects()
+    const found = projects?.find((p) => p.name === pagesProject)
+    const host = new URL(expected.url).host
+    if (!projects) ghEnv.note('Cloudflare Pages project not checked (run npx wrangler login to check it)')
+    else if (ghEnv.check(!!found, `Cloudflare has a Pages project named ${pagesProject}`, { fix: fixGithub })) {
+      ghEnv.check(found.domains.includes(host), `that project serves ${host}`, { detail: found.domains.includes(host) ? undefined : found.domains.join(', '), fix: `add ${host} under Custom domains in Cloudflare` })
+    }
+  }
   ghEnv.check(!!vars.WARD_NAME?.trim(), 'variable WARD_NAME', { detail: vars.WARD_NAME?.trim() || 'not set, so the app is called Ward Desk', fix: fixGithub })
   let tzOk = false
   try {
