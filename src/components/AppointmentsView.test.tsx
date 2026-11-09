@@ -72,13 +72,14 @@ describe('AppointmentsView', () => {
     await user.type(within(nash).getByLabelText('Date for Sister Nash'), '2026-11-15')
     await user.type(within(nash).getByLabelText('Time for Sister Nash'), '10:30')
     await user.click(within(nash).getByRole('button', { name: 'Save' }))
-    expect(a.schedule).toHaveBeenCalledWith('a1', new Date('2026-11-15T10:30').toISOString())
+    expect(a.schedule).toHaveBeenCalledWith('a1', '2026-11-15T17:30:00.000Z')
 
     const reed = screen.getByRole('article', { name: 'Sister Reed' })
     await user.click(within(reed).getByRole('button', { name: 'Done' }))
     expect(a.complete).toHaveBeenCalledWith('a3')
     await user.click(within(reed).getByRole('button', { name: 'Reschedule' }))
     expect(within(reed).getByLabelText('Date for Sister Reed')).toHaveValue('2026-11-08')
+    expect(within(reed).getByLabelText('Time for Sister Reed')).toHaveValue('10:00')
 
     await user.click(within(nash).getByRole('button', { name: 'Not needed' }))
     expect(a.cancel).toHaveBeenCalledWith('a1')

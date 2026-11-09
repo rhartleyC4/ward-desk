@@ -4,6 +4,7 @@
 import type { CallingNeed, Candidate } from './agenda'
 import { isSecretaryOffice } from './access'
 import type { Enums, Tables } from './database.types'
+import { wardParts, wardTimestamp } from './slots'
 
 export type Appointment = Pick<Tables<'interviews'>, 'id' | 'interviewer_id' | 'scheduled_at' | 'person_name' | 'purpose' | 'candidate_id' | 'status' | 'created_at'>
 export type SecretaryAssignment = Pick<Tables<'secretary_assignments'>, 'leader_id' | 'secretary_id'>
@@ -109,15 +110,12 @@ export function whenLabel(iso: string, timeZone: string): string {
   return new Intl.DateTimeFormat('en-US', { timeZone, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(iso))
 }
 
-/** Date and time inputs (browser local time, which is the ward's for anyone using this) to a timestamp. */
-export function toTimestamp(date: string, time: string): string {
-  return new Date(`${date}T${time}`).toISOString()
+/** Date and time inputs, which are the ward's wall clock wherever the device is, to a timestamp. */
+export function toTimestamp(date: string, time: string, timeZone: string): string {
+  return wardTimestamp(date, time, timeZone)
 }
 
-/** A timestamp back to date and time input values in browser local time. */
-export function toInputs(iso: string | null): { date: string; time: string } {
-  if (!iso) return { date: '', time: '' }
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return { date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, time: `${pad(d.getHours())}:${pad(d.getMinutes())}` }
+/** A timestamp back to date and time input values on the ward's wall clock. */
+export function toInputs(iso: string | null, timeZone: string): { date: string; time: string } {
+  return iso ? wardParts(iso, timeZone) : { date: '', time: '' }
 }

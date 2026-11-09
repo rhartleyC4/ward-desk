@@ -52,14 +52,14 @@ function WhenFields({ value, onChange, name }: { value: { date: string; time: st
 
 function AppointmentRow({ appointment: a, data, actions, timeZone }: { appointment: Appointment; data: AppointmentsData; actions: AppointmentsActions; timeZone: string }) {
   const [editing, setEditing] = useState(!a.scheduled_at)
-  const [when, setWhen] = useState(toInputs(a.scheduled_at))
+  const [when, setWhen] = useState(toInputs(a.scheduled_at, timeZone))
   const name = a.person_name ?? 'Unnamed'
   const leader = personLabel(a.interviewer_id, data.profiles) || 'Unassigned'
 
   const save = (e: FormEvent) => {
     e.preventDefault()
     if (!when.date || !when.time) return
-    actions.schedule(a.id, toTimestamp(when.date, when.time))
+    actions.schedule(a.id, toTimestamp(when.date, when.time, timeZone))
     if (a.scheduled_at) setEditing(false)
   }
 
@@ -106,14 +106,14 @@ function AppointmentRow({ appointment: a, data, actions, timeZone }: { appointme
   )
 }
 
-function AddAppointment({ data, onAdd }: { data: AppointmentsData; onAdd: AppointmentsActions['add'] }) {
+function AddAppointment({ data, onAdd, timeZone }: { data: AppointmentsData; onAdd: AppointmentsActions['add']; timeZone: string }) {
   const empty = { interviewer_id: '', person_name: '', purpose: 'other' as Enums<'interview_purpose'> }
   const [form, setForm] = useState(empty)
   const [when, setWhen] = useState({ date: '', time: '' })
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!form.interviewer_id || !form.person_name.trim()) return
-    onAdd({ ...form, person_name: form.person_name.trim(), scheduled_at: when.date && when.time ? toTimestamp(when.date, when.time) : null })
+    onAdd({ ...form, person_name: form.person_name.trim(), scheduled_at: when.date && when.time ? toTimestamp(when.date, when.time, timeZone) : null })
     setForm(empty)
     setWhen({ date: '', time: '' })
   }
@@ -252,7 +252,7 @@ export function AppointmentsView({
 
         <Side>
           <SectionCard title="Add an appointment">
-            <AddAppointment data={data} onAdd={actions.add} />
+            <AddAppointment data={data} onAdd={actions.add} timeZone={timeZone} />
           </SectionCard>
         </Side>
       </Split>

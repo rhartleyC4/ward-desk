@@ -86,9 +86,16 @@ describe('times', () => {
   })
 
   it('round-trips date and time inputs', () => {
-    const iso = toTimestamp('2026-11-08', '10:30')
-    expect(toInputs(iso)).toEqual({ date: '2026-11-08', time: '10:30' })
-    expect(toInputs(null)).toEqual({ date: '', time: '' })
+    const iso = toTimestamp('2026-11-08', '10:30', 'America/Denver')
+    expect(toInputs(iso, 'America/Denver')).toEqual({ date: '2026-11-08', time: '10:30' })
+    expect(toInputs(null, 'America/Denver')).toEqual({ date: '', time: '' })
+  })
+
+  it('reads date and time inputs on the ward’s clock, whatever zone the device is in', () => {
+    expect(toTimestamp('2026-11-08', '10:30', 'America/Denver')).toBe('2026-11-08T17:30:00.000Z')
+    expect(toTimestamp('2026-11-08', '10:30', 'Asia/Tokyo')).toBe('2026-11-08T01:30:00.000Z')
+    expect(toInputs('2026-11-08T17:30:00Z', 'America/Denver')).toEqual({ date: '2026-11-08', time: '10:30' })
+    expect(toInputs('2026-11-08T17:30:00Z', 'Asia/Tokyo')).toEqual({ date: '2026-11-09', time: '02:30' })
   })
 })
 

@@ -253,7 +253,7 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {appointmentPurpose(a, ctx.data.needs, ctx.data.candidates)} · {waiting < 1 ? 'added today' : `waiting ${waiting} day${waiting === 1 ? '' : 's'}`}
-            {a.offered_at && ` · offered ${shortDay(todayIso(new Date(a.offered_at)))}`}
+            {a.offered_at && ` · offered ${shortDay(wardParts(a.offered_at, ctx.timeZone).date)}`}
           </Typography>
           {a.missed_at && (
             <Typography variant="body2" color="warning.main">
@@ -263,7 +263,7 @@ function NeedsRow({ appointment: a, ctx }: { appointment: Appointment; ctx: Ctx 
           )}
           {holding && (
             <Typography variant="body2" color="text.secondary">
-              {a.offered_times.length === 1 ? 'That time is' : `Those ${a.offered_times.length} times are`} held for them until {shortDay(todayIso(holdEnds(a.offered_at!)))}.{' '}
+              {a.offered_times.length === 1 ? 'That time is' : `Those ${a.offered_times.length} times are`} held for them until {shortDay(wardParts(holdEnds(a.offered_at!).toISOString(), ctx.timeZone).date)}.{' '}
               <Button size="small" sx={{ p: 0, minWidth: 0, verticalAlign: 'baseline' }} disabled={ctx.busy} onClick={() => ctx.actions.release(a.id)}>
                 Release
               </Button>

@@ -196,6 +196,14 @@ describe('SecretaryHome', () => {
     expect(onChange).toHaveBeenCalledWith('calling', 10)
   })
 
+  it('dates an offer and its hold on the ward’s calendar, whatever zone the device is in', () => {
+    // 8:00 PM on Friday in Denver, which is already Saturday in UTC and farther east.
+    view(data({ appointments: [appt('a1', 'b', 'Sister Nash', { offered_at: '2026-11-07T03:00:00Z', offered_times: ['2026-11-08T16:20:00Z'] })] }))
+    const nash = screen.getByRole('article', { name: 'Sister Nash' })
+    expect(nash).toHaveTextContent('offered Fri, November 6th')
+    expect(nash).toHaveTextContent('held for them until Mon, November 9th.')
+  })
+
   it('marks times already offered and when', async () => {
     view(data({ appointments: [appt('a1', 'b', 'Sister Nash', { offered_at: '2026-11-06T18:00:00Z', offered_times: ['2026-11-08T16:20:00+00:00'] })] }))
     const nash = screen.getByRole('article', { name: 'Sister Nash' })
