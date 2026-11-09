@@ -1,13 +1,14 @@
-import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined'
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
+import ButtonBase from '@mui/material/ButtonBase'
 import Chip from '@mui/material/Chip'
+import Collapse from '@mui/material/Collapse'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
-import IconButton from '@mui/material/IconButton'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
@@ -16,8 +17,9 @@ import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
 import type { AppRole } from '../lib/access'
-import type { Enums } from '../lib/database.types'
+import { accessPeople, findPeople } from '../lib/accessList'
 import { addDays, longDate, todayIso } from '../lib/dates'
+import { OFFICES } from '../lib/leadership'
 import { addInvite, deleteAccount, loadAccess, removeInvite, updateInvite, updateInviteName, type Account, type Invite, type InviteAccess, type InviteName } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -27,15 +29,6 @@ const ROLES: { role: AppRole; label: string; help: string }[] = [
   { role: 'bishopric', label: 'Bishopric', help: 'Plans meetings and sees callings' },
   { role: 'leader', label: 'Ward leader', help: 'Suggests names for callings' },
   { role: 'admin', label: 'Admin', help: 'Manages meetings and who can sign in' },
-]
-
-const OFFICES: { office: Enums<'bishopric_office'>; label: string }[] = [
-  { office: 'bishop', label: 'Bishop' },
-  { office: 'first_counselor', label: 'First Counselor' },
-  { office: 'second_counselor', label: 'Second Counselor' },
-  { office: 'executive_secretary', label: 'Executive Secretary' },
-  { office: 'assistant_executive_secretary', label: 'Assistant Executive Secretary' },
-  { office: 'ward_clerk', label: 'Ward Clerk' },
 ]
 
 /** How long an account stays after its last role is taken away (purge_old_records in the database). */
@@ -196,6 +189,8 @@ export function AccessPage() {
   const [access, setAccess] = useState<InviteAccess>(NOBODY)
   const [name, setName] = useState<InviteName>(NO_NAME)
   const [deleting, setDeleting] = useState<Account | null>(null)
+  const [find, setFind] = useState('')
+  const [openEmail, setOpenEmail] = useState<string | null>(null)
 
   if (error) return <ErrorNote error={error} />
   if (!data) return <Loading />
@@ -222,15 +217,15 @@ export function AccessPage() {
   }
 
   const isMe = (inviteEmail: string) => inviteEmail.toLowerCase() === profile?.email.toLowerCase()
-  const accountOf = (id: string | null) => data.accounts.find((a) => a.id === id)
   const linked = new Set(data.invites.map((i) => i.profile_id))
   const removed = data.accounts.filter((a) => !linked.has(a.id))
+  const people = findPeople(accessPeople(data.invites, data.accounts), find)
 
   const confirmDelete = async (id: string) => {
     if (await run(() => deleteAccount(supabase, id))) setDeleting(null)
   }
   const deleteButton = (account: Account) => (
-    <Button size="small" color="error" sx={{ mt: 1, ml: -0.5 }} aria-label={`Delete account for ${account.email}`} disabled={save.busy} onClick={() => setDeleting(account)}>
+    <Button size="small" color="error" aria-label={`Delete account for ${account.email}`} disabled={save.busy} onClick={() => setDeleting(account)}>
       Delete account
     </Button>
   )
@@ -262,22 +257,41 @@ export function AccessPage() {
       </SectionCard>
 
       <SectionCard title={`Who can sign in (${data.invites.length})`}>
-        <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />} spacing={1.5}>
-          {data.invites.map((invite) => {
-            const account = accountOf(invite.profile_id)
-            const accountName = account?.display_name
+        <TextField label="Find someone" type="search" size="small" fullWidth autoComplete="off" sx={{ mb: 1 }} value={find} onChange={(e) => setFind(e.target.value)} />
+        {people.length === 0 && <Muted>Nobody matches that.</Muted>}
+        <Stack divider={<Box sx={{ borderTop: 1, borderColor: 'divider' }} />}>
+          {people.map(({ invite, account, name, summary }) => {
             const me = isMe(invite.email)
+            const open = openEmail === invite.email
+            const panelId = `access-${invite.email}`
             return (
-              <Stack key={invite.email} direction="row" sx={{ alignItems: 'flex-start', gap: 1 }}>
-                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                  <Typography sx={{ overflowWrap: 'anywhere' }}>{invite.email}</Typography>
-                  <Muted>{account ? `${accountName || 'Signed in'}${me ? ' (you)' : ''}` : "Hasn't signed in yet"}</Muted>
-                  {!account && (
-                    <Box sx={{ mt: 1.5 }}>
-                      <WaitingName invite={invite} onSave={(next) => void run(() => updateInviteName(supabase, invite.email, next))} />
-                    </Box>
-                  )}
-                  <Box sx={{ mt: 1 }}>
+              <Box key={invite.email}>
+                <ButtonBase
+                  aria-expanded={open}
+                  aria-controls={open ? panelId : undefined}
+                  onClick={() => setOpenEmail(open ? null : invite.email)}
+                  sx={{ display: 'flex', width: 'calc(100% + 16px)', mx: -1, px: 1, minHeight: 56, py: 0.75, gap: 1, justifyContent: 'space-between', textAlign: 'left', borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}
+                >
+                  <Box component="span" sx={{ minWidth: 0 }}>
+                    <Typography component="span" sx={{ display: 'block', overflowWrap: 'anywhere' }}>
+                      {name}
+                      {me ? ' (you)' : ''}
+                    </Typography>
+                    <Typography component="span" variant="body2" color="text.secondary" sx={{ display: 'block' }}>
+                      {summary}
+                      {!account && " · Hasn't signed in yet"}
+                    </Typography>
+                  </Box>
+                  <ExpandMoreIcon fontSize="small" color="action" sx={{ flexShrink: 0, transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 150ms' }} />
+                </ButtonBase>
+                <Collapse in={open} unmountOnExit>
+                  <Stack id={panelId} spacing={1.5} sx={{ pt: 1, pb: 2 }}>
+                    {name !== invite.email && (
+                      <Box sx={{ overflowWrap: 'anywhere' }}>
+                        <Muted>{invite.email}</Muted>
+                      </Box>
+                    )}
+                    {!account && <WaitingName invite={invite} onSave={(next) => void run(() => updateInviteName(supabase, invite.email, next))} />}
                     <AccessFields
                       who={invite.email}
                       access={{ initial_roles: invite.initial_roles, initial_office: invite.initial_office, initial_organization: invite.initial_organization }}
@@ -285,25 +299,28 @@ export function AccessPage() {
                       locked={me ? 'admin' : undefined}
                       onChange={(next) => run(() => updateInvite(supabase, invite.email, next))}
                     />
-                  </Box>
-                  {account && !me && deleteButton(account)}
-                </Box>
-                <Tooltip title={me ? "You can't remove yourself" : 'Remove'}>
-                  <span>
-                    <IconButton
-                      size="small"
-                      aria-label={`Remove ${invite.email}`}
-                      disabled={me || save.busy}
-                      onClick={() => {
-                        if (window.confirm(`Remove ${invite.email}? They won't be able to use the app until they're added again. Their account is deleted after 180 days unless they're added back.`))
-                          run(() => removeInvite(supabase, invite.email))
-                      }}
-                    >
-                      <DeleteOutlinedIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-              </Stack>
+                    <Stack direction="row" sx={{ gap: 1, flexWrap: 'wrap', ml: -0.5 }}>
+                      <Tooltip title={me ? "You can't remove yourself" : ''}>
+                        <span>
+                          <Button
+                            size="small"
+                            color="error"
+                            aria-label={`Remove access for ${invite.email}`}
+                            disabled={me || save.busy}
+                            onClick={() => {
+                              if (window.confirm(`Remove ${invite.email}? They won't be able to use the app until they're added again. Their account is deleted after 180 days unless they're added back.`))
+                                run(() => removeInvite(supabase, invite.email))
+                            }}
+                          >
+                            Remove access
+                          </Button>
+                        </span>
+                      </Tooltip>
+                      {account && !me && deleteButton(account)}
+                    </Stack>
+                  </Stack>
+                </Collapse>
+              </Box>
             )
           })}
         </Stack>
@@ -322,7 +339,7 @@ export function AccessPage() {
                   {account.email}
                   {account.removed_at && ` · removed ${longDate(todayIso(new Date(account.removed_at)))}, deleted after ${longDate(addDays(todayIso(new Date(account.removed_at)), REMOVED_ACCOUNT_DAYS))}`}
                 </Muted>
-                <Box>{deleteButton(account)}</Box>
+                <Box sx={{ mt: 1, ml: -0.5 }}>{deleteButton(account)}</Box>
               </Box>
             ))}
           </Stack>

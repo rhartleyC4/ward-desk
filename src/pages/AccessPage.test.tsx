@@ -32,6 +32,8 @@ const open = async () => {
   await screen.findByRole('heading', { name: 'Access' })
 }
 const chip = (name: string) => screen.getByRole('button', { name })
+/** Opens someone's row, where their details are edited. */
+const expand = (name: RegExp) => userEvent.click(screen.getByRole('button', { name, expanded: false }))
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -49,24 +51,56 @@ describe('AccessPage', () => {
   it('shows who has signed in', async () => {
     await open()
     expect(screen.getByText('Avery (you)')).toBeInTheDocument()
-    expect(screen.getByText('Signed in')).toBeInTheDocument()
-    expect(screen.getByText("Hasn't signed in yet")).toBeInTheDocument()
+    expect(screen.getByText("No roles · Hasn't signed in yet")).toBeInTheDocument()
     expect(screen.getByText('Who can sign in (3)')).toBeInTheDocument()
+  })
+
+  describe('the list', () => {
+    it('gives each person one short row until it is opened', async () => {
+      await open()
+      expect(screen.getByText('Ward Clerk · Scouts leader')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Admin for quinn@ward.test' })).not.toBeInTheDocument()
+      await expand(/quinn@ward\.test/)
+      expect(chip('Admin for quinn@ward.test')).toBeInTheDocument()
+    })
+
+    it('opens one person at a time', async () => {
+      await open()
+      await expand(/quinn@ward\.test/)
+      await expand(/Avery/)
+      expect(chip('Admin for me@ward.test')).toBeInTheDocument()
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Admin for quinn@ward.test' })).not.toBeInTheDocument())
+    })
+
+    it('narrows as you type and says when nobody matches', async () => {
+      await open()
+      await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'clerk')
+      expect(screen.getByText('Ward Clerk · Scouts leader')).toBeInTheDocument()
+      expect(screen.queryByText('Avery (you)')).not.toBeInTheDocument()
+      await userEvent.clear(screen.getByRole('searchbox', { name: 'Find someone' }))
+      await userEvent.type(screen.getByRole('searchbox', { name: 'Find someone' }), 'nobody here')
+      expect(screen.getByText('Nobody matches that.')).toBeInTheDocument()
+    })
   })
 
   describe('names before someone signs in', () => {
     const who = 'new@ward.test'
     const first = () => screen.getByRole('textbox', { name: `First name for ${who}` })
     const last = () => screen.getByRole('textbox', { name: `Last name for ${who}` })
+    const openRow = async () => {
+      await open()
+      await expand(/new@ward\.test/)
+    }
 
     it('asks only for people who have no account yet', async () => {
-      await open()
+      await openRow()
       expect(first()).toBeInTheDocument()
+      await expand(/quinn@ward\.test/)
       expect(screen.queryByRole('textbox', { name: 'First name for quinn@ward.test' })).not.toBeInTheDocument()
     })
 
     it('saves the name when you leave the field', async () => {
-      await open()
+      await openRow()
       await userEvent.type(first(), 'Robin')
       await userEvent.type(last(), ' Vale ')
       await userEvent.tab()
@@ -74,7 +108,7 @@ describe('AccessPage', () => {
     })
 
     it('saves nothing when the name did not change', async () => {
-      await open()
+      await openRow()
       await userEvent.click(first())
       await userEvent.tab()
       expect(updateInviteName).not.toHaveBeenCalled()
@@ -83,6 +117,7 @@ describe('AccessPage', () => {
     it('fills in a name already saved', async () => {
       vi.mocked(loadAccess).mockResolvedValue({ ...data, invites: [invite(who, null, { first_name: 'Robin', last_name: 'Vale' })] } as never)
       await open()
+      await expand(/Robin Vale/)
       expect(first()).toHaveValue('Robin')
       expect(last()).toHaveValue('Vale')
     })
@@ -98,7 +133,7 @@ describe('AccessPage', () => {
 
     it('explains a name that is too long', async () => {
       vi.mocked(updateInviteName).mockRejectedValue(new Error('violates check constraint "allowlist_name_length"'))
-      await open()
+      await openRow()
       await userEvent.type(first(), 'Robin')
       await userEvent.tab()
       expect(await screen.findByText('First and last name together need to fit in 60 characters.')).toBeInTheDocument()
@@ -107,7 +142,8 @@ describe('AccessPage', () => {
 
   it('won\'t let you remove yourself or your own admin access, matching email in any case', async () => {
     await open()
-    expect(screen.getByRole('button', { name: 'Remove me@ward.test' })).toBeDisabled()
+    await expand(/Avery/)
+    expect(screen.getByRole('button', { name: 'Remove access for me@ward.test' })).toBeDisabled()
     expect(chip('Admin for me@ward.test')).toHaveAttribute('aria-disabled', 'true')
     expect(screen.queryByRole('button', { name: 'Delete account for me@ward.test' })).not.toBeInTheDocument()
   })
@@ -161,46 +197,50 @@ describe('AccessPage', () => {
 
   describe('changing someone', () => {
     const who = 'quinn@ward.test'
+    const openQuinn = async () => {
+      await open()
+      await expand(/quinn@ward\.test/)
+    }
 
     it('saves a role as soon as it changes', async () => {
-      await open()
+      await openQuinn()
       await userEvent.click(chip(`Admin for ${who}`))
       expect(updateInvite).toHaveBeenCalledWith(supabase, who, { initial_roles: ['bishopric', 'leader', 'admin'], initial_office: 'ward_clerk', initial_organization: 'Scouts' })
     })
 
     it('clears the position with the role', async () => {
-      await open()
+      await openQuinn()
       await userEvent.click(chip(`Bishopric for ${who}`))
       expect(updateInvite).toHaveBeenCalledWith(supabase, who, { initial_roles: ['leader'], initial_office: null, initial_organization: 'Scouts' })
     })
 
     it('saves no position when none is picked', async () => {
-      await open()
+      await openQuinn()
       await userEvent.selectOptions(screen.getByLabelText(`Position for ${who}`), '')
       expect(updateInvite).toHaveBeenCalledWith(supabase, who, expect.objectContaining({ initial_office: null }))
     })
 
     it('saves no organization when none is picked', async () => {
-      await open()
+      await openQuinn()
       await userEvent.selectOptions(screen.getByLabelText(`Organization for ${who}`), '')
       expect(updateInvite).toHaveBeenCalledWith(supabase, who, expect.objectContaining({ initial_organization: null }))
     })
 
     it('keeps offering an organization no longer on the list', async () => {
-      await open()
+      await openQuinn()
       expect(within(screen.getByLabelText(`Organization for ${who}`)).getByRole('option', { name: 'Scouts' })).toBeInTheDocument()
     })
 
     it('removes them after asking', async () => {
-      await open()
-      await userEvent.click(screen.getByRole('button', { name: `Remove ${who}` }))
+      await openQuinn()
+      await userEvent.click(screen.getByRole('button', { name: `Remove access for ${who}` }))
       expect(removeInvite).toHaveBeenCalledWith(supabase, who)
     })
 
     it('keeps them when the answer is no', async () => {
       vi.mocked(window.confirm).mockReturnValue(false)
-      await open()
-      await userEvent.click(screen.getByRole('button', { name: `Remove ${who}` }))
+      await openQuinn()
+      await userEvent.click(screen.getByRole('button', { name: `Remove access for ${who}` }))
       expect(removeInvite).not.toHaveBeenCalled()
     })
   })
