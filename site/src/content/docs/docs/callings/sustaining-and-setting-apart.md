@@ -16,12 +16,14 @@ Once a name is approved and has met with a leader, the rest is recording what ha
 
 ## When they accept
 
-1. On the callings section, open the **Status** picker for the name and choose **Accepted**.
-2. **Sustain on** appears, set to the coming Sunday. Change it if you need another date.
-3. If someone is being released, the release date is set to the same Sunday. You can move it with **Announce on**.
-4. The appointment is marked met.
+1. In the calling's card, tap **Mark accepted** beside the name.
+2. **Sustain *name* on** appears at the foot of the card, set to the coming Sunday. Change it if you need another date.
+3. If someone is being released, the release date is set to the same Sunday. You can move it with **Release *name* on**, next to it.
+4. The appointment is marked met, and the card shows **To sustain**.
 
-The calling is no longer in "callings to fill". From that Sunday it shows under **Sustainings today** and **Releases today** on the bishopric agenda, where you can move either date.
+If you marked the wrong person, choose **Undo accepted** from the **⋯** menu beside the name.
+
+The calling stays on the list until the sustaining Sunday. From that Sunday it shows under **Sustainings today** and **Releases today** on the bishopric agenda, where you can move either date.
 
 ## When they are sustained
 

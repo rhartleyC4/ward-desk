@@ -16,9 +16,9 @@ When the bishopric decides on a name, you approve it. Approval is what starts th
 
 ## Approve a name
 
-1. Find the name under its calling.
-2. Tap **Approve**. Until a name is approved, this is the only button: a name can't be accepted or declined first.
-3. The name is now **Approved** and **Meets with** appears.
+1. Find the name in its calling's card.
+2. Tap **Approve** beside the name. Until a name is approved, this is the only button: a name can't be accepted or declined first.
+3. The name is now **Approved**, **Meets with** appears, and the card shows **Interview**.
 
 Only one name per calling can be approved at a time. The other names show "Another name is approved" until you step back.
 
@@ -40,7 +40,12 @@ An approved name with a leader appears on the secretary's Home under **Needs an 
 
 ## Change your mind
 
-After approval the **Status** picker offers the next steps: **Considering**, **Approved**, **Accepted** and **Declined**. Choosing **Considering** or **Approved** again steps back, and taking back an acceptance clears the dates it set. **Declined** is final.
+Each name shows one button for its next step. The rarer choices are in the **⋯** menu beside the name:
+
+- For an approved name: **Declined**, or **Back to considering** if you approved the wrong name.
+- For an accepted name: **Undo accepted**, which takes it back to approved and clears the dates it set.
+
+**Declined** is final.
 
 ## Who can see this
 

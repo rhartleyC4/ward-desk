@@ -39,7 +39,7 @@ export const SHOTS: Shot[] = [
   { feature: 'home-leader', role: 'leader', route: '/requests', caption: 'A called leader starts on Requests, where they see what the bishopric has asked and can ask for calling changes.', waitFor: /Got it|New|Sent|Seen|calling/ },
 
   { feature: 'agenda-bishopric', role: 'bishop', route: '/agenda/bishopric', caption: 'The bishopric meeting agenda with every section ready to fill in.', waitFor: /Action \/ discussion items/ },
-  { feature: 'agenda-bishopric-callings', role: 'bishop', route: '/agenda/bishopric', caption: 'Callings are worked on the bishopric agenda: needs, names and where each stands.', waitFor: /Action \/ discussion items/, prepare: scrollToText(/Callings/i) },
+  { feature: 'agenda-bishopric-callings', role: 'bishop', route: '/agenda/bishopric', caption: 'Callings are worked on the bishopric agenda: one card per calling, showing where it stands and its next step.', waitFor: /Action \/ discussion items/, prepare: scrollToText(/^Callings to fill$/) },
   { feature: 'agenda-bishopric-assignments', role: 'secretary', route: '/agenda/bishopric/2026-11-08', caption: 'Prayers and the spiritual thought go to someone picked from a list, who accepts or declines.', waitFor: /Bishopric Meeting Agenda/ },
   { feature: 'agenda-ward-council', role: 'bishop', route: '/agenda/ward-council', caption: 'Ward council agenda, with a section for each organization.', waitFor: /General business/ },
   { feature: 'agenda-ward-council-leader', role: 'leader', route: '/agenda/ward-council', caption: 'Called leaders who attend ward council see only that agenda.', waitFor: /General business/ },

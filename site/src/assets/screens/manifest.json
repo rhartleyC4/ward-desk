@@ -26,7 +26,7 @@
     "agenda-bishopric-callings": {
       "route": "/agenda/bishopric",
       "role": "Bishop",
-      "caption": "Callings are worked on the bishopric agenda: needs, names and where each stands.",
+      "caption": "Callings are worked on the bishopric agenda: one card per calling, showing where it stands and its next step.",
       "variants": [
         "phone-light",
         "phone-dark",
