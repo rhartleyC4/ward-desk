@@ -1,11 +1,13 @@
 // How many things on each main tab are waiting on the signed-in person, for the badges on the tab bar.
-// Rechecked on every page change and when the app comes back to the front.
+// Rechecked on every page change and whenever ward data may have changed (see liveUpdates).
+// This is also where the live-updates channel is opened, since it already knows who's signed in.
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { canPlanMeetings, canSeeCallings, canSendRequests, hasBishopricHome, hasSecretaryHome } from '../lib/access'
 import { showOnAppIcon } from '../lib/appBadge'
+import { listenForWardChanges, onWardChange } from '../lib/liveUpdates'
 import { loadTabCounts } from '../lib/queries'
 import { supabase } from '../lib/supabase'
 import { totalCount, type TabCounts } from '../lib/tabCounts'
@@ -44,11 +46,14 @@ export function WaitingProvider({ children }: { children: ReactNode }) {
   useEffect(() => showOnAppIcon(total), [total])
   useEffect(() => () => showOnAppIcon(0), [])
 
+  // Hear about changes other people make, while someone with a role is signed in.
+  const signedIn = !!userId && roles.length > 0
   useEffect(() => {
-    const onShow = () => document.visibilityState === 'visible' && refresh()
-    document.addEventListener('visibilitychange', onShow)
-    return () => document.removeEventListener('visibilitychange', onShow)
-  }, [refresh])
+    if (!signedIn) return
+    return listenForWardChanges({ client: supabase, doc: document })
+  }, [signedIn, userId])
+
+  useEffect(() => onWardChange(refresh), [refresh])
 
   return <WaitingContext.Provider value={{ counts, refresh }}>{children}</WaitingContext.Provider>
 }

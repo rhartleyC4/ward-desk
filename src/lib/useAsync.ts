@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { reportError } from './errorReport'
+import { onWardChange } from './liveUpdates'
 
-/** Runs a loader on mount and whenever deps change; `reload` re-runs it after a save. */
+/**
+ * Runs a loader on mount and whenever deps change; `reload` re-runs it after a save. It also
+ * re-runs when someone else changes ward data, keeping what's shown until the new data arrives.
+ */
 export function useAsync<T>(load: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -24,6 +28,8 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]) {
       cancelled = true
     }
   }, [run, version])
+
+  useEffect(() => onWardChange(() => setVersion((v) => v + 1)), [])
 
   return { data, error, reload: () => setVersion((v) => v + 1) }
 }

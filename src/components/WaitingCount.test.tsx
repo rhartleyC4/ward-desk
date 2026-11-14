@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { Link, MemoryRouter } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { showOnAppIcon } from '../lib/appBadge'
+import { listenForWardChanges, onWardChange } from '../lib/liveUpdates'
 import { loadTabCounts } from '../lib/queries'
 import { useRefreshWaiting, useTabCounts, WaitingProvider } from './WaitingCount'
 
@@ -12,6 +13,7 @@ vi.mock('../auth/AuthProvider', () => ({ useAuth: () => stub.auth }))
 vi.mock('../lib/supabase', () => ({ supabase: { client: true }, WARD_TIME_ZONE: 'America/Denver' }))
 vi.mock('../lib/appBadge')
 vi.mock('../lib/queries')
+vi.mock('../lib/liveUpdates')
 
 function Counts() {
   const counts = useTabCounts()
@@ -34,11 +36,9 @@ const show = () =>
     </MemoryRouter>,
   )
 const asked = () => vi.mocked(loadTabCounts).mock.calls[0][1]
-const setVisibility = (state: string) => Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => state })
 
 beforeEach(() => {
   vi.resetAllMocks()
-  setVisibility('visible')
   stub.auth = { profile: { id: 'me' }, roles: ['bishopric'], office: 'bishop', templates: [{ sections: [{ kind: 'callings' }] }], callingsHidden: false }
   vi.mocked(loadTabCounts).mockResolvedValue({ '/requests': 2, '/home': 1 })
 })
@@ -124,14 +124,28 @@ describe('WaitingProvider', () => {
     expect(loadTabCounts).toHaveBeenCalledTimes(2)
   })
 
-  it('recounts when the app comes back to the front, not when it leaves', () => {
+  it('recounts when ward data changes', () => {
+    const changed: (() => void)[] = []
+    vi.mocked(onWardChange).mockImplementation((fn) => (changed.push(fn), () => {}))
     show()
-    setVisibility('hidden')
-    act(() => void document.dispatchEvent(new Event('visibilitychange')))
     expect(loadTabCounts).toHaveBeenCalledOnce()
-    setVisibility('visible')
-    act(() => void document.dispatchEvent(new Event('visibilitychange')))
+    act(() => changed.forEach((fn) => fn()))
     expect(loadTabCounts).toHaveBeenCalledTimes(2)
+  })
+
+  it('listens for changes while someone with a role is signed in, and stops on sign-out', () => {
+    const stop = vi.fn()
+    vi.mocked(listenForWardChanges).mockReturnValue(stop)
+    const { unmount } = show()
+    expect(listenForWardChanges).toHaveBeenCalledOnce()
+    unmount()
+    expect(stop).toHaveBeenCalled()
+  })
+
+  it('does not listen for someone with no role', () => {
+    stub.auth = { ...stub.auth, roles: [] }
+    show()
+    expect(listenForWardChanges).not.toHaveBeenCalled()
   })
 
   it('has empty counts and a harmless refresh outside the provider', () => {
