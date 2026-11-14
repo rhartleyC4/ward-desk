@@ -18,7 +18,7 @@ Limits were read from each provider's own pricing or documentation page in **Nov
 | Browser push services | Delivering notifications. Apple, Google and Mozilla run these. No account, no cost |
 | Google Cloud | Optional "Sign in with Google" only |
 
-Nothing else is called at run time. The app loads no analytics, no outside fonts and no tracking, and Supabase Realtime is not used (a search of `src/` finds no channel subscriptions).
+Nothing else is called at run time. The app loads no analytics, no outside fonts and no tracking. Supabase Realtime keeps open pages up to date: each app joins one private channel, and a change sends a message naming only the table that changed, never the data.
 
 Also in the pipeline, with no account of ours: the npm registry, Docker Hub (the backup job runs `pg_dump` from the `postgres` image), and the `age` encryption tool.
 
@@ -48,7 +48,7 @@ Source: [supabase.com/pricing](https://supabase.com/pricing), checked 2026-11.
 | Egress | 5 GB, plus 5 GB cached | Not at this size |
 | Monthly active users | 50,000 | No |
 | Edge Function invocations | 500,000 | No |
-| Realtime | 200 connections, 2 million messages | Not used |
+| Realtime | 200 connections, 2 million messages | No. One connection per open app and one message per save |
 | Automatic backups | **Not included** | Yes. This is why the nightly R2 backup exists |
 
 Two of these deserve a closer look.

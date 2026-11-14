@@ -19,6 +19,7 @@ A mobile-first web app (PWA) for managing ward administration in one place: call
 
 **Meetings**
 - A live agenda for each meeting, with open items carried forward until they're done
+- Everyone's open screen stays in step: a change made on one phone shows on the others within a second
 - Prayers and spiritual thoughts assigned from the agenda
 - Sacrament meeting planning: conducting assignments, speakers, topics and talks
 
@@ -38,7 +39,7 @@ All of these share the same users, roles, notifications, and calendar.
 ## Stack
 
 - **Frontend:** React + TypeScript PWA built with Vite and [MUI](https://mui.com/), hosted on Cloudflare Pages. Light and dark themes follow the device by default; Appearance in Settings overrides it (see `src/theme.ts`)
-- **Backend:** Supabase (Postgres, Auth, Edge Functions)
+- **Backend:** Supabase (Postgres, Auth, Edge Functions, Realtime for live updates)
 - **Auth:** Google sign-in, email magic links and passkeys (Face ID or fingerprint), invite-only via an allowlist table
 - **Notifications:** Web Push (VAPID). Scheduled ones run from `pg_cron` in the database, which calls a Supabase Edge Function (`supabase/functions/notify`) every 10 minutes; requests notify right away through another (`supabase/functions/push`). See "Notifications" below
 
@@ -155,6 +156,12 @@ When someone sends or answers a request, sends or receives a calling request, or
 ```bash
 npx supabase functions serve --env-file supabase/functions/.env
 ```
+
+### Live updates
+
+Open pages update when someone else changes ward data. A statement trigger on each table people see (`signal_ward_change`) sends a broadcast on the private `ward` Realtime channel naming only the table, never the row. The app (`src/lib/liveUpdates.ts`) joins that channel once someone with a role is signed in, waits for a burst of changes to settle, then reloads every open `useAsync` loader and the tab badges through their normal requests. That keeps RLS, and acting for someone through the `x-acting-as` header (which Realtime can't see), working as usual. Only people with a role, or a mentor with an open delegation, can join (`hears_ward_changes()`). The app also reloads when it comes back to the front or reconnects, since a phone drops the connection in the background.
+
+A new table that people see needs the trigger too: add it in a migration the same way `20261114034439_live_updates.sql` does. Logs, queues and per-device settings are left out on purpose.
 
 ## How it replaces the Google Sheet
 
