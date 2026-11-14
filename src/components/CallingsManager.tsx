@@ -20,6 +20,7 @@ import { coveringLeader, organizationFor, type ListedCalling } from '../lib/call
 import { appointmentFor, NEEDS_APPOINTMENT, whenLabel } from '../lib/appointments'
 import { longDate, type IsoDate } from '../lib/dates'
 import { FORMER_MEMBER, unreceived, type CallingRequest } from '../lib/requests'
+import { wardToday } from '../lib/wardToday'
 import type { Enums, TablesUpdate } from '../lib/database.types'
 import type { Appointment, CallingNeed, Candidate, Profile } from '../lib/queries'
 import { nativeSelect } from '../theme'
@@ -451,6 +452,8 @@ export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDa
   const openNeeds = needsToDiscuss(date, data.needs, data.candidates).toSorted((a, b) => b.created_at.localeCompare(a.created_at))
   const newRequests = unreceived(data.callingRequests)
   const waiting = awaitingSettingApart(date, data.needs, data.candidates)
+  // An upcoming agenda lists names sustained that Sunday, but nobody is set apart before then.
+  const today = wardToday()
 
   return (
     <Stack spacing={3}>
@@ -513,17 +516,20 @@ export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDa
         <Box component="section" aria-label="Waiting to be set apart">
           <GroupHeading>Waiting to be set apart</GroupHeading>
           <List disablePadding>
-            {waiting.map(({ candidate: c, calling }) => (
-              <ListItem key={c.id} disableGutters sx={{ gap: 1, flexWrap: 'wrap' }}>
-                <Box sx={{ flex: '1 1 12rem' }}>
-                  <strong>{c.person_name}</strong>, {calling}
-                  <Muted>Sustained {longDate(c.sustain_on!)}</Muted>
-                </Box>
-                <Button variant="outlined" startIcon={<CheckIcon />} onClick={() => actions.setApart(c)} aria-label={`${c.person_name} was set apart`}>
-                  Set apart
-                </Button>
-              </ListItem>
-            ))}
+            {waiting.map(({ candidate: c, calling }) => {
+              const sustained = c.sustain_on! <= today
+              return (
+                <ListItem key={c.id} disableGutters sx={{ gap: 1, flexWrap: 'wrap' }}>
+                  <Box sx={{ flex: '1 1 12rem' }}>
+                    <strong>{c.person_name}</strong>, {calling}
+                    <Muted>{sustained ? `Sustained ${longDate(c.sustain_on!)}` : `To be sustained ${longDate(c.sustain_on!)}. Set apart after that.`}</Muted>
+                  </Box>
+                  <Button variant="outlined" startIcon={<CheckIcon />} disabled={!sustained} onClick={() => actions.setApart(c)} aria-label={`${c.person_name} was set apart`}>
+                    Set apart
+                  </Button>
+                </ListItem>
+              )
+            })}
           </List>
         </Box>
       )}

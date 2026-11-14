@@ -211,6 +211,15 @@ describe('CallingsManager', () => {
     expect(a.setApart).toHaveBeenCalledWith(data.candidates[0])
   })
 
+  it("doesn't offer Set apart on an upcoming agenda until the name is sustained", () => {
+    const data = agendaData()
+    data.candidates[0] = { ...data.candidates[0], sustain_on: '2099-11-01' }
+    render(<CallingsManager date="2099-11-01" data={data} actions={actions()} timeZone="America/Denver" />)
+    const waiting = screen.getByRole('region', { name: 'Waiting to be set apart' })
+    expect(within(waiting).getByText(/To be sustained .*Set apart after that\./)).toBeInTheDocument()
+    expect(within(waiting).getByRole('button', { name: 'Sister Moss was set apart' })).toBeDisabled()
+  })
+
   it('marks a calling no longer needed only after confirming', async () => {
     const user = userEvent.setup()
     const a = actions()
