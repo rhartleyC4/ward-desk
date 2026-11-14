@@ -9,17 +9,24 @@ Everything starts on the **Callings** section of the bishopric agenda (**Meeting
 
 ## What you can do
 
-- Add a calling to fill, and who it will release.
-- Add one or more names to consider for it.
+- Add a calling to fill, who it will release, and the first names to consider, all at once.
+- Add more names to consider later.
 - Attach a name suggested by a leader to the right calling.
 - Take a calling off the list if it is no longer needed.
 
 ## Add a calling to fill
 
-1. Tap **Add a calling**, beside the **Callings to fill** heading.
-2. Start typing the title. Titles from the ward's [calling list](/docs/settings/calling-list/) are suggested; you can type a new one and it is added to the list for next time.
-3. If someone is being released, type their name in **Releasing (optional)**.
-4. Tap **Add calling**. The new calling shows as its own card in the list.
+1. Tap **Add a calling**, beside the **Callings to fill** heading. A window opens (the whole screen on a phone).
+2. Start typing the title in **Calling**. Titles from the ward's [calling list](/docs/settings/calling-list/) are suggested; you can type a new one and it is added to the list for next time.
+3. If someone is being released, type their name in **Who's being released**.
+4. If you already have names in mind, type one in **Name to consider**. Tap **Another name** for more.
+5. Tap **Add calling**. The new calling shows at the top of the list, newest first, and is briefly highlighted.
+
+**More options** holds the choices you need less often:
+
+- **Release only**: someone is released and no one new is called. The names box goes away, and who's being released is required.
+- **Release *name* on**: the Sunday the release is read. Leave it blank and it is set when someone accepts.
+- **Notes**: anything to remember about the calling. Notes show under the calling's title. To add or change them later, use **Add notes** or **Edit notes** in the card's **⋯** menu.
 
 ## Add a name to consider
 
