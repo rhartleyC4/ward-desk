@@ -40,6 +40,22 @@ export const SHOTS: Shot[] = [
 
   { feature: 'agenda-bishopric', role: 'bishop', route: '/agenda/bishopric', caption: 'The bishopric meeting agenda with every section ready to fill in.', waitFor: /Action \/ discussion items/ },
   { feature: 'agenda-bishopric-callings', role: 'bishop', route: '/agenda/bishopric', caption: 'Callings are worked on the bishopric agenda: one card per calling, showing where it stands and its next step.', waitFor: /Action \/ discussion items/, prepare: scrollToText(/^Callings to fill$/) },
+  {
+    feature: 'callings-add-dialog',
+    role: 'bishop',
+    route: '/agenda/bishopric',
+    caption: 'Adding a calling: the calling, who is released and the first names to consider, with the rarer choices under More options.',
+    waitFor: /Callings to fill/,
+    prepare: async (page) => {
+      await page.getByRole('button', { name: 'Add a calling' }).click()
+      const dialog = page.getByRole('dialog', { name: 'Add a calling' })
+      await dialog.getByRole('combobox', { name: 'Calling' }).fill('Ward Librarian')
+      await page.keyboard.press('Tab')
+      await dialog.getByLabel("Who's being released (optional)").fill('Sister Ames')
+      await dialog.getByLabel('Name to consider (optional)').fill('Brother Hale')
+      await dialog.getByRole('button', { name: 'More options' }).click()
+    },
+  },
   { feature: 'agenda-bishopric-assignments', role: 'secretary', route: '/agenda/bishopric/2026-11-08', caption: 'Prayers and the spiritual thought go to someone picked from a list, who accepts or declines.', waitFor: /Bishopric Meeting Agenda/ },
   { feature: 'agenda-ward-council', role: 'bishop', route: '/agenda/ward-council', caption: 'Ward council agenda, with a section for each organization.', waitFor: /General business/ },
   { feature: 'agenda-ward-council-leader', role: 'leader', route: '/agenda/ward-council', caption: 'Called leaders who attend ward council see only that agenda.', waitFor: /General business/ },

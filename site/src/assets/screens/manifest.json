@@ -78,6 +78,17 @@
         "desktop-dark"
       ]
     },
+    "callings-add-dialog": {
+      "route": "/agenda/bishopric",
+      "role": "Bishop",
+      "caption": "Adding a calling: the calling, who is released and the first names to consider, with the rarer choices under More options.",
+      "variants": [
+        "phone-light",
+        "phone-dark",
+        "desktop-light",
+        "desktop-dark"
+      ]
+    },
     "handover-bishop": {
       "route": "/settings/handover",
       "role": "Bishop (also a ward admin)",
