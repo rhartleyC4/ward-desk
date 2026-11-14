@@ -9,20 +9,21 @@ function actions(): CallingsActions {
 }
 
 const need = (title: string) => screen.getByRole('article', { name: title })
+const menuItems = () => screen.getAllByRole('menuitem').map((m) => m.textContent)
 
 describe('CallingsManager', () => {
   it('shows who meets with an approved name and when', () => {
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
 
     const primary = need('Primary Teacher')
-    expect(within(primary).getByText('Release:')).toBeInTheDocument()
+    expect(within(primary).getByText('Releasing Brother Ivey')).toBeInTheDocument()
     expect(within(primary).getByLabelText('Who meets with Sister Nash')).toHaveValue('l')
     expect(within(primary).getByText('Sun, Nov 8, 10:00 AM')).toBeInTheDocument()
 
     // Accepted names get a sustain date instead of an appointment.
     const rs = need('RS Teacher')
     expect(within(rs).queryByLabelText('Who meets with Sister Moss')).not.toBeInTheDocument()
-    expect(within(rs).getByLabelText('Sustain on')).toHaveValue('2026-11-01')
+    expect(within(rs).getByLabelText('Sustain Sister Moss on')).toHaveValue('2026-11-01')
   })
 
   it('says when an assigned appointment still needs a time', () => {
@@ -72,7 +73,8 @@ describe('CallingsManager', () => {
     data.candidates[2] = { ...data.candidates[2], status: 'discussing' }
     render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
     expect(screen.getByRole('button', { name: 'Approve Sister Nash' })).toBeInTheDocument()
-    expect(screen.queryByLabelText('Status for Sister Nash')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mark Sister Nash accepted' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'More for Sister Nash' })).not.toBeInTheDocument()
   })
 
   it('records an acceptance so it moves to Sustainings', async () => {
@@ -81,16 +83,30 @@ describe('CallingsManager', () => {
     const data = agendaData()
     render(<CallingsManager date="2026-10-25" data={data} actions={a} timeZone="America/Denver" />)
 
-    await user.selectOptions(screen.getByLabelText('Status for Sister Nash'), 'Accepted')
+    await user.click(screen.getByRole('button', { name: 'Mark Sister Nash accepted' }))
     expect(a.acceptCandidate).toHaveBeenCalledWith(data.candidates[2])
     expect(a.updateCandidate).not.toHaveBeenCalled()
   })
 
-  it('offers only the next steps and one step back', () => {
+  it('keeps the rarer moves and one step back in each name\'s menu', async () => {
+    const user = userEvent.setup()
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
-    const options = (name: string) => within(screen.getByLabelText(`Status for ${name}`)).getAllByRole('option').map((o) => o.textContent)
-    expect(options('Sister Nash')).toEqual(['Considering', 'Approved', 'Accepted', 'Declined'])
-    expect(options('Sister Moss')).toEqual(['Approved', 'Accepted'])
+    await user.click(screen.getByRole('button', { name: 'More for Sister Nash' }))
+    expect(menuItems()).toEqual(['Declined', 'Back to considering'])
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: 'More for Sister Moss' }))
+    expect(menuItems()).toEqual(['Undo accepted'])
+  })
+
+  it('shows where each calling stands', () => {
+    const data = agendaData()
+    data.needs.push({ ...data.needs[0], id: 'n4', calling_title: 'Ward Librarian' }, { ...data.needs[0], id: 'n5', calling_title: 'Ward Organist' })
+    data.candidates.push({ ...data.candidates[2], id: 'c8', need_id: 'n5', person_name: 'Sister Pratt', status: 'discussing' })
+    render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
+    expect(within(need('Primary Teacher')).getByText('Interview')).toBeInTheDocument()
+    expect(within(need('RS Teacher')).getByText('To sustain')).toBeInTheDocument()
+    expect(within(need('Ward Librarian')).getByText('Needs a name')).toBeInTheDocument()
+    expect(within(need('Ward Organist')).getByText('To approve')).toBeInTheDocument()
   })
 
   it('takes back an accept without handing out a new appointment', async () => {
@@ -98,7 +114,8 @@ describe('CallingsManager', () => {
     const a = actions()
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
-    await user.selectOptions(screen.getByLabelText('Status for Sister Moss'), 'Approved')
+    await user.click(screen.getByRole('button', { name: 'More for Sister Moss' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Undo accepted' }))
     expect(a.updateCandidate).toHaveBeenCalledWith('c1', { status: 'approved' })
     expect(a.approveCandidate).not.toHaveBeenCalled()
   })
@@ -107,7 +124,8 @@ describe('CallingsManager', () => {
     const data = agendaData()
     data.candidates[2] = { ...data.candidates[2], status: 'declined' }
     render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
-    expect(screen.queryByLabelText('Status for Sister Nash')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'More for Sister Nash' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mark Sister Nash accepted' })).not.toBeInTheDocument()
     expect(within(need('Primary Teacher')).getByText('Declined')).toBeInTheDocument()
   })
 
@@ -119,12 +137,13 @@ describe('CallingsManager', () => {
     expect(within(need('Primary Teacher')).getByText('Another name is approved')).toBeInTheDocument()
   })
 
-  it('shows Announce on once a name has accepted, or right away for a release only', () => {
+  it('shows the sustain and release dates together once a name has accepted', () => {
     const data = agendaData()
     data.needs[1] = { ...data.needs[1], release_name: 'Sister Hale' }
     render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
-    expect(within(need('Primary Teacher')).queryByLabelText('Announce on')).not.toBeInTheDocument()
-    expect(within(need('RS Teacher')).getByLabelText('Announce on')).toBeInTheDocument()
+    expect(within(need('Primary Teacher')).queryByLabelText('Release Brother Ivey on')).not.toBeInTheDocument()
+    expect(within(need('RS Teacher')).getByLabelText('Release Sister Hale on')).toBeInTheDocument()
+    expect(within(need('RS Teacher')).getByLabelText('Sustain Sister Moss on')).toBeInTheDocument()
   })
 
   it('takes no names for a release only', () => {
@@ -132,18 +151,19 @@ describe('CallingsManager', () => {
     data.needs[2] = { ...data.needs[2], release_on: null, release_only: true }
     render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
     const ss = need('Sunday School')
-    expect(within(ss).getByLabelText('Announce on')).toBeInTheDocument()
-    expect(within(ss).queryByLabelText('Name to consider for Sunday School')).not.toBeInTheDocument()
+    expect(within(ss).getByLabelText('Release Sister Kemp on')).toBeInTheDocument()
+    expect(within(ss).getByText('Release only')).toBeInTheDocument()
+    expect(within(ss).queryByRole('button', { name: 'Add a name' })).not.toBeInTheDocument()
   })
 
-  it('hides the name box behind a button once a calling has a name', async () => {
+  it('opens the name box from Add a name', async () => {
     const user = userEvent.setup()
     const a = actions()
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
     const primary = need('Primary Teacher')
     expect(within(primary).queryByLabelText('Name to consider for Primary Teacher')).not.toBeInTheDocument()
-    await user.click(within(primary).getByRole('button', { name: 'Add name' }))
+    await user.click(within(primary).getByRole('button', { name: 'Add a name' }))
     await user.type(within(primary).getByLabelText('Name to consider for Primary Teacher'), 'Brother Hale{Enter}')
     expect(a.addCandidate).toHaveBeenCalledWith('n1', 'Brother Hale')
     expect(within(primary).queryByLabelText('Name to consider for Primary Teacher')).not.toBeInTheDocument()
@@ -155,7 +175,7 @@ describe('CallingsManager', () => {
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
     const rs = need('RS Teacher')
-    await user.click(within(rs).getByRole('button', { name: 'Releasing' }))
+    await user.click(within(rs).getByRole('button', { name: "Add who's being released" }))
     await user.type(within(rs).getByLabelText('Releasing from RS Teacher'), 'Sister Hale{Enter}')
     expect(a.updateNeed).toHaveBeenCalledWith('n2', { release_name: 'Sister Hale' })
   })
@@ -166,10 +186,13 @@ describe('CallingsManager', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
-    const remove = within(need('Sunday School')).getByRole('button', { name: 'Remove Sunday School' })
-    await user.click(remove)
+    const remove = async () => {
+      await user.click(within(need('Sunday School')).getByRole('button', { name: 'More for Sunday School' }))
+      await user.click(screen.getByRole('menuitem', { name: 'Remove calling' }))
+    }
+    await remove()
     expect(a.deleteNeed).not.toHaveBeenCalled()
-    await user.click(remove)
+    await remove()
     expect(a.deleteNeed).toHaveBeenCalledWith('n3')
     confirm.mockRestore()
   })
@@ -194,10 +217,13 @@ describe('CallingsManager', () => {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
-    const button = within(need('Sunday School')).getByRole('button', { name: 'No longer needed' })
-    await user.click(button)
+    const cancel = async () => {
+      await user.click(within(need('Sunday School')).getByRole('button', { name: 'More for Sunday School' }))
+      await user.click(screen.getByRole('menuitem', { name: 'No longer needed' }))
+    }
+    await cancel()
     expect(a.updateNeed).not.toHaveBeenCalled()
-    await user.click(button)
+    await cancel()
     expect(a.updateNeed).toHaveBeenCalledWith('n3', { status: 'cancelled' })
     confirm.mockRestore()
   })
@@ -207,9 +233,11 @@ describe('CallingsManager', () => {
     const a = actions()
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
 
-    await user.selectOptions(screen.getByLabelText('Status for Sister Nash'), 'Declined')
+    await user.click(screen.getByRole('button', { name: 'More for Sister Nash' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Declined' }))
     expect(a.updateCandidate).toHaveBeenCalledWith('c3', { status: 'declined' })
 
+    await user.click(within(need('Sunday School')).getByRole('button', { name: 'Add a name' }))
     await user.type(within(need('Sunday School')).getByLabelText('Name to consider for Sunday School'), 'Brother Hale')
     await user.click(within(need('Sunday School')).getByRole('button', { name: 'Add' }))
     expect(a.addCandidate).toHaveBeenCalledWith('n3', 'Brother Hale')
@@ -217,17 +245,20 @@ describe('CallingsManager', () => {
     await user.selectOptions(screen.getByLabelText('Attach Brother Vale to a calling'), 'Primary Teacher')
     expect(a.updateCandidate).toHaveBeenCalledWith('c2', { need_id: 'n1', status: 'discussing' })
 
+    await user.click(screen.getByRole('button', { name: 'Add a calling' }))
     const form = screen.getByRole('form', { name: 'Add a calling to fill' })
     await user.type(within(form).getByLabelText('Calling'), 'Ward Librarian')
     await user.type(within(form).getByLabelText('Releasing (optional)'), 'Sister Ames')
-    await user.click(within(form).getByRole('button', { name: 'Add' }))
+    await user.click(within(form).getByRole('button', { name: 'Add calling' }))
     expect(a.addNeed).toHaveBeenCalledWith({ calling_title: 'Ward Librarian', release_name: 'Sister Ames' })
+    expect(screen.queryByRole('form', { name: 'Add a calling to fill' })).not.toBeInTheDocument()
   })
 
   it('suggests titles from the calling list, including ones added by the ward', async () => {
     const user = userEvent.setup()
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
 
+    await user.click(screen.getByRole('button', { name: 'Add a calling' }))
     const form = screen.getByRole('form', { name: 'Add a calling to fill' })
     await user.type(within(form).getByLabelText('Calling'), 'teacher')
     const list = screen.getByRole('listbox')
@@ -249,7 +280,7 @@ describe('CallingsManager', () => {
     const primary = need('Primary Teacher')
     expect(within(primary).getByText('Asked for by Sister Reyes (Primary) · needed by December 1st · not marked received yet')).toBeInTheDocument()
     expect(within(primary).getByText('“Sunbeams need one”')).toBeInTheDocument()
-    expect(within(primary).getByText('Suggested by Sister Reyes')).toBeInTheDocument()
+    expect(within(primary).getByText('Considering · suggested by Sister Reyes')).toBeInTheDocument()
 
     const request = screen.getByRole('article', { name: 'Release Brother Ivey and call someone new as Primary Teacher' })
     await userEvent.click(within(request).getByRole('button', { name: 'Got it' }))

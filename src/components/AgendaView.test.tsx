@@ -147,8 +147,8 @@ describe('AgendaView', () => {
 
     const callings = section('Callings needed (to discuss)')
     expect(within(callings).queryByRole('table')).not.toBeInTheDocument()
-    expect(within(callings).getByLabelText('Status for Sister Nash')).toHaveValue('approved')
-    expect(within(callings).getByRole('form', { name: 'Add a calling to fill' })).toBeInTheDocument()
+    expect(within(callings).getByRole('button', { name: 'Mark Sister Nash accepted' })).toBeInTheDocument()
+    expect(within(callings).getByRole('button', { name: 'Add a calling' })).toBeInTheDocument()
   })
 
   it('lets the bishopric move a sustaining or release to another Sunday', () => {
