@@ -15,6 +15,11 @@ concurrency:
 permissions:
   contents: read
 
+# The Supabase CLI pulls its images from here instead of public.ecr.aws, which rate limits
+# anonymous pulls from shared runner IPs. See scripts/ci-db-start.sh.
+env:
+  SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
+
 jobs:
   # Cheap and always runs: a .env commit has no code in it, so a path filter would hide it.
   guard:
@@ -128,7 +133,7 @@ jobs:
 
       # Starts the local Supabase stack in Docker, applies migrations and seed.sql.
       - name: Start local Supabase
-        run: npm run db:start
+        run: scripts/ci-db-start.sh
 
       - name: Database tests (pgTAP, RLS access rules)
         run: npm run test:db
@@ -159,7 +164,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
 
       - name: Start local Supabase
-        run: npm run db:start
+        run: scripts/ci-db-start.sh
 
       # Reads the URL and keys from `supabase status`; refuses to run against anything non-local.
       - name: End-to-end tests
@@ -203,7 +208,7 @@ jobs:
       - run: npm ci
 
       - name: Start local Supabase
-        run: npm run db:start
+        run: scripts/ci-db-start.sh
 
       # The unit tests import the Supabase client, and the integration tests need the real local key.
       - name: Point the tests at local Supabase
