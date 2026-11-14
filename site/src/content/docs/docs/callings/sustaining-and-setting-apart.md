@@ -29,6 +29,8 @@ The calling stays on the list until the sustaining Sunday. From that Sunday it s
 
 Once the sustaining date arrives, the name moves to **Waiting to be set apart** at the top of the callings section. It shows the sustain date and a **Set apart** button.
 
+On the agenda for an upcoming Sunday, names being sustained that day already show here, marked **To be sustained** with the date. Their **Set apart** button stays off until that Sunday, since nobody is set apart before they are sustained.
+
 ## Mark them set apart
 
 1. Find the name under **Waiting to be set apart**.
