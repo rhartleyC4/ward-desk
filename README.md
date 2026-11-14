@@ -243,7 +243,7 @@ A few steps need a person in a dashboard. Do these first:
    - Under Emails → Templates, keep the email wording generic, with no names.
 4. **Cloudflare Pages:** create two Direct Upload projects:
    ```bash
-   npx wrangler pages project create ward-desk-staging --production-branch main
+   npx wrangler pages project create ward-desk-demo --production-branch main
    ```
    ```bash
    npx wrangler pages project create ward-desk-gp7 --production-branch gp7
@@ -267,7 +267,7 @@ Where the settings live, for reference (`env:github` fills them):
 | Where | Secrets | Variables |
 |---|---|---|
 | Repository | `CLOUDFLARE_API_TOKEN`, `BACKUP_R2_ACCESS_KEY_ID`, `BACKUP_R2_SECRET_ACCESS_KEY`, `BACKUP_DB_URL_PRODUCTION`, `BACKUP_DB_URL_STAGING` | `CLOUDFLARE_ACCOUNT_ID`, `NOTIFY_ENABLED`, `DEPLOY_ENABLED`, `BACKUP_ENABLED`, `BACKUP_AGE_RECIPIENT`, `BACKUP_R2_BUCKET`, `BACKUP_R2_ENDPOINT`. A fork with no training site also sets `DEPLOY_STAGING` to `false` by hand |
-| Environment `staging` | `SUPABASE_DB_URL` (session pooler), `SUPABASE_ACCESS_TOKEN` (deploy bot), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-staging`, `WARD_NAME`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY`, `STAGING_ADMIN_EMAILS` |
+| Environment `staging` | `SUPABASE_DB_URL` (session pooler), `SUPABASE_ACCESS_TOKEN` (deploy bot), `VAPID_PRIVATE_KEY` | `SUPABASE_PROJECT_REF`, `SUPABASE_ANON_KEY`, `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-demo`, `WARD_NAME`, `WARD_TIME_ZONE`, `ENABLE_GOOGLE`, `VAPID_PUBLIC_KEY`, `STAGING_ADMIN_EMAILS` |
 | Environment `production` | `SUPABASE_DB_URL`, `SUPABASE_ACCESS_TOKEN`, `VAPID_PRIVATE_KEY` | Same as staging, with `CLOUDFLARE_PAGES_PROJECT` = `ward-desk-gp7` and no `STAGING_ADMIN_EMAILS` |
 
 ### Google sign-in

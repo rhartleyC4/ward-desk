@@ -135,7 +135,7 @@ Cloudflare cannot move a Pages project from one account to another in a way we f
 1. In the new Cloudflare account, create the three Pages projects as the README shows:
 
    ```bash
-   npx wrangler pages project create ward-desk-staging --production-branch main
+   npx wrangler pages project create ward-desk-demo --production-branch main
    ```
 
    ```bash
