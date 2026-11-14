@@ -71,6 +71,7 @@ npm run lint && npx tsc -b && npm run test:all
 
 - **Data must stay private.** Never commit real member names or data. The seed, fixtures and tests use invented names only. Keep notification text generic.
 - **Access rules live in the database.** Every new table needs RLS policies in a migration plus pgTAP coverage in `supabase/tests/database/`. The UI checks in `src/lib/access.ts` only decide what to show.
+- **Functions:** RLS helpers (`has_role`, `attends`, `acting_as`, ...) live in the `private` schema, which the API doesn't expose, so call them as `private.<name>()`. Only functions the app calls with `.rpc()` go in `public`. A `SECURITY DEFINER` function in `public` must check who is calling, revoke EXECUTE from `public` and `anon` unless signed-out visitors need it, and be added to the list in `supabase/tests/database/function_grants.test.sql`.
 - **Schema changes:** add a new file with `npx supabase migration new <name>` and never edit a migration that has already been applied anywhere shared. Then run `npm run db:reset` and `npm run db:types`.
 - **Database access** goes through `src/lib/queries.ts`, with functions that take the client as a parameter so integration tests can call them as any role.
 - **Pure logic** (dates, schedule rules, agenda assembly) lives in `src/lib/` with unit tests next to it.

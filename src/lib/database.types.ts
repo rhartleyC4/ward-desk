@@ -922,17 +922,8 @@ isOneToOne: false
             "accounts_not_signed_in":
 { Args: Record<PropertyKey, never>; Returns: string[]
                            },
-"acting_as":
-{ Args: Record<PropertyKey, never>; Returns: string
-                           },
 "apply_waiting_seats":
 { Args: { "person": string,"person_email": string }; Returns: undefined
-                           },
-"attends":
-{ Args: { "template": string }; Returns: boolean
-                           },
-"attends_section":
-{ Args: { "section": string }; Returns: boolean
                            },
 "bishopric_template":
 { Args: Record<PropertyKey, never>; Returns: string
@@ -948,15 +939,6 @@ isOneToOne: false
                            },
 "calling_request_stage":
 { Args: { "request_id": string }; Returns: string
-                           },
-"can_manage_meetings":
-{ Args: Record<PropertyKey, never>; Returns: boolean
-                           },
-"can_see_callings":
-{ Args: Record<PropertyKey, never>; Returns: boolean
-                           },
-"can_use_prayer_roll":
-{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "change_leader":
 { Args: { "email"?: string,"org": string,"outgoing_becomes"?: string,"person"?: string }; Returns: string
@@ -976,29 +958,11 @@ isOneToOne: false
 "delete_person":
 { Args: { "person": string }; Returns: undefined
                            },
-"has_a_role":
-{ Args: { "person": string }; Returns: boolean
-                           },
-"has_any_role":
-{ Args: Record<PropertyKey, never>; Returns: boolean
-                           },
-"has_role":
-{ Args: { "check_role": Database["public"]['Enums']["app_role"] }; Returns: boolean
-                           },
 "health_check":
 { Args: Record<PropertyKey, never>; Returns: (string)[]
                            },
 "health_report":
 { Args: { "since": string,"until": string }; Returns: (string)[]
-                           },
-"holds_role":
-{ Args: { "check_role": Database["public"]['Enums']["app_role"],"person": string }; Returns: boolean
-                           },
-"is_mentoring":
-{ Args: Record<PropertyKey, never>; Returns: boolean
-                           },
-"is_planner":
-{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "leadership_work":
 { Args: { "person": string }; Returns: {

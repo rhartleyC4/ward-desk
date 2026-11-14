@@ -36,7 +36,7 @@ values ('ward', 'broadcast', 'probe', '{}', true), ('elsewhere', 'broadcast', 'p
 -- ---------------------------------------------------------------------------
 
 select pg_temp.act_as('first@ward.test');
-select ok(public.hears_ward_changes(), 'someone in the bishopric hears ward changes');
+select ok(private.hears_ward_changes(), 'someone in the bishopric hears ward changes');
 select ok(pg_temp.can_join('ward'), 'and can join the ward channel');
 select ok(not pg_temp.can_join('elsewhere'), 'but no other channel');
 
@@ -47,7 +47,7 @@ select ok(pg_temp.can_join('ward'), 'a ward leader can join too');
 reset role;
 delete from public.roles where user_id = pg_temp.uid('temple@ward.test');
 select pg_temp.act_as('temple@ward.test');
-select ok(not public.hears_ward_changes(), 'someone with no role does not hear ward changes');
+select ok(not private.hears_ward_changes(), 'someone with no role does not hear ward changes');
 select ok(not pg_temp.can_join('ward'), 'and can''t join the ward channel');
 
 -- Mentoring the new bishop is enough, while it lasts.

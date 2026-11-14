@@ -125,7 +125,7 @@ select is((select moved_at from public.handover_seats where incoming_email = 'ne
 -- Mentoring.
 select is((select for_id from public.delegations where mentor_id = (select avery from ids) and ended_at is null), (select lane from ids), 'the old bishop mentors the new one');
 select pg_temp.act_as('bishop@ward.test', 'first@ward.test');
-select is(public.acting_as(), (select lane from ids), 'and can act for him');
+select is(private.acting_as(), (select lane from ids), 'and can act for him');
 select is(jsonb_array_length(public.whoami() -> 'mentoring'), 1, 'whoami tells the app');
 
 -- The newcomer signs in: their work arrives.

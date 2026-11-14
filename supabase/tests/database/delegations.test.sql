@@ -40,31 +40,31 @@ select mentor, bishop, now() + interval '4 weeks' from ids;
 -- ---------------------------------------------------------------------------
 
 select pg_temp.act_as('leader@ward.test');
-select is(public.acting_as(), (select mentor from ids), 'without the header, a mentor is herself');
-select ok(not public.has_role('bishopric'), 'and has only her own roles');
+select is(private.acting_as(), (select mentor from ids), 'without the header, a mentor is herself');
+select ok(not private.has_role('bishopric'), 'and has only her own roles');
 
 select pg_temp.act_as('leader@ward.test', 'first@ward.test');
-select is(public.acting_as(), (select bishop from ids), 'with the header, she acts as the person she mentors');
-select ok(public.is_mentoring(), 'and is mentoring');
-select ok(public.has_role('bishopric'), 'she has his bishopric role');
-select ok(not public.has_role('leader'), 'but not her own leader role while acting for him');
-select ok(not public.can_see_callings(), 'callings stay hidden until he allows them');
+select is(private.acting_as(), (select bishop from ids), 'with the header, she acts as the person she mentors');
+select ok(private.is_mentoring(), 'and is mentoring');
+select ok(private.has_role('bishopric'), 'she has his bishopric role');
+select ok(not private.has_role('leader'), 'but not her own leader role while acting for him');
+select ok(not private.can_see_callings(), 'callings stay hidden until he allows them');
 select is((select count(*)::int from public.calling_needs where calling_title = 'Test Calling For Mentors'), 0, 'she can''t read callings being discussed');
 select is((select count(*)::int from public.interviews where person_name = 'Calling Visit'), 0, 'nor appointments to extend a calling');
 select is((select count(*)::int from public.interviews where person_name = 'Recommend Visit'), 1, 'but sees his other appointments');
 
 select pg_temp.act_as('second@ward.test', 'first@ward.test');
-select is(public.acting_as(), pg_temp.uid('second@ward.test'), 'someone without a delegation who sends the header is themself');
+select is(private.acting_as(), pg_temp.uid('second@ward.test'), 'someone without a delegation who sends the header is themself');
 
 select pg_temp.act_as('leader@ward.test', 'second@ward.test');
-select is(public.acting_as(), (select mentor from ids), 'a mentor can''t act for someone else');
+select is(private.acting_as(), (select mentor from ids), 'a mentor can''t act for someone else');
 
 -- An admin who mentors doesn't take admin into it, nor does the person mentored lend theirs.
 reset role;
 insert into public.delegations (mentor_id, for_id, ends_at)
 select admin, bishop, now() + interval '1 week' from ids;
 select pg_temp.act_as('bishop@ward.test', 'first@ward.test');
-select ok(public.has_role('bishopric') and not public.has_role('admin'), 'an admin acting for someone is not an admin while doing it');
+select ok(private.has_role('bishopric') and not private.has_role('admin'), 'an admin acting for someone is not an admin while doing it');
 
 -- ---------------------------------------------------------------------------
 -- The person mentored decides
@@ -90,7 +90,7 @@ select throws_ok(
   '23514', null, 'mentoring can''t run past 12 weeks');
 
 select pg_temp.act_as('leader@ward.test', 'first@ward.test');
-select ok(public.can_see_callings(), 'once allowed, the mentor sees callings');
+select ok(private.can_see_callings(), 'once allowed, the mentor sees callings');
 select is((select count(*)::int from public.calling_needs where calling_title = 'Test Calling For Mentors'), 1, 'and reads them');
 select is((select count(*)::int from public.interviews where person_name = 'Calling Visit'), 1, 'and the appointments to extend them');
 
@@ -98,7 +98,7 @@ select is((select count(*)::int from public.interviews where person_name = 'Call
 reset role;
 delete from public.roles where user_id = (select bishop from ids) and role = 'bishopric';
 select pg_temp.act_as('leader@ward.test', 'first@ward.test');
-select is(public.acting_as(), (select mentor from ids), 'mentoring stops when the person mentored leaves the bishopric');
+select is(private.acting_as(), (select mentor from ids), 'mentoring stops when the person mentored leaves the bishopric');
 reset role;
 insert into public.roles (user_id, role) select bishop, 'bishopric' from ids;
 
@@ -109,14 +109,14 @@ select throws_ok(
   $$ update public.delegations set ended_at = null where mentor_id = (select mentor from ids) $$,
   '42501', null, 'ended mentoring can''t be reopened');
 select pg_temp.act_as('leader@ward.test', 'first@ward.test');
-select is(public.acting_as(), (select mentor from ids), 'after it ends, the mentor is herself');
+select is(private.acting_as(), (select mentor from ids), 'after it ends, the mentor is herself');
 
 reset role;
 select set_config('request.jwt.claims', '', true);
 update public.delegations set starts_at = now() - interval '5 weeks', ends_at = now() - interval '1 week'
 where mentor_id = (select admin from ids);
 select pg_temp.act_as('bishop@ward.test', 'first@ward.test');
-select is(public.acting_as(), (select admin from ids), 'after the end date, the mentor is himself');
+select is(private.acting_as(), (select admin from ids), 'after the end date, the mentor is himself');
 
 select * from finish();
 rollback;
