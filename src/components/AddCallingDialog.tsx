@@ -41,6 +41,10 @@ export function AddCallingDialog({ open, onClose, onAdd, callings }: { open: boo
   const [form, setForm] = useState(EMPTY)
   const [more, setMore] = useState(false)
   const callingRef = useRef<HTMLInputElement>(null)
+  const startInCalling = (container: HTMLElement) => {
+    const active = document.activeElement
+    if (!active || !container.contains(active) || active.getAttribute('role') === 'dialog') callingRef.current?.focus()
+  }
   const set = (changes: Partial<typeof EMPTY>) => setForm((f) => ({ ...f, ...changes }))
 
   const releasing = form.release_name.trim()
@@ -86,8 +90,9 @@ export function AddCallingDialog({ open, onClose, onAdd, callings }: { open: boo
       fullWidth
       maxWidth="sm"
       aria-labelledby="add-calling-title"
-      // The dialog focuses itself as it opens; once it's in, start in the Calling box.
-      slotProps={{ transition: { onEntered: () => callingRef.current?.focus() } }}
+      // The dialog focuses itself as it opens; once it's in, start in the Calling box, unless
+      // someone has already moved into a field, so their typing isn't pulled back mid-word.
+      slotProps={{ transition: { onEntered: startInCalling } }}
     >
       <Box component="form" onSubmit={submit} aria-label="Add a calling to fill" sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
         {phone ? (

@@ -277,6 +277,21 @@ describe('CallingsManager', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
+  it('starts in the Calling box, but leaves a field someone already moved to alone', async () => {
+    const user = userEvent.setup()
+    const { unmount } = render(<CallingsManager date="2026-10-25" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
+    await user.click(screen.getByRole('button', { name: 'Add a calling' }))
+    await waitFor(() => expect(screen.getByRole('combobox', { name: /^Calling/ })).toHaveFocus())
+    unmount()
+
+    render(<CallingsManager date="2026-10-25" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
+    await user.click(screen.getByRole('button', { name: 'Add a calling' }))
+    const released = screen.getByLabelText("Who's being released (optional)")
+    await user.click(released)
+    await new Promise((r) => setTimeout(r, 400))
+    expect(released).toHaveFocus()
+  })
+
   it('adds a release-only calling, which needs who is released and takes no names', async () => {
     const user = userEvent.setup()
     const a = actions()
