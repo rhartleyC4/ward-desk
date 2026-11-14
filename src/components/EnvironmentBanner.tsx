@@ -3,6 +3,7 @@ import Box from '@mui/material/Box'
 import IconButton from '@mui/material/IconButton'
 import TextField from '@mui/material/TextField'
 import { useEffect, useState } from 'react'
+import { trackBusy } from '../lib/busy'
 import { isTrainingSite } from '../lib/env'
 import { PRACTICE_ACCOUNTS, practicePassword, signInAsPractice } from '../lib/practiceAccounts'
 import { supabase } from '../lib/supabase'
@@ -35,7 +36,7 @@ function PracticeSwitcher() {
   const switchTo = async (next: string) => {
     setBusy(true)
     setError(null)
-    const problem = await signInAsPractice(next)
+    const problem = await trackBusy(signInAsPractice(next))
     setBusy(false)
     if (problem) setError(problem)
     // A fresh load drops the previous person's data and lands on the new person's first page.

@@ -5,6 +5,7 @@ import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useEffect, useState } from 'react'
+import { trackBusy } from '../lib/busy'
 import { currentDevice, installPlatform } from '../lib/install'
 import { pushAvailability, pushSupported, vapidPublicKey, type PushState } from '../lib/push'
 import { WARD_NAME } from '../lib/ward'
@@ -62,7 +63,7 @@ export function NotificationsCard({ actions }: { actions: NotificationActions })
     setBusy(true)
     setError(null)
     try {
-      await fn()
+      await trackBusy(fn())
       if (next) setState(next)
       return true
     } catch (e) {

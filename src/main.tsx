@@ -3,6 +3,7 @@ import { ThemeProvider } from '@mui/material/styles'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
+import { BusyOverlay } from './components/BusyOverlay'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { EnvironmentBanner } from './components/EnvironmentBanner'
 import { reportClientError } from './lib/queries'
@@ -24,6 +25,7 @@ createRoot(document.getElementById('root')!).render(
       <ErrorBoundary>
         <App />
       </ErrorBoundary>
+      <BusyOverlay />
     </ThemeProvider>
   </StrictMode>,
 )

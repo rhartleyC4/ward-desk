@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { trackBusy } from './busy'
 import { reportError } from './errorReport'
 import { onWardChange } from './liveUpdates'
 
@@ -10,6 +11,8 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]) {
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [version, setVersion] = useState(0)
+  // Reloads waiting for the next load to land, so the busy overlay covers the refresh too.
+  const waiting = useRef<(() => void)[]>([])
 
   const run = useCallback(load, deps)
 
@@ -24,14 +27,26 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]) {
         // The page shows it too, but a load that fails is worth knowing about.
         reportError('load', e)
       })
+      .finally(() => {
+        if (cancelled) return
+        waiting.current.splice(0).forEach((done) => done())
+      })
     return () => {
       cancelled = true
     }
   }, [run, version])
 
   useEffect(() => onWardChange(() => setVersion((v) => v + 1)), [])
+  // Leaving the page mid-reload must not leave the overlay up.
+  useEffect(() => () => waiting.current.splice(0).forEach((done) => done()), [])
 
-  return { data, error, reload: () => setVersion((v) => v + 1) }
+  // Callers don't wait for this; the overlay does, so the old data isn't left looking current.
+  const reload = () => {
+    void trackBusy(new Promise<void>((done) => waiting.current.push(done)))
+    setVersion((v) => v + 1)
+  }
+
+  return { data, error, reload }
 }
 
 /** Wraps a save so the button can show progress and the error can be shown inline. */
@@ -42,7 +57,7 @@ export function useAction() {
     setBusy(true)
     setError(null)
     try {
-      await fn()
+      await trackBusy(fn())
       return true
     } catch (e) {
       setError((e as Error).message)

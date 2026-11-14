@@ -1,6 +1,7 @@
 import type { Session } from '@supabase/supabase-js'
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { AppRole } from '../lib/access'
+import { trackBusy } from '../lib/busy'
 import type { Enums } from '../lib/database.types'
 import { loadAgendaTemplates, loadMe, whoami, type AgendaTemplate, type MentoredBy, type MentoringFor, type Profile } from '../lib/queries'
 import { ACTING_KEY, setActingFor, supabase } from '../lib/supabase'
@@ -136,7 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loading = !sessionKnown || (!!userId && !current)
 
   const reloadTemplates = async () => {
-    const templates = await loadAgendaTemplates(supabase)
+    const templates = await trackBusy(loadAgendaTemplates(supabase))
     setMe((m) => (m ? { ...m, templates } : m))
   }
 
@@ -147,18 +148,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     storeActing(null)
     setActingFor(null)
-    await supabase.auth.signOut()
+    await trackBusy(supabase.auth.signOut())
   }
 
   const switchActing = async (id: string | null) => {
     if (!userId) return
     storeActing(id)
-    setMe(await loadWho(userId, id))
+    setMe(await trackBusy(loadWho(userId, id)))
   }
 
   const reloadMentoring = async () => {
     if (!userId) return
-    setMe(await loadWho(userId, me?.actingFor?.for_id ?? null))
+    setMe(await trackBusy(loadWho(userId, me?.actingFor?.for_id ?? null)))
   }
 
   return (

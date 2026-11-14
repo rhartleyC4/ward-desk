@@ -16,6 +16,7 @@ import { useState, type FormEvent } from 'react'
 import { ErrorNote } from '../components/Layout'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { friendlyAuthError } from '../lib/authErrors'
+import { trackBusy } from '../lib/busy'
 import { isTrainingSite } from '../lib/env'
 import { PasskeyCancelled, passkeysSupported, rememberPasskeyChoice } from '../lib/passkeys'
 import { PRACTICE_ACCOUNTS, practicePassword, signInAsPractice } from '../lib/practiceAccounts'
@@ -42,10 +43,12 @@ export function LoginPage() {
   const sendLink = async () => {
     setBusy(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
-    })
+    const { error } = await trackBusy(
+      supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin },
+      }),
+    )
     setBusy(false)
     if (error) setError(friendlyAuthError(error.message))
     else setSent(true)
@@ -54,7 +57,7 @@ export function LoginPage() {
   const passwordSignIn = async () => {
     setBusy(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { error } = await trackBusy(supabase.auth.signInWithPassword({ email, password }))
     setBusy(false)
     if (error) setError(friendlyAuthError(error.message))
   }
@@ -62,7 +65,7 @@ export function LoginPage() {
   const practiceSignIn = async (account: string) => {
     setBusy(true)
     setError(null)
-    const problem = await signInAsPractice(account)
+    const problem = await trackBusy(signInAsPractice(account))
     setBusy(false)
     if (problem) setError(problem)
   }
