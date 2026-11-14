@@ -1,6 +1,6 @@
 import { useAuth } from '../auth/AuthProvider'
 import { AppointmentsView, type AppointmentsActions } from '../components/AppointmentsView'
-import { ErrorNote, Loading } from '../components/Layout'
+import { ErrorNote, Loading, SaveError } from '../components/Layout'
 import * as q from '../lib/queries'
 import { supabase, WARD_TIME_ZONE } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
@@ -27,7 +27,7 @@ export function AppointmentsPage() {
 
   return (
     <>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <AppointmentsView data={data} userId={profile?.id ?? ''} actions={actions} timeZone={WARD_TIME_ZONE} busy={save.busy} />
     </>
   )

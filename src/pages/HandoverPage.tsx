@@ -18,7 +18,7 @@ import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, Muted, SaveError, SectionCard } from '../components/Layout'
 import { PersonPick } from '../components/PersonPick'
 import { Choices, StepFrame } from '../components/Steps'
 import { addDays, longDate, type IsoDate } from '../lib/dates'
@@ -320,7 +320,8 @@ export function HandoverPage() {
             <Muted>Finished requests and past appointments stay as they are.</Muted>
           </Stack>
         )}
-        <ErrorNote error={run.error ?? work.error} />
+        <ErrorNote error={work.error} />
+        <SaveError action={run} />
       </StepFrame>
 
       <Dialog open={confirming} onClose={() => setConfirming(false)}>

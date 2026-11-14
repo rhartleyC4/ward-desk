@@ -4,7 +4,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, SaveError, SectionCard } from '../components/Layout'
 import { MeetingCard, MeetingForm, type MeetingSetupActions } from '../components/MeetingSetup'
 import { moveId, slugFor } from '../lib/agenda'
 import * as q from '../lib/queries'
@@ -70,7 +70,8 @@ export function MeetingsPage() {
           </Button>
         )}
       </Stack>
-      <ErrorNote error={error ?? save.error} />
+      <ErrorNote error={error} />
+      <SaveError action={save} />
       {creating && (
         <SectionCard title="New meeting">
           <MeetingForm

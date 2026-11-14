@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { DAYS_AHEAD, HoursView, type HoursActions } from '../components/HoursView'
-import { ErrorNote, Loading } from '../components/Layout'
+import { ErrorNote, Loading, SaveError } from '../components/Layout'
 import { keepsHours } from '../lib/availability'
 import { addDays } from '../lib/dates'
 import * as q from '../lib/queries'
@@ -49,7 +49,7 @@ export function HoursPage() {
 
   return (
     <>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <HoursView data={data} leaderId={leaderId} onLeader={setPicked} from={today} firstTime={firstTime} selfId={isLeader ? profile?.id : undefined} actions={actions} busy={save.busy} />
     </>
   )

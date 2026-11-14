@@ -1,5 +1,5 @@
 import Typography from '@mui/material/Typography'
-import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, Muted, SaveError, SectionCard } from '../components/Layout'
 import { UsualLengths } from '../components/SecretaryHome'
 import * as q from '../lib/queries'
 import { supabase } from '../lib/supabase'
@@ -18,7 +18,7 @@ export function LengthsPage() {
       <Typography variant="h1" sx={{ mb: 2 }}>
         Usual lengths
       </Typography>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <SectionCard>
         <Muted>New appointments start at these. You can still change any one when booking.</Muted>
         <UsualLengths lengths={data} busy={save.busy} onChange={(purpose, minutes) => void save.act(() => q.setUsualLength(supabase, purpose, minutes)).then((ok) => ok && reload())} />

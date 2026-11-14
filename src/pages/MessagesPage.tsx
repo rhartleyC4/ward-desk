@@ -1,5 +1,5 @@
 import Typography from '@mui/material/Typography'
-import { ErrorNote, Loading, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, SaveError, SectionCard } from '../components/Layout'
 import { TemplatesEditor } from '../components/Messages'
 import * as q from '../lib/queries'
 import { supabase } from '../lib/supabase'
@@ -24,7 +24,7 @@ export function MessagesPage() {
       <Typography variant="h1" sx={{ mb: 2 }}>
         Message templates
       </Typography>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <SectionCard>
         <TemplatesEditor templates={data} busy={save.busy} onSave={(t) => run(() => q.saveTemplate(supabase, t))} onDelete={(id) => void run(() => q.deleteTemplate(supabase, id))} />
       </SectionCard>

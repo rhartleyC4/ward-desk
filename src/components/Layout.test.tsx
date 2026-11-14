@@ -1,10 +1,11 @@
 import { ThemeProvider } from '@mui/material/styles'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { theme } from '../theme'
-import { ErrorNote, Layout, Loading, Muted, SectionCard, Side, Split, Tiles } from './Layout'
+import { ErrorNote, Layout, Loading, Muted, SaveError, SectionCard, Side, Split, Tiles } from './Layout'
 
 const stub = vi.hoisted(() => ({ auth: {} as Record<string, unknown>, counts: {} as Record<string, number>, steps: [] as { done: boolean }[], wide: false }))
 
@@ -204,6 +205,21 @@ describe('the small pieces', () => {
     expect(container).toBeEmptyDOMElement()
     rerender(<ErrorNote error="broken" />)
     expect(screen.getByRole('alert')).toHaveTextContent('broken')
+  })
+
+  it('SaveError pops up a failed save until it is closed', async () => {
+    const clear = vi.fn()
+    const { rerender } = render(<SaveError action={{ error: null, clear }} />)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    rerender(<SaveError action={{ error: 'Someone is set apart after they are sustained', clear }} />)
+    expect(screen.getByRole('alert')).toHaveTextContent('Someone is set apart after they are sustained')
+    // A tap somewhere else on the page leaves it up.
+    await userEvent.click(document.body)
+    expect(clear).not.toHaveBeenCalled()
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(clear).toHaveBeenCalled()
+    rerender(<SaveError action={{ error: null, clear }} />)
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
   })
 
   it('Loading says so', () => {

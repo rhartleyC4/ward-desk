@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { trackBusy } from './busy'
 import { reportError } from './errorReport'
+import { friendlyError } from './friendlyError'
 import { onWardChange } from './liveUpdates'
 
 /**
@@ -23,7 +24,7 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]) {
       .then((d) => !cancelled && setData(d))
       .catch((e: Error) => {
         if (cancelled) return
-        setError(e.message)
+        setError(friendlyError(e.message))
         // The page shows it too, but a load that fails is worth knowing about.
         reportError('load', e)
       })
@@ -49,7 +50,10 @@ export function useAsync<T>(load: () => Promise<T>, deps: unknown[]) {
   return { data, error, reload }
 }
 
-/** Wraps a save so the button can show progress and the error can be shown inline. */
+/**
+ * Wraps a save so the button can show progress. A failure is kept in `error`, worded for people,
+ * for SaveError to show where it can't be missed; `clear` dismisses it.
+ */
 export function useAction() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -60,11 +64,12 @@ export function useAction() {
       await trackBusy(fn())
       return true
     } catch (e) {
-      setError((e as Error).message)
+      setError(friendlyError((e as Error).message))
       return false
     } finally {
       setBusy(false)
     }
   }
-  return { busy, error, act }
+  const clear = useCallback(() => setError(null), [])
+  return { busy, error, act, clear }
 }

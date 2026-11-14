@@ -7,7 +7,7 @@ import Tabs from '@mui/material/Tabs'
 import { Link, Navigate, useParams } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { AgendaView, type AgendaActions } from '../components/AgendaView'
-import { ErrorNote, Loading } from '../components/Layout'
+import { ErrorNote, Loading, SaveError } from '../components/Layout'
 import { canSeeCallings } from '../lib/access'
 import { shortDate, sustainingSunday } from '../lib/dates'
 import * as q from '../lib/queries'
@@ -108,7 +108,8 @@ export function AgendaPage() {
           {shortDate(next)}
         </Button>
       </Stack>
-      <ErrorNote error={error ?? save.error} />
+      <ErrorNote error={error} />
+      <SaveError action={save} />
       {data ? <AgendaView template={template} date={date} data={data} actions={actions} timeZone={WARD_TIME_ZONE} canEditCallings={canSeeCallings(roles, callingsHidden)} callingsHidden={callingsHidden} me={{ id: profile?.id ?? '', name: profile?.display_name ?? '' }} /> : !error && <Loading />}
     </>
   )

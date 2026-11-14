@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading } from '../components/Layout'
+import { ErrorNote, Loading, SaveError } from '../components/Layout'
 import { RequestsView, type RequestsActions } from '../components/Requests'
 import { canAskForCallings, canSendRequests } from '../lib/access'
 import * as q from '../lib/queries'
@@ -78,7 +78,7 @@ export function RequestsPage() {
 
   return (
     <>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <RequestsView data={data} userId={userId} today={today} timeZone={WARD_TIME_ZONE} canSend={canSend} canAskCallings={canAsk} startWith={startWith} actions={actions} busy={save.busy} organization={organization} />
     </>
   )

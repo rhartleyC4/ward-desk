@@ -15,7 +15,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, Muted, SaveError, SectionCard } from '../components/Layout'
 import type { AppRole } from '../lib/access'
 import { accessPeople, findPeople } from '../lib/accessList'
 import { addDays, longDate, todayIso } from '../lib/dates'
@@ -150,7 +150,7 @@ function WaitingName({ invite, onSave }: { invite: Invite; onSave: (name: Invite
 }
 
 /** Asks before deleting an account, saying what goes and what stays. */
-function DeleteAccountDialog({ account, busy, error, onCancel, onDelete }: { account: Account | null; busy: boolean; error: string | null; onCancel: () => void; onDelete: (id: string) => void }) {
+function DeleteAccountDialog({ account, busy, onCancel, onDelete }: { account: Account | null; busy: boolean; onCancel: () => void; onDelete: (id: string) => void }) {
   const name = account?.display_name || account?.email
   return (
     <Dialog open={!!account} onClose={onCancel} aria-labelledby="delete-account-title">
@@ -162,7 +162,6 @@ function DeleteAccountDialog({ account, busy, error, onCancel, onDelete }: { acc
         <DialogContentText>
           Requests and calling requests they were part of stay, showing &ldquo;Former member&rdquo;. This can't be undone.
         </DialogContentText>
-        <ErrorNote error={error} />
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Cancel</Button>
@@ -241,7 +240,7 @@ export function AccessPage() {
           counselors appear in the Conducting and Interviewer pickers.
         </Muted>
       </Box>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
 
       <SectionCard title="Add someone">
         <Stack component="form" spacing={1.5} onSubmit={submit}>
@@ -346,7 +345,7 @@ export function AccessPage() {
         </SectionCard>
       )}
 
-      <DeleteAccountDialog account={deleting} busy={save.busy} error={save.error} onCancel={() => setDeleting(null)} onDelete={(id) => void confirmDelete(id)} />
+      <DeleteAccountDialog account={deleting} busy={save.busy} onCancel={() => setDeleting(null)} onDelete={(id) => void confirmDelete(id)} />
     </>
   )
 }

@@ -17,7 +17,7 @@ import { WARD_TIME_ZONE, supabase } from '../lib/supabase'
 import { wardParts } from '../lib/slots'
 import { useAction } from '../lib/useAsync'
 import { wardToday } from '../lib/wardToday'
-import { ErrorNote, Muted, SectionCard } from './Layout'
+import { Muted, SaveError, SectionCard } from './Layout'
 import { Choices } from './Steps'
 
 /** The last day mentoring covers (it ends at midnight after it). */
@@ -32,7 +32,7 @@ export function MentorChoice() {
   return (
     <SectionCard title="Use Ward Desk as">
       <Muted>While you help the new bishop, you can see and do what he does. Everything you do is recorded as his, and he's told.</Muted>
-      <ErrorNote error={act.error} />
+      <SaveError action={act} />
       <Choices
         label="Use Ward Desk as"
         value={value}
@@ -60,7 +60,7 @@ function MentorCard({ m }: { m: MentoredBy }) {
     <Box sx={{ mb: 2 }}>
       <Typography sx={{ fontWeight: 600 }}>{m.name ?? 'Your mentor'}</Typography>
       <Muted>Can use Ward Desk as you. What they do is recorded as yours, and you're told.</Muted>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <FormControlLabel
         sx={{ mt: 1, display: 'flex' }}
         control={<Switch checked={m.sees_callings} disabled={save.busy} onChange={(e) => void change({ sees_callings: e.target.checked })} />}

@@ -289,11 +289,12 @@ describe('AccessPage', () => {
       expect(within(dialog).getByText(/This deletes gone2@ward\.test/)).toBeInTheDocument()
     })
 
-    it('stays open with the error when it fails', async () => {
+    it('stays open and pops up the error over it when it fails', async () => {
       vi.mocked(deleteAccount).mockRejectedValue(new Error('refused'))
       const dialog = await startDelete()
       await confirm(dialog)
-      expect(await within(dialog).findByText('refused')).toBeInTheDocument()
+      expect(await screen.findByRole('alert')).toHaveTextContent('refused')
+      expect(dialog).toBeInTheDocument()
     })
 
     it('can be cancelled', async () => {

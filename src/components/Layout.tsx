@@ -18,6 +18,8 @@ import CircularProgress from '@mui/material/CircularProgress'
 import Container from '@mui/material/Container'
 import IconButton from '@mui/material/IconButton'
 import Paper from '@mui/material/Paper'
+import Portal from '@mui/material/Portal'
+import Snackbar from '@mui/material/Snackbar'
 import Tab from '@mui/material/Tab'
 import Tabs from '@mui/material/Tabs'
 import Toolbar from '@mui/material/Toolbar'
@@ -25,7 +27,7 @@ import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { useTheme } from '@mui/material/styles'
 import useMediaQuery from '@mui/material/useMediaQuery'
-import { Children, isValidElement, type ReactNode } from 'react'
+import { Children, createContext, isValidElement, useContext, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { ErrorBoundary } from './ErrorBoundary'
@@ -48,6 +50,9 @@ const TAB_ICONS: Record<string, ReactNode> = {
   '/requests': <AssignmentOutlinedIcon />,
 }
 
+
+/** Whether the floating tab bar is at the bottom of a phone screen, so a toast can sit above it. */
+const TabBarShown = createContext(false)
 
 export function Layout() {
   return (
@@ -93,115 +98,117 @@ function Shell() {
   )
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
-      <AppBar position="sticky" color="inherit" elevation={0} sx={[glass, { borderBottom: 1, borderColor: 'divider', pt: 'env(safe-area-inset-top, 0px)' }]}>
-        <Toolbar sx={{ gap: 1, minHeight: { xs: 52 } }}>
-          {back ? (
-            <Button component={NavLink} to={back.to} startIcon={<ChevronLeftIcon />} sx={{ ml: -1.5, fontSize: '1rem', '& .MuiButton-startIcon': { mr: 0 } }}>
-              {back.label}
-            </Button>
-          ) : (
-            <Typography sx={{ fontWeight: 700, display: { md: showTabs ? 'none' : 'block' } }}>{WARD_NAME}</Typography>
+    <TabBarShown.Provider value={showTabs}>
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <AppBar position="sticky" color="inherit" elevation={0} sx={[glass, { borderBottom: 1, borderColor: 'divider', pt: 'env(safe-area-inset-top, 0px)' }]}>
+          <Toolbar sx={{ gap: 1, minHeight: { xs: 52 } }}>
+            {back ? (
+              <Button component={NavLink} to={back.to} startIcon={<ChevronLeftIcon />} sx={{ ml: -1.5, fontSize: '1rem', '& .MuiButton-startIcon': { mr: 0 } }}>
+                {back.label}
+              </Button>
+            ) : (
+              <Typography sx={{ fontWeight: 700, display: { md: showTabs ? 'none' : 'block' } }}>{WARD_NAME}</Typography>
+            )}
+            {showTabs && (
+              <Tabs value={current} variant="scrollable" scrollButtons={false} aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, flexGrow: 1, minHeight: 52 }}>
+                {links.map((l) => (
+                  <Tab
+                    key={l.to}
+                    value={l.to}
+                    label={
+                      countFor(l.to) ? (
+                        // The count sits inline after the label: the tab row scrolls sideways, so it
+                        // clips anything raised above the label, like a regular corner badge.
+                        <Badge color="error" badgeContent={countFor(l.to)} max={99} sx={{ alignItems: 'center', '& .MuiBadge-badge': { position: 'static', transform: 'none', ml: 0.75 } }}>
+                          {l.label}
+                        </Badge>
+                      ) : (
+                        l.label
+                      )
+                    }
+                    aria-label={tabLabel(l)}
+                    component={NavLink}
+                    to={l.to}
+                    sx={{ minHeight: 52 }}
+                  />
+                ))}
+              </Tabs>
+            )}
+            <Box sx={{ flexGrow: { xs: 1, md: showTabs ? 0 : 1 } }} />
+            <Tooltip title={settingsLabel}>
+              <IconButton component={NavLink} to="/settings" aria-label={settingsLabel} sx={{ mr: -1 }}>
+                <Badge color="error" variant="dot" overlap="circular" invisible={!pending}>
+                  <Avatar sx={{ width: 34, height: 34, fontSize: '0.875rem', fontWeight: 700, bgcolor: pathname === '/settings' ? 'primary.main' : 'secondary.main', color: 'primary.contrastText' }}>
+                    {initials(profile?.display_name)}
+                  </Avatar>
+                </Badge>
+              </IconButton>
+            </Tooltip>
+          </Toolbar>
+        </AppBar>
+        <Container maxWidth={width} sx={{ maxWidth: width === false ? wideMax : undefined, pt: 2, pb: showTabs ? { xs: 'calc(96px + env(safe-area-inset-bottom, 0px))', md: 4 } : 4 }}>
+          {landing && (
+            <>
+              <InstallPrompt />
+              <PasskeyOffer />
+            </>
           )}
-          {showTabs && (
-            <Tabs value={current} variant="scrollable" scrollButtons={false} aria-label="Main" sx={{ display: { xs: 'none', md: 'flex' }, flexGrow: 1, minHeight: 52 }}>
+          <MentorBanner />
+          {/* Keyed by path, so a page that crashed comes back after moving to another one. */}
+          <ErrorBoundary key={pathname}>
+            <Outlet />
+          </ErrorBoundary>
+        </Container>
+        {showTabs && (
+          // A floating glass pill, like the iOS tab bar, so the page shows through as it scrolls.
+          <Paper
+            component="nav"
+            aria-label="Main"
+            elevation={0}
+            sx={[
+              glass,
+              {
+                display: { md: 'none' },
+                position: 'fixed',
+                left: 8,
+                right: 8,
+                bottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
+                mx: 'auto',
+                maxWidth: 560,
+                zIndex: 'appBar',
+                borderRadius: 999,
+                border: 1,
+                borderColor: 'divider',
+                overflow: 'hidden',
+              },
+            ]}
+          >
+            <BottomNavigation showLabels value={current} sx={{ height: 64, px: 0.5, alignItems: 'center', bgcolor: 'transparent' }}>
               {links.map((l) => (
-                <Tab
+                <BottomNavigationAction
                   key={l.to}
                   value={l.to}
-                  label={
-                    countFor(l.to) ? (
-                      // The count sits inline after the label: the tab row scrolls sideways, so it
-                      // clips anything raised above the label, like a regular corner badge.
-                      <Badge color="error" badgeContent={countFor(l.to)} max={99} sx={{ alignItems: 'center', '& .MuiBadge-badge': { position: 'static', transform: 'none', ml: 0.75 } }}>
-                        {l.label}
-                      </Badge>
-                    ) : (
-                      l.label
-                    )
-                  }
+                  label={l.label}
                   aria-label={tabLabel(l)}
+                  icon={tabIcon(l.to)}
                   component={NavLink}
                   to={l.to}
-                  sx={{ minHeight: 52 }}
+                  sx={{
+                    minWidth: 0,
+                    px: 0.25,
+                    height: 52,
+                    borderRadius: 999,
+                    '&.Mui-selected': { bgcolor: 'action.selected' },
+                    // iOS-sized labels, so five tabs fit in the pill at phone width.
+                    '& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected': { fontSize: '0.6875rem', whiteSpace: 'nowrap' },
+                  }}
                 />
               ))}
-            </Tabs>
-          )}
-          <Box sx={{ flexGrow: { xs: 1, md: showTabs ? 0 : 1 } }} />
-          <Tooltip title={settingsLabel}>
-            <IconButton component={NavLink} to="/settings" aria-label={settingsLabel} sx={{ mr: -1 }}>
-              <Badge color="error" variant="dot" overlap="circular" invisible={!pending}>
-                <Avatar sx={{ width: 34, height: 34, fontSize: '0.875rem', fontWeight: 700, bgcolor: pathname === '/settings' ? 'primary.main' : 'secondary.main', color: 'primary.contrastText' }}>
-                  {initials(profile?.display_name)}
-                </Avatar>
-              </Badge>
-            </IconButton>
-          </Tooltip>
-        </Toolbar>
-      </AppBar>
-      <Container maxWidth={width} sx={{ maxWidth: width === false ? wideMax : undefined, pt: 2, pb: showTabs ? { xs: 'calc(96px + env(safe-area-inset-bottom, 0px))', md: 4 } : 4 }}>
-        {landing && (
-          <>
-            <InstallPrompt />
-            <PasskeyOffer />
-          </>
+            </BottomNavigation>
+          </Paper>
         )}
-        <MentorBanner />
-        {/* Keyed by path, so a page that crashed comes back after moving to another one. */}
-        <ErrorBoundary key={pathname}>
-          <Outlet />
-        </ErrorBoundary>
-      </Container>
-      {showTabs && (
-        // A floating glass pill, like the iOS tab bar, so the page shows through as it scrolls.
-        <Paper
-          component="nav"
-          aria-label="Main"
-          elevation={0}
-          sx={[
-            glass,
-            {
-              display: { md: 'none' },
-              position: 'fixed',
-              left: 8,
-              right: 8,
-              bottom: 'calc(8px + env(safe-area-inset-bottom, 0px))',
-              mx: 'auto',
-              maxWidth: 560,
-              zIndex: 'appBar',
-              borderRadius: 999,
-              border: 1,
-              borderColor: 'divider',
-              overflow: 'hidden',
-            },
-          ]}
-        >
-          <BottomNavigation showLabels value={current} sx={{ height: 64, px: 0.5, alignItems: 'center', bgcolor: 'transparent' }}>
-            {links.map((l) => (
-              <BottomNavigationAction
-                key={l.to}
-                value={l.to}
-                label={l.label}
-                aria-label={tabLabel(l)}
-                icon={tabIcon(l.to)}
-                component={NavLink}
-                to={l.to}
-                sx={{
-                  minWidth: 0,
-                  px: 0.25,
-                  height: 52,
-                  borderRadius: 999,
-                  '&.Mui-selected': { bgcolor: 'action.selected' },
-                  // iOS-sized labels, so five tabs fit in the pill at phone width.
-                  '& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected': { fontSize: '0.6875rem', whiteSpace: 'nowrap' },
-                }}
-              />
-            ))}
-          </BottomNavigation>
-        </Paper>
-      )}
-    </Box>
+      </Box>
+    </TabBarShown.Provider>
   )
 }
 
@@ -315,6 +322,34 @@ function WaitingCount({ count }: { count: number }) {
   )
 }
 
+/**
+ * A save that failed, shown at the bottom of the screen (above the tab bar on a phone, and over any
+ * dialog) so it's seen wherever the button was. It stays until closed or the next save starts.
+ */
+export function SaveError({ action }: { action: { error: string | null; clear: () => void } }) {
+  const tabBar = useContext(TabBarShown)
+  // The last message, so the text doesn't vanish while the toast slides away.
+  const [message, setMessage] = useState(action.error)
+  if (action.error && action.error !== message) setMessage(action.error)
+  // In a portal on the body, so an open dialog doesn't hide it from screen readers with the page.
+  return (
+    <Portal>
+      <Snackbar
+        open={!!action.error}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        // A tap elsewhere on the page doesn't count as having read it.
+        onClose={(_, reason) => reason !== 'clickaway' && action.clear()}
+        sx={tabBar ? { bottom: { xs: 'calc(84px + env(safe-area-inset-bottom, 0px))', md: 24 } } : undefined}
+      >
+        <Alert severity="error" variant="filled" onClose={action.clear} sx={{ width: '100%', maxWidth: 560 }}>
+          {message}
+        </Alert>
+      </Snackbar>
+    </Portal>
+  )
+}
+
+/** A page that couldn't load, shown in place of the page. */
 export function ErrorNote({ error }: { error: string | null }) {
   return error ? (
     <Alert severity="error" sx={{ mb: 1.5 }}>

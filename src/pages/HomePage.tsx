@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { BishopricHome, type BishopricHomeActions } from '../components/BishopricHome'
-import { ErrorNote, Loading } from '../components/Layout'
+import { ErrorNote, Loading, SaveError } from '../components/Layout'
 import { RequestsOnHome } from '../components/RequestsOnHome'
 import { SetupCard } from '../components/Setup'
 import { useRefreshWaiting } from '../components/WaitingCount'
@@ -60,7 +60,7 @@ function BishopricHomePage() {
 
   return (
     <>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <SetupCard />
       <RequestsOnHome />
       <BishopricHome data={data} userId={userId} today={today} now={now} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
@@ -110,7 +110,7 @@ function SecretaryHomePage() {
 
   return (
     <>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <SetupCard />
       <RequestsOnHome />
       <SecretaryHome data={data} userId={profile?.id ?? ''} myName={profile?.display_name ?? ''} today={today} now={now} timeZone={WARD_TIME_ZONE} sendsReminders={sendsReminders} actions={actions} busy={save.busy} />

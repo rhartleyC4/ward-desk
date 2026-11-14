@@ -12,7 +12,7 @@ import { FORMER_MEMBER, callingRequestSummary, requestStatusLine, unreceived, wa
 import { supabase } from '../lib/supabase'
 import { useAction, useAsync } from '../lib/useAsync'
 import { wardToday } from '../lib/wardToday'
-import { ErrorNote, Muted, SectionCard } from './Layout'
+import { Muted, SaveError, SectionCard } from './Layout'
 import { useRefreshWaiting } from './WaitingCount'
 
 const SHOWN = 3
@@ -102,7 +102,7 @@ export function RequestsOnHome() {
 
   return (
     <SectionCard title="Waiting for you">
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <Stack spacing={1.5}>
         {items.slice(0, SHOWN).map((i) => (
           <Stack key={i.id} direction="row" sx={{ alignItems: 'center', gap: 1 }}>

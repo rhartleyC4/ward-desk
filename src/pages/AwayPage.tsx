@@ -11,7 +11,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, Muted, SaveError, SectionCard } from '../components/Layout'
 import { ShortSundaysNote } from '../components/ShortSundays'
 import { personLabel } from '../lib/agenda'
 import { shortSundays, shortSundaysWith } from '../lib/coverage'
@@ -82,7 +82,7 @@ export function AwayPage() {
             </Button>
           </Grid>
         </Grid>
-        <ErrorNote error={save.error} />
+        <SaveError action={save} />
         {draftShort.length > 0 && (
           <Box sx={{ mt: 1.5 }}>
             <ShortSundaysNote sundays={draftShort} leaderIds={data.leaderIds} people={data.profiles} intro="With these dates" />

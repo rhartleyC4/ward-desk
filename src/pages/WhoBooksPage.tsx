@@ -1,6 +1,6 @@
 import Typography from '@mui/material/Typography'
 import { WhoSchedules } from '../components/AppointmentsView'
-import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, Muted, SaveError, SectionCard } from '../components/Layout'
 import { schedulersFrom, soleScheduler } from '../lib/appointments'
 import * as q from '../lib/queries'
 import { supabase } from '../lib/supabase'
@@ -21,7 +21,7 @@ export function WhoBooksPage() {
       <Typography variant="h1" sx={{ mb: 2 }}>
         Who books for whom
       </Typography>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <SectionCard>
         {sole ? (
           <Muted>

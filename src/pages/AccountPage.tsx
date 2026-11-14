@@ -14,7 +14,7 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, Muted, SaveError, SectionCard } from '../components/Layout'
 import { MentorChoice, YourMentors } from '../components/Mentoring'
 import { NotificationChoices, type ChoiceActions } from '../components/NotificationChoices'
 import { NotificationsCard, type NotificationActions } from '../components/NotificationsCard'
@@ -73,7 +73,7 @@ function YourName() {
     <SectionCard title="Your name">
       <Box component="form" onSubmit={submit} noValidate>
         <Muted>How you appear to others in Ward Desk, on agendas, requests and appointments.</Muted>
-        <ErrorNote error={save.error} />
+        <SaveError action={save} />
         <TextField
           label="Your name"
           fullWidth
@@ -217,7 +217,7 @@ export function AccountPage() {
           Devices that can sign you in without an email. Rename one to tell it apart, or remove it if it's lost or no longer yours. You can still sign in with an
           email link{import.meta.env.VITE_ENABLE_GOOGLE === 'true' ? ' or Google' : ''}.
         </Muted>
-        <ErrorNote error={save.error} />
+        <SaveError action={save} />
         {data.length === 0 ? (
           <Typography sx={{ my: 1.5 }}>None yet.</Typography>
         ) : (

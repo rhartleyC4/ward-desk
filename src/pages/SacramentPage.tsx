@@ -5,7 +5,7 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import { useState } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading, SectionCard, Tiles } from '../components/Layout'
+import { ErrorNote, Loading, SaveError, SectionCard, Tiles } from '../components/Layout'
 import { MeetingEditor } from '../components/MeetingEditor'
 import { meetingLabel, MeetingSummary } from '../components/MeetingSummary'
 import { canPlanMeetings } from '../lib/access'
@@ -41,7 +41,7 @@ export function SacramentPage() {
       <Typography variant="h1" sx={{ mb: 2 }}>
         Sacrament meetings
       </Typography>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <Tiles>
         {sundays.map((date) => {
           const meeting = data.meetings.find((m) => m.meeting_date === date)

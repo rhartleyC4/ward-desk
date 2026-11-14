@@ -8,7 +8,7 @@ import TextField from '@mui/material/TextField'
 import Tooltip from '@mui/material/Tooltip'
 import Typography from '@mui/material/Typography'
 import { useState, type FormEvent } from 'react'
-import { ErrorNote, Loading, Muted, SectionCard } from '../components/Layout'
+import { ErrorNote, Loading, Muted, SaveError, SectionCard } from '../components/Layout'
 import { groupCallings, ORGANIZATIONS, tidyTitle, UNREVIEWED, type ListedCalling } from '../lib/callings'
 import { addToCallingList, loadCallingList, mergeCalling, removeFromCallingList, updateCallingListEntry } from '../lib/queries'
 import { supabase } from '../lib/supabase'
@@ -199,7 +199,7 @@ export function CallingListPage() {
           file it under an organization, merge it into the right title, or remove it. Renaming a title also renames the open callings that use it. Filled ones keep the title they had.
         </Muted>
       </Box>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
 
       <SectionCard title="Add a calling">
         <Stack component="form" onSubmit={submit} direction="row" sx={{ gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>

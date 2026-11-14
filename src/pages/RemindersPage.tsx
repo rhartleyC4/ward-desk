@@ -2,7 +2,7 @@ import Button from '@mui/material/Button'
 import Typography from '@mui/material/Typography'
 import { Link, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading, Muted } from '../components/Layout'
+import { ErrorNote, Loading, Muted, SaveError } from '../components/Layout'
 import { Reminders, type RemindersActions } from '../components/Reminders'
 import { WEEKDAYS } from '../lib/availability'
 import { addDays, longDate, weekday } from '../lib/dates'
@@ -47,7 +47,7 @@ export function RemindersPage() {
 
   return (
     <>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <Typography variant="h1">Reminders for {day}</Typography>
       <Muted>
         {WEEKDAYS[weekday(date)]}, {longDate(date)}. Copy each message, or open it in Messages or email, then pick who it goes to.

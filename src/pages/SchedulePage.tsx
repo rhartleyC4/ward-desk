@@ -1,5 +1,5 @@
 import { useAuth } from '../auth/AuthProvider'
-import { ErrorNote, Loading } from '../components/Layout'
+import { ErrorNote, Loading, SaveError } from '../components/Layout'
 import { ScheduleEditor, type ScheduleActions } from '../components/ScheduleEditor'
 import { canEditSchedule, isSecretaryOffice } from '../lib/access'
 import * as q from '../lib/queries'
@@ -35,7 +35,7 @@ export function SchedulePage() {
 
   return (
     <>
-      <ErrorNote error={save.error} />
+      <SaveError action={save} />
       <ScheduleEditor data={data} canEdit={canEditSchedule(roles)} actions={actions} busy={save.busy} />
     </>
   )
