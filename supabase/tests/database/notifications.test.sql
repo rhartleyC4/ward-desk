@@ -119,7 +119,7 @@ select is(pg_temp.queued(), 'added,booked,moved,sent_back,booked,cancelled', 'an
 select pg_temp.act_as('first@ward.test');
 insert into public.absences (starts_on, ends_on) values ('2026-11-20', '2026-11-22');
 select is(pg_temp.queued(), 'added,booked,moved,sent_back,booked,cancelled,away', 'away dates are queued');
-select is((select count(*)::int from public.notification_outbox), 0, 'nobody signed in can read the queue');
+select throws_ok('select count(*) from public.notification_outbox', '42501', null, 'nobody signed in can read the queue');
 
 select * from finish();
 rollback;
