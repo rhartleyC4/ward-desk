@@ -18,6 +18,8 @@ export function AppointmentsPage() {
     // Youth interviews are with youth, so their messages go to a parent.
     add: (appointment) => run(() => q.addAppointment(supabase, { ...appointment, is_youth: appointment.purpose === 'youth' })),
     setSecretary: (leaderId, secretaryId, on) => run(() => (on ? q.addSecretary : q.removeSecretary)(supabase, leaderId, secretaryId)),
+    setLength: (id, minutes) => run(() => q.updateAppointment(supabase, id, { duration_minutes: minutes })),
+    setYouth: (id, isYouth, parentName) => run(() => q.updateAppointment(supabase, id, { is_youth: isYouth, parent_name: parentName })),
   }
 
   if (error) return <ErrorNote error={error} />
@@ -26,7 +28,7 @@ export function AppointmentsPage() {
   return (
     <>
       <ErrorNote error={save.error} />
-      <AppointmentsView data={data} userId={profile?.id ?? ''} actions={actions} timeZone={WARD_TIME_ZONE} />
+      <AppointmentsView data={data} userId={profile?.id ?? ''} actions={actions} timeZone={WARD_TIME_ZONE} busy={save.busy} />
     </>
   )
 }

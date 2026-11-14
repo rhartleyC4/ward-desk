@@ -12,7 +12,7 @@ const templates: RemindersProps['templates'] = [
 ]
 
 function setup(extra: Partial<RemindersProps> = {}) {
-  const actions = { remind: vi.fn(), remindMeeting: vi.fn() }
+  const actions = { remind: vi.fn(), remindMeeting: vi.fn(), setYouth: vi.fn() }
   render(
     <MemoryRouter>
       <Reminders
@@ -51,6 +51,24 @@ describe('Reminders', () => {
     await user.selectOptions(row.getByLabelText('Template'), 'Opening prayer')
     expect(row.getByLabelText('Message')).toHaveValue('Hi Brother Ortiz, you have the opening prayer at Ward Council.')
     expect(row.queryByText(/No one is down/)).not.toBeInTheDocument()
+  })
+
+  it('marks a youth on the day before, so the reminder goes to a parent', async () => {
+    const appointment = {
+      id: 'a1', interviewer_id: 'b', scheduled_at: '2026-11-08T16:00:00Z', person_name: 'Avery Quinn', purpose: 'other' as const, candidate_id: null,
+      location: null, status: 'scheduled' as const, notes: null, created_at: '2026-11-01T00:00:00Z', duration_minutes: 10, offered_at: null, offered_times: [],
+      is_youth: false, parent_name: null, confirmed_at: null, reminded_at: null, missed_at: null, report_note: null, reported_at: null, reported_by: null,
+    }
+    const { actions, user } = setup({ meetings: [], appointments: [appointment] })
+    const row = within(screen.getByRole('article', { name: 'Avery Quinn' }))
+    await user.click(row.getByLabelText('Youth under 18: message a parent'))
+    expect(actions.setYouth).toHaveBeenCalledWith('a1', true, null)
+  })
+
+  it('says appointment reminders are off, with the way to turn them on', () => {
+    setup({ appointmentsOff: true })
+    expect(screen.getByText(/turned appointment reminders off/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Send reminders in Settings' })).toHaveAttribute('href', '/settings')
   })
 
   it("says so when the meeting isn't linked to an agenda", () => {

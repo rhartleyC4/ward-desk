@@ -18,7 +18,7 @@ Each person chooses which notifications they get. See [Notifications](/docs/sett
 
 ## Texts and emails
 
-Reminders and confirmations are drafted from [templates](/docs/settings/message-templates/) the bishopric controls, and sent from the sender's own phone or email app. Ward Desk does not send them, and **does not keep phone numbers**. For a youth under 18, the message goes to a parent, and only the parent's name is kept.
+Offers and reminders are drafted from [templates](/docs/settings/message-templates/) the bishopric controls, and sent from the sender's own phone or email app. Ward Desk does not send them, and **does not keep phone numbers**. For a youth under 18, the message goes to a parent, and only the parent's name is kept.
 
 Templates should stay general, so a message never says what the appointment is for.
 

@@ -3,7 +3,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(50);
+select plan(53);
 
 create function pg_temp.act_as(user_email text) returns void language plpgsql as $$
 begin
@@ -72,6 +72,14 @@ select throws_ok(
 );
 with renamed as (update public.profiles set display_name = 'Not mine' where id = (select counselor from ids) returning 1)
 select is((select count(*)::int from renamed), 0, 'a leader cannot rename someone else');
+
+select is((select sends_reminders from public.profiles where id = (select auth.uid())), true, 'appointment reminders start on');
+select lives_ok(
+  $$ update public.profiles set sends_reminders = false where id = (select auth.uid()) $$,
+  'a person turns their own appointment reminders off'
+);
+with changed as (update public.profiles set sends_reminders = false where id = (select counselor from ids) returning 1)
+select is((select count(*)::int from changed), 0, 'a person cannot turn off someone else''s reminders');
 
 select pg_temp.act_as('first@ward.test');
 

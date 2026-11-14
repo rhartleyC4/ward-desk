@@ -81,7 +81,7 @@ export const SHOTS: Shot[] = [
   { feature: 'settings-who-books', role: 'bishop', route: '/settings/who-books', caption: 'Who books for whom: which secretary schedules each leader.', waitFor: /Who books for whom/ },
   { feature: 'settings-notifications', role: 'bishop', route: '/account', caption: 'Choose which notifications this device gets: tomorrow’s summary, how did today go, and more.', waitFor: /notification/i, prepare: scrollToText(/^Your day$/i) },
   { feature: 'settings-account', role: 'bishop', route: '/account', caption: 'Your account: your name, Face ID or fingerprint sign-in, and notifications for this device.', waitFor: /Your name/ },
-  { feature: 'settings-messages', role: 'secretary', route: '/settings/messages', caption: 'Message templates the secretaries use to offer and confirm times.', waitFor: /Shared by the bishopric/ },
+  { feature: 'settings-messages', role: 'secretary', route: '/settings/messages', caption: 'Message templates the secretaries use to offer times and send reminders.', waitFor: /Shared by the bishopric/ },
   { feature: 'settings-meetings', role: 'bishop', route: '/meetings', caption: 'Meetings: create an agenda, choose its sections and who attends.', waitFor: /Meetings/ },
   { feature: 'settings-calling-list', role: 'admin', route: '/calling-list', caption: "The calling list: the ward's callings and the organization each belongs to.", waitFor: /Add a calling/ },
   { feature: 'reminders', role: 'secretary', route: '/reminders?date=2026-11-02', caption: 'Reminders to send the day before, each with the message ready to copy, text or email.', waitFor: /Reminders for/ },

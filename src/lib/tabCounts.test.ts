@@ -42,17 +42,16 @@ describe('secretaryHomeCount', () => {
   ]
   const appointments = [
     appt('needs a time'),
-    appt('booked, not confirmed', { scheduled_at: '2026-11-08T17:00:00Z' }),
-    appt('confirmed', { scheduled_at: '2026-11-08T17:00:00Z', confirmed_at: '2026-11-06T15:00:00Z' }),
+    appt('booked', { scheduled_at: '2026-11-08T17:00:00Z' }),
     appt('for first', { interviewer_id: 'first' }),
   ]
 
-  it('counts names to book and times to confirm for my leaders', () => {
+  it('counts names to book for my leaders, not booked times', () => {
     const assignments = [
       { leader_id: 'bishop', secretary_id: 'me' },
       { leader_id: 'first', secretary_id: 'other' },
     ]
-    expect(secretaryHomeCount('me', { appointments, assignments, bishopric, secretaries }, now)).toBe(2)
+    expect(secretaryHomeCount('me', { appointments, assignments, bishopric, secretaries })).toBe(1)
   })
 
   it('counts every leader when no one has been assigned to me', () => {
@@ -60,7 +59,7 @@ describe('secretaryHomeCount', () => {
       { leader_id: 'bishop', secretary_id: 'other' },
       { leader_id: 'first', secretary_id: 'other' },
     ]
-    expect(secretaryHomeCount('me', { appointments, assignments, bishopric, secretaries }, now)).toBe(3)
+    expect(secretaryHomeCount('me', { appointments, assignments, bishopric, secretaries })).toBe(2)
   })
 })
 

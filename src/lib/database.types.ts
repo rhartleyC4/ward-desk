@@ -703,14 +703,14 @@ isOneToOne: false
                   ]
                 },"profiles": {
                   Row: {
-                    "created_at": string,"display_name": string | null,"email": string,"id": string,"office": Database["public"]['Enums']["bishopric_office"] | null,"organization": string | null,"removed_at": string | null,"short_name": string | null
+                    "created_at": string,"display_name": string | null,"email": string,"id": string,"office": Database["public"]['Enums']["bishopric_office"] | null,"organization": string | null,"removed_at": string | null,"sends_reminders": boolean,"short_name": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"display_name"?: string | null,"email": string,"id": string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"organization"?: string | null,"removed_at"?: string | null,"short_name"?: string | null
+                    "created_at"?: string,"display_name"?: string | null,"email": string,"id": string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"organization"?: string | null,"removed_at"?: string | null,"sends_reminders"?: boolean,"short_name"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"display_name"?: string | null,"email"?: string,"id"?: string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"organization"?: string | null,"removed_at"?: string | null,"short_name"?: string | null
+                    "created_at"?: string,"display_name"?: string | null,"email"?: string,"id"?: string,"office"?: Database["public"]['Enums']["bishopric_office"] | null,"organization"?: string | null,"removed_at"?: string | null,"sends_reminders"?: boolean,"short_name"?: string | null
                   }
                   Relationships: [
                     

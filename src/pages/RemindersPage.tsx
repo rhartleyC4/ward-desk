@@ -18,7 +18,7 @@ import { wardToday } from '../lib/wardToday'
  * notification opens this page.
  */
 export function RemindersPage() {
-  const { profile, templates: agendaTemplates } = useAuth()
+  const { profile, templates: agendaTemplates, sendsReminders } = useAuth()
   const userId = profile?.id ?? ''
   const [params] = useSearchParams()
   const asked = params.get('date')
@@ -39,6 +39,7 @@ export function RemindersPage() {
   const actions: RemindersActions = {
     remind: (id, sent) => run(() => q.markReminded(supabase, id, sent)),
     remindMeeting: (eventId, sent) => run(() => q.markMeetingReminded(supabase, eventId, date, sent)),
+    setYouth: (id, isYouth, parentName) => run(() => q.updateAppointment(supabase, id, { is_youth: isYouth, parent_name: parentName })),
   }
   const { leaderIds } = myLeaderIds(userId, data)
   const leaderName = (id: string | null) => data.bishopric.find((l) => l.id === id)?.display_name ?? 'Unassigned'
@@ -56,7 +57,8 @@ export function RemindersPage() {
       </Button>
       <Reminders
         date={date}
-        appointments={appointmentsOn(data.appointments, leaderIds, date, WARD_TIME_ZONE)}
+        appointments={sendsReminders ? appointmentsOn(data.appointments, leaderIds, date, WARD_TIME_ZONE) : []}
+        appointmentsOff={!sendsReminders}
         meetings={meetingsToRemind(userId, date, data.events)}
         sent={data.sent}
         agendas={data.agendas}

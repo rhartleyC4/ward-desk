@@ -6,7 +6,7 @@ import { nothingToPlan } from './agenda'
 import { splitAppointments, myLeaderIds, type Appointment, type SecretaryAssignment } from './appointments'
 import type { Enums, Tables } from './database.types'
 import type { IsoDate } from './dates'
-import { toConfirm, toReport, type FollowUpAppointment } from './followUp'
+import { toReport, type FollowUpAppointment } from './followUp'
 import { isAway } from './schedule'
 
 export type TabCounts = Partial<Record<'/home' | '/agenda' | '/sacrament' | '/appointments' | '/requests', number>>
@@ -18,7 +18,7 @@ export function leaderHomeCount(userId: string, appointments: FollowUpAppointmen
 
 type HomeAppointment = Appointment & FollowUpAppointment
 
-/** A secretary's Home: names still needing a time, plus booked times not confirmed yet, for their leaders. */
+/** A secretary's Home: names still needing a time, for their leaders. */
 export function secretaryHomeCount(
   userId: string,
   data: {
@@ -27,10 +27,9 @@ export function secretaryHomeCount(
     bishopric: { id: string }[]
     secretaries: { id: string; office: Enums<'bishopric_office'> | null }[]
   },
-  now: Date,
 ): number {
   const { leaderIds } = myLeaderIds(userId, data)
-  return splitAppointments(data.appointments, leaderIds).toSchedule.length + toConfirm(data.appointments, leaderIds, now).length
+  return splitAppointments(data.appointments, leaderIds).toSchedule.length
 }
 
 type Suggestion = Pick<Tables<'calling_candidates'>, 'need_id' | 'status' | 'request_id'>

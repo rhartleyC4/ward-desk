@@ -14,7 +14,9 @@ import { personLabel } from '../lib/agenda'
 import { appointmentPurpose, defaultSecretaryFor, leadersScheduledBy, schedulersFrom, splitAppointments, toInputs, toTimestamp, whenLabel, withDefaultSecretary } from '../lib/appointments'
 import type { Enums } from '../lib/database.types'
 import type { Appointment, AppointmentsData } from '../lib/queries'
+import { overlapping } from '../lib/slots'
 import { nativeSelect } from '../theme'
+import { LengthControl, YouthFields, type SetYouth } from './AppointmentFields'
 import { Muted, SectionCard, Side, Split } from './Layout'
 
 export type AppointmentsActions = {
@@ -23,6 +25,8 @@ export type AppointmentsActions = {
   cancel: (id: string) => void
   add: (appointment: { interviewer_id: string; person_name: string; purpose: Enums<'interview_purpose'>; scheduled_at: string | null }) => void
   setSecretary: (leaderId: string, secretaryId: string, on: boolean) => void
+  setLength: (id: string, minutes: number) => void
+  setYouth: SetYouth
 }
 
 const shrink = { inputLabel: { shrink: true } } as const
@@ -50,7 +54,11 @@ function WhenFields({ value, onChange, name }: { value: { date: string; time: st
   )
 }
 
-function AppointmentRow({ appointment: a, data, actions, timeZone }: { appointment: Appointment; data: AppointmentsData; actions: AppointmentsActions; timeZone: string }) {
+/**
+ * One appointment. A booked one can also change length and say it's a youth's, since nothing on
+ * Home holds booked times any more; it warns when it runs into the leader's next one.
+ */
+function AppointmentRow({ appointment: a, data, actions, timeZone, clash = false, busy = false }: { appointment: Appointment; data: AppointmentsData; actions: AppointmentsActions; timeZone: string; clash?: boolean; busy?: boolean }) {
   const [editing, setEditing] = useState(!a.scheduled_at)
   const [when, setWhen] = useState(toInputs(a.scheduled_at, timeZone))
   const name = a.person_name ?? 'Unnamed'
@@ -77,6 +85,12 @@ function AppointmentRow({ appointment: a, data, actions, timeZone }: { appointme
       <Typography variant="body2" color="text.secondary">
         {appointmentPurpose(a, data.needs, data.candidates)}
       </Typography>
+      {clash && (
+        <Typography variant="body2" color="warning.main">
+          Runs into another appointment with {leader}.
+        </Typography>
+      )}
+      {a.scheduled_at && !editing && <YouthFields key={`${a.is_youth}|${a.parent_name}`} appointment={a} onChange={actions.setYouth} busy={busy} />}
       {editing ? (
         <Stack component="form" onSubmit={save} direction="row" useFlexGap sx={{ mt: 1, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
           <WhenFields value={when} onChange={setWhen} name={name} />
@@ -90,7 +104,8 @@ function AppointmentRow({ appointment: a, data, actions, timeZone }: { appointme
           )}
         </Stack>
       ) : (
-        <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
+        <Stack direction="row" useFlexGap sx={{ mt: 0.5, gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+          <LengthControl minutes={a.duration_minutes} onChange={(m) => actions.setLength(a.id, m)} purpose={a.purpose} name={name} busy={busy} />
           <Button size="small" startIcon={<CheckIcon />} onClick={() => actions.complete(a.id)}>
             Done
           </Button>
@@ -201,15 +216,18 @@ export function AppointmentsView({
   userId,
   actions,
   timeZone,
+  busy = false,
 }: {
   data: AppointmentsData
   userId: string
   actions: AppointmentsActions
   timeZone: string
+  busy?: boolean
 }) {
   const mine = leadersScheduledBy(userId, withDefaultSecretary(data.assignments, data.bishopric.map((l) => l.id), data.secretaries))
   const [scope, setScope] = useState<'mine' | 'all'>(mine.length ? 'mine' : 'all')
   const { toSchedule, scheduled } = splitAppointments(data.appointments, scope === 'mine' && mine.length ? mine : undefined)
+  const clashes = overlapping(data.appointments)
   const mineLabel = mine.map((id) => personLabel(id, data.profiles)).filter(Boolean).join(', ')
 
   return (
@@ -242,7 +260,7 @@ export function AppointmentsView({
           {scheduled.length ? (
             <Stack divider={<Divider flexItem />} spacing={1.5}>
               {scheduled.map((a) => (
-                <AppointmentRow key={a.id} appointment={a} data={data} actions={actions} timeZone={timeZone} />
+                <AppointmentRow key={a.id} appointment={a} data={data} actions={actions} timeZone={timeZone} clash={clashes.has(a.id)} busy={busy} />
               ))}
             </Stack>
           ) : (

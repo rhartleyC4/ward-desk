@@ -78,7 +78,7 @@ function Where() {
 beforeEach(() => {
   vi.clearAllMocks()
   for (const key of Object.keys(stub.props)) delete stub.props[key]
-  stub.auth.value = { roles: ['bishopric'], office: 'bishop', profile: me, templates: [template], reloadTemplates: vi.fn(), callingsHidden: false, organization: null, hasHours: true, setHasHours: vi.fn() }
+  stub.auth.value = { roles: ['bishopric'], office: 'bishop', profile: me, templates: [template], reloadTemplates: vi.fn(), callingsHidden: false, organization: null, hasHours: true, setHasHours: vi.fn(), sendsReminders: true }
   for (const fn of Object.values(q)) fn.mockReset?.()
   q.loadAppointments.mockResolvedValue({ appointments: [], assignments: [], bishopric: [{ id: 'l1', display_name: 'Leader' }], secretaries: [] })
   q.loadSundays.mockResolvedValue([])
@@ -142,7 +142,6 @@ const pages: Page[] = [
     cases: [
       c('books a time', (a) => a.book('i', 'at', 30), 'updateAppointment', ['i', { scheduled_at: 'at', duration_minutes: 30 }]),
       c('changes a length', (a) => a.setLength('i', 15), 'updateAppointment', ['i', { duration_minutes: 15 }]),
-      c('marks one confirmed', (a) => a.confirm('i'), 'markConfirmed', ['i']),
       c('offers times', (a) => a.offer('i', ['t']), 'markOffered', ['i', ['t']]),
       c('marks a youth with a parent', (a) => a.setYouth('i', true, 'Parent'), 'updateAppointment', ['i', { is_youth: true, parent_name: 'Parent' }]),
       c('lets offered times go', (a) => a.release('i'), 'releaseOffered', ['i']),
@@ -218,6 +217,8 @@ const pages: Page[] = [
       c('adds another kind as not youth', (a) => a.add({ purpose: 'other' }), 'addAppointment', [{ purpose: 'other', is_youth: false }]),
       c('adds a secretary', (a) => a.setSecretary('l', 's', true), 'addSecretary', ['l', 's']),
       c('removes a secretary', (a) => a.setSecretary('l', 's', false), 'removeSecretary', ['l', 's']),
+      c('changes a length', (a) => a.setLength('i', 15), 'updateAppointment', ['i', { duration_minutes: 15 }]),
+      c('marks a youth with a parent', (a) => a.setYouth('i', true, 'Parent'), 'updateAppointment', ['i', { is_youth: true, parent_name: 'Parent' }]),
     ],
   },
   {
@@ -229,6 +230,7 @@ const pages: Page[] = [
     cases: [
       c('marks a reminder sent', (a) => a.remind('i', true), 'markReminded', ['i', true]),
       c('marks a meeting reminder for the day shown', (a) => a.remindMeeting('e', false), 'markMeetingReminded', ['e', DATE, false]),
+      c('marks a youth with a parent', (a) => a.setYouth('i', true, 'Parent'), 'updateAppointment', ['i', { is_youth: true, parent_name: 'Parent' }]),
     ],
   },
   {

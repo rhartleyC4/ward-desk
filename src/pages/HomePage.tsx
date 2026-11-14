@@ -69,7 +69,7 @@ function BishopricHomePage() {
 }
 
 function SecretaryHomePage() {
-  const { profile } = useAuth()
+  const { profile, sendsReminders } = useAuth()
   const today = wardToday()
   const { data, error, reload } = useAsync(async () => {
     const [appointments, hours, templates, lengths, schedule, reminders] = await Promise.all([
@@ -103,7 +103,6 @@ function SecretaryHomePage() {
   const actions: SecretaryHomeActions = {
     book: (id, at, minutes) => run(() => q.updateAppointment(supabase, id, { scheduled_at: at, duration_minutes: minutes })),
     setLength: (id, minutes) => void run(() => q.updateAppointment(supabase, id, { duration_minutes: minutes })),
-    confirm: (id) => void run(() => q.markConfirmed(supabase, id)),
     offer: (id, times) => void run(() => q.markOffered(supabase, id, times)),
     setYouth: (id, isYouth, parentName) => void run(() => q.updateAppointment(supabase, id, { is_youth: isYouth, parent_name: parentName })),
     release: (id) => void run(() => q.releaseOffered(supabase, id)),
@@ -114,7 +113,7 @@ function SecretaryHomePage() {
       <ErrorNote error={save.error} />
       <SetupCard />
       <RequestsOnHome />
-      <SecretaryHome data={data} userId={profile?.id ?? ''} myName={profile?.display_name ?? ''} today={today} now={now} timeZone={WARD_TIME_ZONE} actions={actions} busy={save.busy} />
+      <SecretaryHome data={data} userId={profile?.id ?? ''} myName={profile?.display_name ?? ''} today={today} now={now} timeZone={WARD_TIME_ZONE} sendsReminders={sendsReminders} actions={actions} busy={save.busy} />
     </>
   )
 }

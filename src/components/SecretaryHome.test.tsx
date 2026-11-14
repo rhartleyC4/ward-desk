@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -66,14 +66,14 @@ function data(extra: Partial<SecretaryHomeData> = {}): SecretaryHomeData {
 }
 
 function actions(): SecretaryHomeActions {
-  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), confirm: vi.fn(), offer: vi.fn(), setYouth: vi.fn(), release: vi.fn() }
+  return { book: vi.fn().mockResolvedValue(true), setLength: vi.fn(), offer: vi.fn(), setYouth: vi.fn(), release: vi.fn() }
 }
 
-const view = (d = data(), userId = 'exec') => {
+const view = (d = data(), userId = 'exec', sendsReminders = true) => {
   const a = actions()
   render(
     <MemoryRouter>
-      <SecretaryHome data={d} userId={userId} myName="Brother Quinn" today={TODAY} now={NOW} timeZone={TZ} actions={a} busy={false} />
+      <SecretaryHome data={d} userId={userId} myName="Brother Quinn" today={TODAY} now={NOW} timeZone={TZ} sendsReminders={sendsReminders} actions={a} busy={false} />
     </MemoryRouter>,
   )
   return a
@@ -218,17 +218,6 @@ describe('SecretaryHome', () => {
     expect(within(nash).getByRole('button', { name: 'Sun, November 8th at 9:20 AM, offered' })).toHaveTextContent('• 9:20 AM')
   })
 
-  it('writes a confirmation for a booked time, and counts it confirmed once copied', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined)
-    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
-    const a = view(data({ appointments: [appt('a4', 'b', 'Brother Hale', { scheduled_at: '2026-11-11T02:30:00Z' })] }))
-    const hale = screen.getByRole('article', { name: 'Brother Hale' })
-    await userEvent.click(within(hale).getByRole('button', { name: 'Confirm' }))
-    expect(within(hale).getByLabelText('Message')).toHaveValue('Hi Brother Hale, see Bishop Avery on Tue, November 10th at 7:30 PM.')
-    await userEvent.click(within(hale).getByRole('button', { name: 'Copy' }))
-    expect(a.confirm).toHaveBeenCalledWith('a4')
-  })
-
   it('lets the secretary add a template and warns about a mistyped variable', async () => {
     const onSave = vi.fn().mockResolvedValue(true)
     const { container } = render(<TemplatesEditor templates={data().templates} onSave={onSave} onDelete={vi.fn()} busy={false} />)
@@ -243,8 +232,8 @@ describe('SecretaryHome', () => {
   })
 
   it('lets the secretary address someone entered as "First Last" by first name, Sister or Brother', async () => {
-    const templates = [{ id: 't', name: 'Confirm', kind: 'confirm' as const, audience: 'member' as const, body: 'Hi {first_name}, see you {time}.' }]
-    render(<MessagePanel kind="confirm" audience="member" templates={templates} values={{ name: 'Mary Reyes', leader: 'Bishop Avery', minutes: 10, myName: 'Q', time: 'Sunday' }} />)
+    const templates = [{ id: 't', name: 'Reminder', kind: 'reminder' as const, audience: 'member' as const, body: 'Hi {first_name}, see you {time}.' }]
+    render(<MessagePanel kind="reminder" audience="member" templates={templates} values={{ name: 'Mary Reyes', leader: 'Bishop Avery', minutes: 10, myName: 'Q', time: 'Sunday' }} />)
     expect(screen.getByLabelText('Message')).toHaveValue('Hi Mary, see you Sunday.')
     await userEvent.click(screen.getByRole('button', { name: 'Sister Reyes' }))
     expect(screen.getByLabelText('Message')).toHaveValue('Hi Sister Reyes, see you Sunday.')
@@ -253,8 +242,8 @@ describe('SecretaryHome', () => {
   })
 
   it('skips the address choice when the name was entered with a title', () => {
-    const templates = [{ id: 't', name: 'Confirm', kind: 'confirm' as const, audience: 'member' as const, body: 'Hi {first_name}' }]
-    render(<MessagePanel kind="confirm" audience="member" templates={templates} values={{ name: 'Brother Hale', leader: '', minutes: 10, myName: '' }} />)
+    const templates = [{ id: 't', name: 'Reminder', kind: 'reminder' as const, audience: 'member' as const, body: 'Hi {first_name}' }]
+    render(<MessagePanel kind="reminder" audience="member" templates={templates} values={{ name: 'Brother Hale', leader: '', minutes: 10, myName: '' }} />)
     expect(screen.queryByText('Address as')).not.toBeInTheDocument()
   })
 
@@ -281,32 +270,18 @@ describe('SecretaryHome', () => {
     expect(within(ward).getByRole('button', { name: 'Shorter for Brother Ward' })).toBeDisabled()
   })
 
-  it('shows booked times with their length, and flags ones that run into each other', async () => {
-    const a = view()
-    const hale = screen.getByRole('article', { name: 'Brother Hale' })
-    expect(hale).toHaveTextContent('Sun, November 8th 9–9:20 AM')
-    expect(within(hale).getByText(/Runs into another appointment/)).toBeInTheDocument()
-
-    await userEvent.click(within(hale).getByRole('button', { name: 'Shorter for Brother Hale' }))
-    expect(a.setLength).toHaveBeenCalledWith('a4', 15)
-    await userEvent.click(within(hale).getByRole('button', { name: 'They already know' }))
-    expect(a.confirm).toHaveBeenCalledWith('a4')
-  })
-
-  it('hands a booked time to the leader once it is confirmed or over', () => {
+  it('hands a booked time straight to the leader, with nothing to confirm', () => {
     view(
       data({
         appointments: [
           appt('p1', 'b', 'Brother Late', { scheduled_at: '2026-11-01T16:00:00Z' }),
-          appt('p2', 'b', 'Sister Told', { scheduled_at: '2026-11-09T16:00:00Z', confirmed_at: ts }),
+          appt('p2', 'b', 'Sister Booked', { scheduled_at: '2026-11-12T16:00:00Z' }),
         ],
       }),
     )
     expect(screen.queryByRole('article', { name: 'Brother Late' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('article', { name: 'Sister Told' })).not.toBeInTheDocument()
-    const confirm = section(/To confirm/)
-    expect(confirm).toHaveTextContent(/Every booked time has been confirmed/)
-    expect(within(confirm).queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('article', { name: 'Sister Booked' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /To confirm/ })).not.toBeInTheDocument()
   })
 
   it('puts a missed appointment back in the list with the leader\'s note', () => {
@@ -320,8 +295,8 @@ describe('SecretaryHome', () => {
     view(
       data({
         appointments: [
-          appt('t1', 'b', 'Sister Soon', { scheduled_at: '2026-11-09T16:00:00Z', confirmed_at: ts }),
-          appt('t2', 'b', 'Brother Done', { scheduled_at: '2026-11-09T17:00:00Z', confirmed_at: ts, reminded_at: ts }),
+          appt('t1', 'b', 'Sister Soon', { scheduled_at: '2026-11-09T16:00:00Z' }),
+          appt('t2', 'b', 'Brother Done', { scheduled_at: '2026-11-09T17:00:00Z', reminded_at: ts }),
         ],
         events: [{ id: 'e1', title: 'Youth council', weekday: 1, week_of_month: null, start_time: '19:00:00', reminder_by: 'exec', agenda_template_id: null }],
       }),
@@ -330,6 +305,19 @@ describe('SecretaryHome', () => {
     expect(card).toHaveTextContent('Youth council')
     expect(card).toHaveTextContent('1 of 2 appointments to remind')
     expect(within(card).getByRole('link', { name: 'Send reminders' })).toHaveAttribute('href', '/reminders?date=2026-11-09')
+  })
+
+  it("leaves appointments out of tomorrow's reminders for a secretary who doesn't send them", () => {
+    const appointments = [appt('t1', 'b', 'Sister Soon', { scheduled_at: '2026-11-09T16:00:00Z' })]
+    const events = [{ id: 'e1', title: 'Youth council', weekday: 1, week_of_month: null, start_time: '19:00:00', reminder_by: 'exec', agenda_template_id: null }]
+    view(data({ appointments, events }), 'exec', false)
+    const card = section(/Reminders for Monday/)
+    expect(card).toHaveTextContent('Youth council')
+    expect(card).not.toHaveTextContent(/appointment/)
+    cleanup()
+
+    view(data({ appointments }), 'exec', false)
+    expect(screen.queryByRole('heading', { name: /Reminders for/ })).not.toBeInTheDocument()
   })
 
   it('shows each covered leader\'s hours this week', () => {

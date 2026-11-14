@@ -22,6 +22,7 @@ import {
   fillTemplate,
   insertAt,
   KIND_LABELS,
+  TEMPLATE_KINDS,
   SAMPLE_VALUES,
   smsLink,
   templatesFor,
@@ -245,7 +246,7 @@ function TemplateForm({ initial, onSave, onCancel, busy }: { initial: TemplateDr
           onChange={(e) => setForm({ ...form, kind: e.target.value as MessageKind, ...(e.target.value === 'meeting' ? { audience: 'member' as const } : {}) })}
           sx={{ flex: '1 1 10rem' }}
         >
-          {(Object.keys(KIND_LABELS) as MessageKind[]).map((k) => (
+          {TEMPLATE_KINDS.map((k) => (
             <option key={k} value={k}>
               {KIND_LABELS[k]}
             </option>
@@ -358,7 +359,7 @@ export function TemplatesEditor({
     <>
       <Muted>Shared by the bishopric. Keep them general: a message shouldn't say what the appointment is for.</Muted>
       <Stack divider={<Divider flexItem />} spacing={1} sx={{ mt: 1 }}>
-        {templates.map((t) =>
+        {templates.filter((t) => TEMPLATE_KINDS.includes(t.kind)).map((t) =>
           editing === t.id ? (
             <TemplateForm key={t.id} initial={t} onSave={onSave} onCancel={() => setEditing(null)} busy={busy} />
           ) : (

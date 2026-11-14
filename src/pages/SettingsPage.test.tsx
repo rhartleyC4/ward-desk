@@ -12,6 +12,9 @@ vi.mock('../auth/AuthProvider', () => ({ useAuth: () => stub.auth }))
 vi.mock('../components/Layout', async (original) => ({ ...(await original<object>()), useSettingsSplit: () => stub.split }))
 vi.mock('../components/Setup', () => ({ useSetupSteps: () => stub.steps, SetupChecklist: ({ steps }: { steps: unknown[] }) => <div>{`checklist of ${steps.length}`}</div> }))
 vi.mock('./AccountPage', () => ({ AccountPage: () => <div>account page</div> }))
+vi.mock('../lib/supabase', () => ({ supabase: {} }))
+const setSendsReminders = vi.hoisted(() => vi.fn())
+vi.mock('../lib/queries', () => ({ setSendsReminders }))
 
 const signOut = vi.fn()
 
@@ -59,6 +62,32 @@ describe('SettingsPage', () => {
     showPage()
     expect(screen.getByText('account page')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Settings' })).not.toBeInTheDocument()
+  })
+
+  it('lets a secretary turn appointment reminders off', async () => {
+    const show = vi.fn()
+    setSendsReminders.mockResolvedValue(undefined)
+    stub.auth = { ...stub.auth, office: 'executive_secretary', profile: { id: 'me', display_name: 'Quinn' }, sendsReminders: true, setSendsReminders: show }
+    showPage()
+    const appointments = screen.getByRole('region', { name: 'Appointments' })
+    await userEvent.click(within(appointments).getByRole('switch', { name: 'Send reminders' }))
+    expect(show).toHaveBeenCalledWith(false)
+    expect(setSendsReminders).toHaveBeenCalledWith({}, 'me', false)
+  })
+
+  it('puts the choice back when it does not save', async () => {
+    const show = vi.fn()
+    setSendsReminders.mockRejectedValue(new Error('offline'))
+    stub.auth = { ...stub.auth, office: 'executive_secretary', profile: { id: 'me', display_name: 'Quinn' }, sendsReminders: true, setSendsReminders: show }
+    showPage()
+    await userEvent.click(screen.getByRole('switch', { name: 'Send reminders' }))
+    expect(show).toHaveBeenLastCalledWith(true)
+    expect(await screen.findByText('offline')).toBeInTheDocument()
+  })
+
+  it('only offers the reminders choice to secretaries', () => {
+    showPage()
+    expect(screen.queryByRole('switch', { name: 'Send reminders' })).not.toBeInTheDocument()
   })
 
   it('mentions notifications only to those who get them', () => {

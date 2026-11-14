@@ -8,10 +8,10 @@ import { AppointmentsView, WhoSchedules, type AppointmentsActions } from './Appo
 const ts = '2026-10-01T00:00:00Z'
 
 function actions(): AppointmentsActions {
-  return { schedule: vi.fn(), complete: vi.fn(), cancel: vi.fn(), add: vi.fn(), setSecretary: vi.fn() }
+  return { schedule: vi.fn(), complete: vi.fn(), cancel: vi.fn(), add: vi.fn(), setSecretary: vi.fn(), setLength: vi.fn(), setYouth: vi.fn() }
 }
 
-function data(): AppointmentsData {
+function data(extra: AppointmentsData['appointments'] = []): AppointmentsData {
   const { needs, candidates } = agendaData()
   const appt = (id: string, interviewer: string, name: string, extra: Partial<AppointmentsData['appointments'][number]> = {}) => ({
     id, interviewer_id: interviewer, scheduled_at: null, person_name: name, purpose: 'calling' as const, candidate_id: null,
@@ -23,6 +23,7 @@ function data(): AppointmentsData {
       appt('a1', 'l', 'Sister Nash', { candidate_id: 'c3' }),
       appt('a2', 'b', 'Brother Ward', { purpose: 'temple_recommend' }),
       appt('a3', 'o', 'Sister Reed', { purpose: 'ppi', scheduled_at: '2026-11-08T17:00:00Z' }),
+      ...extra,
     ],
     assignments: [
       { leader_id: 'b', secretary_id: 'exec', created_at: ts },
@@ -83,6 +84,23 @@ describe('AppointmentsView', () => {
 
     await user.click(within(nash).getByRole('button', { name: 'Not needed' }))
     expect(a.cancel).toHaveBeenCalledWith('a1')
+  })
+
+  it('changes a booked time\'s length and youth details, and flags one that runs into the next', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    const d = data()
+    const reed = d.appointments.find((x) => x.id === 'a3')!
+    const lund = { ...reed, id: 'a4', person_name: 'Brother Lund', scheduled_at: '2026-11-08T17:05:00Z' }
+    render(<AppointmentsView data={data([lund])} userId="asst" actions={a} timeZone="America/Denver" />)
+
+    const row = screen.getByRole('article', { name: 'Sister Reed' })
+    expect(row).toHaveTextContent('Runs into another appointment with')
+    await user.click(within(row).getByRole('button', { name: 'Longer for Sister Reed' }))
+    expect(a.setLength).toHaveBeenCalledWith('a3', 15)
+    await user.click(within(row).getByLabelText('Youth under 18: message a parent'))
+    expect(a.setYouth).toHaveBeenCalledWith('a3', true, null)
+    expect(within(screen.getByRole('article', { name: 'Sister Nash' })).queryByRole('group', { name: /Length for/ })).not.toBeInTheDocument()
   })
 
   it('adds an appointment that can be scheduled later', async () => {

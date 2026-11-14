@@ -9,8 +9,13 @@ export type MessageAudience = Enums<'message_audience'>
 
 export const KIND_LABELS: Record<MessageKind, string> = { offer: 'Offering times', confirm: 'Confirming a time', reminder: 'Reminder the day before', meeting: 'Meeting reminder' }
 
+/**
+ * The kinds a template can be written for. 'confirm' is no longer sent: booked times go straight to
+ * the leader and the reminder the day before tells the person. Its templates are kept, unshown.
+ */
+export const TEMPLATE_KINDS: MessageKind[] = ['offer', 'reminder', 'meeting']
 /** The kinds about one person's appointment; a meeting reminder goes to everyone who attends. */
-export const APPOINTMENT_KINDS: MessageKind[] = ['offer', 'confirm', 'reminder']
+export const APPOINTMENT_KINDS: MessageKind[] = ['offer', 'reminder']
 export const AUDIENCE_LABELS: Record<MessageAudience, string> = { member: 'To the person', parent: 'To a parent of a youth' }
 
 /** The variables a template can use, with what each becomes. */
@@ -21,14 +26,14 @@ export const VARIABLES: { name: string; meaning: string; kinds: MessageKind[]; p
   { name: 'leader', meaning: 'Who they meet with, like "Bishop Avery"', kinds: APPOINTMENT_KINDS },
   { name: 'length', meaning: 'How long, like "10 minutes"', kinds: APPOINTMENT_KINDS },
   { name: 'times', meaning: 'The times picked, one per line', kinds: ['offer'] },
-  { name: 'time', meaning: 'The time booked, like "Sun, November 8th at 9:10 AM"', kinds: ['confirm', 'reminder'] },
+  { name: 'time', meaning: 'The time booked, like "Sun, November 8th at 9:10 AM"', kinds: ['reminder'] },
   { name: 'meeting', meaning: 'The meeting, like "Ward Council"', kinds: ['meeting'] },
   { name: 'when', meaning: 'Its day and time, like "Sunday, November 8th at 9:15 AM"', kinds: ['meeting'] },
   { name: 'assignments', meaning: 'Who has each assignment on that day\'s agenda, one per line, like "Opening prayer: Brother Ortiz". Left out when no one is down yet', kinds: ['meeting'] },
   { name: 'opening_prayer', meaning: 'Who has the opening prayer, as written on the agenda', kinds: ['meeting'] },
   { name: 'spiritual_thought', meaning: 'Who has the spiritual thought (or handbook review), as written on the agenda', kinds: ['meeting'] },
   { name: 'closing_prayer', meaning: 'Who has the closing prayer, as written on the agenda', kinds: ['meeting'] },
-  { name: 'my_name', meaning: 'Your name', kinds: ['offer', 'confirm', 'reminder', 'meeting'] },
+  { name: 'my_name', meaning: 'Your name', kinds: TEMPLATE_KINDS },
 ]
 
 /** How {first_name} addresses someone: by first name, or as Sister or Brother with the last name. */
@@ -111,7 +116,7 @@ export function unknownVariables(body: string): string[] {
 
 /**
  * Wording that depends on how many times are offered: "{this time|one of these times}" uses the
- * part before the bar for one time and the part after it for more. A confirmation is one time.
+ * part before the bar for one time and the part after it for more. A reminder is one time.
  */
 export const CHOICE_HELP = { example: '{this time|one of these times}', meaning: 'The first part when one time is offered, the second when there are more' }
 

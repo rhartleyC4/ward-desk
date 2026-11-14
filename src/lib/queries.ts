@@ -42,7 +42,7 @@ export type Profile = Pick<Tables<'profiles'>, 'id' | 'email' | 'display_name' |
 
 export async function loadMe(client: Client, userId: string) {
   const [profile, roles, templates, hours] = await Promise.all([
-    client.from('profiles').select('id, email, display_name, short_name, office, organization').eq('id', userId).maybeSingle(),
+    client.from('profiles').select('id, email, display_name, short_name, office, organization, sends_reminders').eq('id', userId).maybeSingle(),
     client.from('roles').select('role').eq('user_id', userId),
     loadAgendaTemplates(client),
     client.from('availability').select('id', { count: 'exact', head: true }).eq('user_id', userId),
@@ -52,6 +52,7 @@ export async function loadMe(client: Client, userId: string) {
     profile: row && { id: row.id, email: row.email, display_name: row.display_name, short_name: row.short_name },
     office: row?.office ?? null,
     organization: row?.organization ?? null,
+    sendsReminders: row?.sends_reminders ?? true,
     roles: must(roles).map((r) => r.role),
     templates,
     // RLS hides hours from anyone outside the bishopric, who keep none anyway.
@@ -67,6 +68,11 @@ export async function loadProfiles(client: Client): Promise<Profile[]> {
 export async function updateMyName(client: Client, userId: string, name: string): Promise<string> {
   const row = must(await client.from('profiles').update({ display_name: cleanName(name) }).eq('id', userId).select('display_name').single())
   return row.display_name ?? ''
+}
+
+/** Turns the signed-in secretary's appointment reminders on or off. */
+export async function setSendsReminders(client: Client, userId: string, on: boolean) {
+  check(await client.from('profiles').update({ sends_reminders: on }).eq('id', userId))
 }
 
 /** The bishop and counselors, in that order, for the Conducting and "Meets with" pickers. */
@@ -477,7 +483,7 @@ export async function loadTabCounts(client: Client, who: TabCountsFor): Promise<
     who.home === 'leader'
       ? client
           .from('interviews')
-          .select('id, interviewer_id, scheduled_at, duration_minutes, status, confirmed_at, reminded_at')
+          .select('id, interviewer_id, scheduled_at, duration_minutes, status, reminded_at')
           .eq('interviewer_id', who.userId)
           .eq('status', 'scheduled')
           .not('scheduled_at', 'is', null)
@@ -485,7 +491,7 @@ export async function loadTabCounts(client: Client, who: TabCountsFor): Promise<
       : who.home === 'secretary'
         ? Promise.all([client.from('interviews').select('*').eq('status', 'scheduled'), client.from('secretary_assignments').select('*'), loadBishopric(client), loadSecretaries(client)]).then(
             ([appointments, assignments, bishopric, secretaries]) =>
-              secretaryHomeCount(who.userId, { appointments: must(appointments), assignments: must(assignments), bishopric, secretaries }, who.now),
+              secretaryHomeCount(who.userId, { appointments: must(appointments), assignments: must(assignments), bishopric, secretaries }),
           )
         : null,
     who.callings
@@ -588,11 +594,6 @@ export async function reportAppointment(client: Client, appointment: Pick<Appoin
         : { ...reported, missed_at: appointment.scheduled_at, report_note: report.note.trim(), status: 'cancelled' }
   // Only while it's still open, so two reports at once can't both apply.
   check(await client.from('interviews').update(changes).eq('id', appointment.id).eq('status', 'scheduled'))
-}
-
-/** Records that the person was sent their confirmation (or told another way). */
-export async function markConfirmed(client: Client, id: string) {
-  check(await client.from('interviews').update({ confirmed_at: new Date().toISOString() }).eq('id', id))
 }
 
 /** Records the day-before reminder, or with `false` takes it back. */

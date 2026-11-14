@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appointmentsOn, meetingsToRemind, meetingWhen, remindersMessage, remindersWindow, reportDue, reportMessage, toConfirm, toReport, type FollowUpAppointment } from './followUp'
+import { appointmentsOn, meetingsToRemind, meetingWhen, remindersMessage, remindersWindow, reportDue, reportMessage, toReport, type FollowUpAppointment } from './followUp'
 
 const TZ = 'America/Denver'
 const appt = (id: string, extra: Partial<FollowUpAppointment> = {}): FollowUpAppointment => ({
@@ -8,7 +8,6 @@ const appt = (id: string, extra: Partial<FollowUpAppointment> = {}): FollowUpApp
   scheduled_at: null,
   duration_minutes: 10,
   status: 'scheduled',
-  confirmed_at: null,
   reminded_at: null,
   ...extra,
 })
@@ -30,19 +29,6 @@ describe('toReport', () => {
   })
   it('waits until one has ended', () => {
     expect(toReport('b', list, at('10:05')).map((a) => a.id)).toEqual(['early'])
-  })
-})
-
-describe('toConfirm', () => {
-  it('lists booked, unconfirmed, upcoming times for my leaders', () => {
-    const list = [
-      appt('soon', { scheduled_at: iso('11:00') }),
-      appt('told', { scheduled_at: iso('11:00'), confirmed_at: iso('08:00') }),
-      appt('past', { scheduled_at: iso('08:00') }),
-      appt('theirs', { scheduled_at: iso('11:00'), interviewer_id: 'o' }),
-      appt('unbooked'),
-    ]
-    expect(toConfirm(list, ['b'], at('09:00')).map((a) => a.id)).toEqual(['soon'])
   })
 })
 

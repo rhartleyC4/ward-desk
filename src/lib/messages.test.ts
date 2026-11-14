@@ -78,7 +78,7 @@ describe('fillTemplate', () => {
     expect(fillTemplate('Hi {first_name}', { name: 'Mary Reyes', leader: '', minutes: 5, myName: '', address: 'sister' })).toBe('Hi Sister Reyes')
   })
 
-  it('fills a confirmation with the time booked', () => {
+  it('fills a reminder with the time booked', () => {
     expect(fillTemplate('{name}: {time} with {leader}', { name: 'Sister Nash', leader: 'Brother Lane', minutes: 5, myName: 'Q', time: 'Sun, November 8th at 9 AM' })).toBe(
       'Sister Nash: Sun, November 8th at 9 AM with Brother Lane',
     )
@@ -89,7 +89,7 @@ describe('fillTemplate', () => {
     const base = { name: 'Jordan', leader: 'Bishop Avery', minutes: 10, myName: '' }
     expect(fillTemplate(body, { ...base, times: ['Sun, November 8th at 9 AM'] })).toBe('Would this time work?\nSun, November 8th at 9 AM')
     expect(fillTemplate(body, { ...base, times: ['Sun at 9 AM', 'Wed at 7 PM'] })).toBe('Would one of these times work?\n• Sun at 9 AM\n• Wed at 7 PM')
-    // A confirmation is about one time; either side may be empty.
+    // A reminder is about one time; either side may be empty.
     expect(fillTemplate('See you{| all} on {time}.', { ...base, time: 'Sun at 9 AM' })).toBe('See you on Sun at 9 AM.')
     expect(unknownVariables(body)).toEqual([])
   })
@@ -110,7 +110,7 @@ describe('messages to a parent', () => {
 
   it('picks the parent templates for a youth', () => {
     const t = (id: string, kind: MessageTemplate['kind'], audience: MessageTemplate['audience']): MessageTemplate => ({ id, name: id, kind, audience, body: '' })
-    const all = [t('o', 'offer', 'member'), t('op', 'offer', 'parent'), t('cp', 'confirm', 'parent')]
+    const all = [t('o', 'offer', 'member'), t('op', 'offer', 'parent'), t('rp', 'reminder', 'parent')]
     expect(audienceFor({ is_youth: true })).toBe('parent')
     expect(audienceFor({ is_youth: false })).toBe('member')
     expect(templatesFor(all, 'offer', 'parent').map((x) => x.id)).toEqual(['op'])

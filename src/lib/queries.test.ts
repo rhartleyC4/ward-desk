@@ -249,10 +249,10 @@ describe('appointments', () => {
     expect(changes(c)).toMatchObject({ status: 'cancelled', report_note: 'moved', missed_at: appointment.scheduled_at })
   })
 
-  it('records a confirmation', async () => {
+  it('turns a secretary\'s appointment reminders off', async () => {
     const c = client()
-    await q.markConfirmed(c.fake, 'a')
-    expect(changes(c).confirmed_at).toEqual(expect.any(String))
+    await q.setSendsReminders(c.fake, 'u1', false)
+    expect(c.ops('profiles')).toEqual([['update', { sends_reminders: false }], ['eq', 'id', 'u1']])
   })
 
   it('records a reminder, and takes it back', async () => {

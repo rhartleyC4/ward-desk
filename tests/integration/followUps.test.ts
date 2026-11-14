@@ -132,4 +132,22 @@ describe("asking a secretary to send tomorrow's reminders", () => {
     await run(at(SATURDAY, '12:10'), none.send)
     expect(none.sent).toHaveLength(0)
   })
+
+  it("leaves out appointments for a secretary who doesn't send reminders, but still asks about meetings", async () => {
+    await sql`update public.profiles set sends_reminders = false where id = ${SECRETARY}`
+    try {
+      const push = fakePush()
+      await run(at(SATURDAY, '10:00'), push.send)
+      expect(push.sent.map((s) => s.endpoint.split('/').at(-1))).toEqual(['secretary'])
+      expect(push.sent[0].message.body).toBe('Follow-up test meeting: reminder to send')
+
+      await sql`delete from public.notification_log where kind = 'reminders' and for_date = ${SUNDAY}`
+      await sql`insert into public.meeting_reminders (event_id, for_date) select id, ${SUNDAY} from public.recurring_events where title = 'Follow-up test meeting'`
+      const none = fakePush()
+      await run(at(SATURDAY, '10:10'), none.send)
+      expect(none.sent).toHaveLength(0)
+    } finally {
+      await sql`update public.profiles set sends_reminders = true where id = ${SECRETARY}`
+    }
+  })
 })

@@ -35,6 +35,10 @@ type AuthState = {
   setHasHours: (hasHours: boolean) => void
   /** Shows a name this person just saved for themselves. */
   setDisplayName: (displayName: string) => void
+  /** Whether this secretary reminds people of their appointments the day before. */
+  sendsReminders: boolean
+  /** Shows the reminders choice this person just saved. */
+  setSendsReminders: (on: boolean) => void
   /** The meetings whose agendas this user can open. */
   templates: AgendaTemplate[]
   /** Re-reads the meetings after one is created or changed, so the Agenda tabs stay current. */
@@ -63,6 +67,7 @@ type Me = {
   profile: Profile | null
   office: Enums<'bishopric_office'> | null
   organization: string | null
+  sendsReminders: boolean
   roles: AppRole[]
   templates: AgendaTemplate[]
   hasHours: boolean
@@ -72,7 +77,7 @@ type Me = {
   hasOwnRoles: boolean
 }
 
-const NO_ONE = { profile: null, office: null, organization: null, roles: [], templates: [], hasHours: false, mentoring: [], mentoredBy: [], actingFor: null, hasOwnRoles: false }
+const NO_ONE = { profile: null, office: null, organization: null, sendsReminders: true, roles: [], templates: [], hasHours: false, mentoring: [], mentoredBy: [], actingFor: null, hasOwnRoles: false }
 
 /**
  * Loads who this person is, and who they use Ward Desk as. A mentor with no role of their own acts
@@ -137,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setHasHours = (hasHours: boolean) => setMe((m) => (m ? { ...m, hasHours } : m))
   const setDisplayName = (display_name: string) => setMe((m) => (m?.profile ? { ...m, profile: { ...m.profile, display_name } } : m))
+  const setSendsReminders = (sendsReminders: boolean) => setMe((m) => (m ? { ...m, sendsReminders } : m))
 
   const signOut = async () => {
     storeActing(null)
@@ -166,6 +172,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasHours: current?.hasHours ?? false,
         setHasHours,
         setDisplayName,
+        sendsReminders: current?.sendsReminders ?? true,
+        setSendsReminders,
         templates: current?.templates ?? [],
         reloadTemplates,
         signOut,

@@ -9,19 +9,24 @@ import KeyOutlinedIcon from '@mui/icons-material/KeyOutlined'
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined'
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import MailOutlinedIcon from '@mui/icons-material/MailOutlined'
+import NotificationsActiveOutlinedIcon from '@mui/icons-material/NotificationsActiveOutlined'
 import TimerOutlinedIcon from '@mui/icons-material/TimerOutlined'
 import Avatar from '@mui/material/Avatar'
 import Box from '@mui/material/Box'
+import Switch from '@mui/material/Switch'
 import Typography from '@mui/material/Typography'
 import { useColorScheme } from '@mui/material/styles'
-import type { ChangeEvent, ReactNode } from 'react'
+import { useState, type ChangeEvent, type ReactNode } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { useAuth } from '../auth/AuthProvider'
 import { useSettingsSplit } from '../components/Layout'
 import { GroupedList, GroupedRow, IconTile, type TileColor } from '../components/Grouped'
+import { ErrorNote } from '../components/Layout'
 import { SetupChecklist, useSetupSteps } from '../components/Setup'
-import { canSeeAppointments, settingsFor, type SettingsIcon } from '../lib/access'
+import { canSeeAppointments, isSecretaryOffice, settingsFor, type SettingsIcon } from '../lib/access'
 import { initials } from '../lib/names'
+import { setSendsReminders } from '../lib/queries'
+import { supabase } from '../lib/supabase'
 import { AccountPage } from './AccountPage'
 
 const ICONS: Record<SettingsIcon, { icon: ReactNode; color: TileColor }> = {
@@ -68,6 +73,46 @@ function Appearance() {
   )
 }
 
+/**
+ * Whether this secretary reminds people of their appointments the day before. Off, their Home,
+ * the Reminders page and the day-before notification leave appointments out.
+ */
+function RemindersChoice() {
+  const { profile, sendsReminders, setSendsReminders: show } = useAuth()
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const toggle = async (on: boolean) => {
+    if (!profile) return
+    // Show the change straight away, and put it back if it didn't save.
+    show(on)
+    setSaving(true)
+    setError(null)
+    try {
+      await setSendsReminders(supabase, profile.id, on)
+    } catch (e) {
+      show(!on)
+      setError((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <>
+      <GroupedRow
+        start={
+          <IconTile color="error">
+            <NotificationsActiveOutlinedIcon />
+          </IconTile>
+        }
+        label="Send reminders"
+        hint="Remind people of their appointment the day before"
+        value={<Switch edge="end" checked={sendsReminders} disabled={saving} onChange={(_, on) => void toggle(on)} slotProps={{ input: { 'aria-label': 'Send reminders' } }} />}
+      />
+      {error && <ErrorNote error={error} />}
+    </>
+  )
+}
+
 /** The page a row opens is showing, so the row is highlighted. Settings itself opens on the account. */
 function useSelected() {
   const { pathname } = useLocation()
@@ -110,6 +155,7 @@ function SettingsList() {
             />
           ))}
           {g.title === 'You' && <Appearance />}
+          {g.title === 'Appointments' && isSecretaryOffice(office) && !actingFor && <RemindersChoice />}
         </GroupedList>
       ))}
       {!groups.some((g) => g.title === 'You') && (

@@ -14,17 +14,22 @@ import type { Appointment } from '../lib/queries'
 import { bookedRange, slotLabel, wardParts } from '../lib/slots'
 import { Muted, SectionCard } from './Layout'
 import { MessagePanel } from './Messages'
+import { YouthFields, type SetYouth } from './AppointmentFields'
 
 export type RemindersActions = {
   /** Records the reminder for an appointment, or with `false` takes it back. */
   remind: (id: string, sent: boolean) => void
   remindMeeting: (eventId: string, sent: boolean) => void
+  /** Marks an appointment as a youth's, so the reminder goes to a parent. */
+  setYouth: SetYouth
 }
 
 export type RemindersProps = {
   date: IsoDate
   /** Booked appointments on `date` for the leaders this secretary schedules for. */
   appointments: Appointment[]
+  /** This secretary turned appointment reminders off in Settings. */
+  appointmentsOff?: boolean
   /** Standing meetings on `date` this secretary reminds people about. */
   meetings: RemindedEvent[]
   sent: MeetingReminder[]
@@ -122,7 +127,7 @@ function MeetingAssignmentsLine({ assignments, link }: { assignments: MeetingAss
   )
 }
 
-export function Reminders({ date, appointments, meetings, sent, agendas, agendaTemplates, templates, leaderName, myName, timeZone, actions, busy }: RemindersProps) {
+export function Reminders({ date, appointments, appointmentsOff = false, meetings, sent, agendas, agendaTemplates, templates, leaderName, myName, timeZone, actions, busy }: RemindersProps) {
   const firstOpen = [...meetings.filter((m) => !meetingReminded(m.id, date, sent)).map((m) => m.id), ...appointments.filter((a) => !a.reminded_at).map((a) => a.id)][0]
   return (
     <>
@@ -167,7 +172,11 @@ export function Reminders({ date, appointments, meetings, sent, agendas, agendaT
         </SectionCard>
       )}
       <SectionCard title="Appointments">
-        {appointments.length ? (
+        {appointmentsOff ? (
+          <Muted>
+            You've turned appointment reminders off. To send them, turn on <Link to="/settings">Send reminders in Settings</Link>.
+          </Muted>
+        ) : appointments.length ? (
           <Stack divider={<Divider flexItem />} spacing={1.5}>
             {appointments.map((a) => {
               const leader = leaderName(a.interviewer_id)
@@ -182,6 +191,7 @@ export function Reminders({ date, appointments, meetings, sent, agendas, agendaT
                   onDoneAnotherWay={() => actions.remind(a.id, true)}
                   busy={busy}
                 >
+                  <YouthFields key={`youth|${a.is_youth}|${a.parent_name}`} appointment={a} onChange={actions.setYouth} busy={busy} />
                   <MessagePanel
                     key={`${a.is_youth}|${a.parent_name}`}
                     kind="reminder"

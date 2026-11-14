@@ -1,7 +1,7 @@
-// What happens to an appointment after it's booked: the secretary confirms it, reminds the person
-// the day before, and afterwards the leader reports how it went. Also the meeting reminders a
-// secretary sends for standing meetings, and the notifications that ask for each. Pure so the app,
-// the scheduled sender (scripts/notify) and the unit tests share it.
+// What happens to an appointment after it's booked: the secretary reminds the person the day
+// before (unless they've turned reminders off), and afterwards the leader reports how it went.
+// Also the meeting reminders a secretary sends for standing meetings, and the notifications that
+// ask for each. Pure so the app, the scheduled sender (scripts/notify) and the unit tests share it.
 //
 // Notifications show on lock screens, so they say how many and when, never who or what for.
 
@@ -18,7 +18,7 @@ export const REMIND_FROM_HOUR = 10
 /** ...until this one, so a job that couldn't run at 10 still asks later that day, but never at night. */
 export const REMIND_UNTIL_HOUR = 20
 
-export type FollowUpAppointment = Pick<Tables<'interviews'>, 'id' | 'interviewer_id' | 'scheduled_at' | 'duration_minutes' | 'status' | 'confirmed_at' | 'reminded_at'>
+export type FollowUpAppointment = Pick<Tables<'interviews'>, 'id' | 'interviewer_id' | 'scheduled_at' | 'duration_minutes' | 'status' | 'reminded_at'>
 export type RemindedEvent = Pick<Tables<'recurring_events'>, 'id' | 'title' | 'weekday' | 'week_of_month' | 'start_time' | 'reminder_by' | 'agenda_template_id'>
 /** A meeting's agenda on one date: who has the prayers and the spiritual thought. */
 export type AgendaAssignments = Pick<Tables<'agendas'>, 'template_id' | 'opening_prayer' | 'spiritual_thought' | 'closing_prayer'>
@@ -31,11 +31,6 @@ const byTime = (a: { scheduled_at: string | null }, b: { scheduled_at: string | 
 /** A leader's appointments that are over and still waiting to be marked done or missed, oldest first. */
 export function toReport<A extends FollowUpAppointment>(leaderId: string, appointments: A[], now: Date): A[] {
   return appointments.filter((a) => booked(a) && a.interviewer_id === leaderId && ended(a, now)).sort(byTime)
-}
-
-/** Booked times the person hasn't been sent a confirmation for yet, soonest first. Past ones drop off. */
-export function toConfirm<A extends FollowUpAppointment>(appointments: A[], leaderIds: string[], now: Date): A[] {
-  return appointments.filter((a) => booked(a) && !a.confirmed_at && a.interviewer_id && leaderIds.includes(a.interviewer_id) && new Date(a.scheduled_at) > now).sort(byTime)
 }
 
 /** Appointments on this ward date for these leaders, with the ones not reminded yet first. */
