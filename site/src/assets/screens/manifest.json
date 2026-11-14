@@ -334,7 +334,7 @@
     "settings-messages": {
       "route": "/settings/messages",
       "role": "Executive secretary",
-      "caption": "Message templates the secretaries use to offer and confirm times.",
+      "caption": "Message templates the secretaries use to offer times and send reminders.",
       "variants": [
         "phone-light",
         "phone-dark",
