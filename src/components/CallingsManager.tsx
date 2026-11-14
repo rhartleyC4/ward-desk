@@ -12,8 +12,9 @@ import Menu from '@mui/material/Menu'
 import MenuItem from '@mui/material/MenuItem'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
+import { alpha } from '@mui/material/styles'
 import Typography from '@mui/material/Typography'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { awaitingSettingApart, needsToDiscuss, unsortedSuggestions } from '../lib/agenda'
 import { coveringLeader, organizationFor, type ListedCalling } from '../lib/callings'
 import { appointmentFor, NEEDS_APPOINTMENT, whenLabel } from '../lib/appointments'
@@ -22,7 +23,7 @@ import { FORMER_MEMBER, unreceived, type CallingRequest } from '../lib/requests'
 import type { Enums, TablesUpdate } from '../lib/database.types'
 import type { Appointment, CallingNeed, Candidate, Profile } from '../lib/queries'
 import { nativeSelect } from '../theme'
-import { CallingField } from './CallingField'
+import { AddCallingDialog, type NewCalling } from './AddCallingDialog'
 import { Muted } from './Layout'
 import { CallingRequestRow } from './Requests'
 
@@ -55,7 +56,8 @@ export type CallingsData = {
 }
 
 export type CallingsActions = {
-  addNeed: (need: { calling_title: string; release_name: string | null }) => void
+  /** Adds a calling to fill along with its first names to consider. */
+  addNeed: (calling: NewCalling) => void
   updateNeed: (id: string, changes: TablesUpdate<'calling_needs'>) => void
   /** Marks a sustained name set apart today, which completes the calling. */
   setApart: (candidate: Candidate) => void
@@ -299,13 +301,79 @@ function Dates({ need, accepted, actions }: { need: CallingNeed; accepted: Candi
   )
 }
 
-function NeedCard({ need, data, actions, timeZone }: { need: CallingNeed; data: CallingsData; actions: CallingsActions; timeZone: string }) {
+/** A calling's notes, shown under its title and edited in place from the ⋯ menu. */
+function NeedNotes({ need, editing, onDone, onSave }: { need: CallingNeed; editing: boolean; onDone: () => void; onSave: (notes: string | null) => void }) {
+  if (editing) return <NotesForm need={need} onDone={onDone} onSave={onSave} />
+  return need.notes ? (
+    <Typography variant="body2" sx={{ color: 'text.secondary', whiteSpace: 'pre-line' }}>
+      {need.notes}
+    </Typography>
+  ) : null
+}
+
+function NotesForm({ need, onDone, onSave }: { need: CallingNeed; onDone: () => void; onSave: (notes: string | null) => void }) {
+  const [text, setText] = useState(need.notes ?? '')
+  return (
+    <Stack
+      component="form"
+      spacing={1}
+      onSubmit={(e) => {
+        e.preventDefault()
+        onSave(text.trim() || null)
+        onDone()
+      }}
+    >
+      <TextField
+        autoFocus
+        multiline
+        minRows={2}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => e.key === 'Escape' && onDone()}
+        slotProps={{ htmlInput: { 'aria-label': `Notes for ${need.calling_title}` } }}
+      />
+      <Stack direction="row" spacing={1}>
+        <Button type="submit" variant="outlined">
+          Save
+        </Button>
+        <Button onClick={onDone}>Cancel</Button>
+      </Stack>
+    </Stack>
+  )
+}
+
+function NeedCard({ need, data, actions, timeZone, justAdded }: { need: CallingNeed; data: CallingsData; actions: CallingsActions; timeZone: string; justAdded: boolean }) {
   const names = data.candidates.filter((c) => c.need_id === need.id)
   const accepted = names.find((c) => ACCEPTED.includes(c.status))
   const stage = stageOf(need, names)
+  const [editingNotes, setEditingNotes] = useState(false)
+  const ref = useRef<HTMLElement>(null)
+
+  // A calling just added from the dialog comes into view with a brief glow, so it's clear where it went.
+  useEffect(() => {
+    if (justAdded) ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+  }, [justAdded])
 
   return (
-    <Box component="article" aria-label={need.calling_title} sx={{ border: 1, borderColor: 'divider', borderRadius: 2, px: 2, py: 1.5 }}>
+    <Box
+      ref={ref}
+      component="article"
+      aria-label={need.calling_title}
+      sx={(theme) => ({
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 2,
+        px: 2,
+        py: 1.5,
+        ...(justAdded && {
+          '@keyframes just-added': {
+            from: { backgroundColor: alpha(theme.palette.primary.main, 0.16), borderColor: theme.palette.primary.main },
+            to: { backgroundColor: 'transparent', borderColor: theme.palette.divider },
+          },
+          animation: 'just-added 2.5s ease-out',
+        }),
+      })}
+    >
       <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
         <Typography component="h4" variant="h3" sx={{ flex: 1, minWidth: 0 }}>
           {need.calling_title}
@@ -314,6 +382,7 @@ function NeedCard({ need, data, actions, timeZone }: { need: CallingNeed; data: 
         <MoreMenu
           label={`More for ${need.calling_title}`}
           items={[
+            { label: need.notes ? 'Edit notes' : 'Add notes', onClick: () => setEditingNotes(true) },
             // A calling is done once its name is set apart; this is for when it isn't needed after all.
             {
               label: 'No longer needed',
@@ -344,6 +413,7 @@ function NeedCard({ need, data, actions, timeZone }: { need: CallingNeed; data: 
           />
         )}
         <RequestedBy need={need} data={data} />
+        <NeedNotes need={need} editing={editingNotes} onDone={() => setEditingNotes(false)} onSave={(notes) => actions.updateNeed(need.id, { notes })} />
       </Stack>
       {names.length > 0 && (
         <Box component="ul" aria-label={`Names for ${need.calling_title}`} sx={{ m: 0, mt: 1, p: 0, borderTop: 1, borderColor: 'divider', '& > li + li': { borderTop: 1, borderColor: 'divider' } }}>
@@ -368,28 +438,6 @@ function NeedCard({ need, data, actions, timeZone }: { need: CallingNeed; data: 
   )
 }
 
-function AddNeed({ onAdd, onClose, callings }: { onAdd: CallingsActions['addNeed']; onClose: () => void; callings: ListedCalling[] }) {
-  const [form, setForm] = useState({ calling_title: '', release_name: '' })
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    if (!form.calling_title.trim()) return
-    onAdd({ calling_title: form.calling_title.trim(), release_name: form.release_name.trim() || null })
-    onClose()
-  }
-  return (
-    <Stack component="form" onSubmit={submit} aria-label="Add a calling to fill" spacing={1.5} sx={{ border: 1, borderColor: 'primary.main', borderRadius: 2, p: 2 }}>
-      <CallingField callings={callings} value={form.calling_title} onChange={(calling_title) => setForm({ ...form, calling_title })} />
-      <TextField label="Releasing (optional)" value={form.release_name} onChange={(e) => setForm({ ...form, release_name: e.target.value })} />
-      <Stack direction="row" spacing={1}>
-        <Button type="submit" variant="contained">
-          Add calling
-        </Button>
-        <Button onClick={onClose}>Cancel</Button>
-      </Stack>
-    </Stack>
-  )
-}
-
 /**
  * Everything the bishopric does with callings, worked through during the bishopric meeting. A
  * calling moves to "Waiting to be set apart" on the Sunday its accepted name is sustained, and is
@@ -397,8 +445,10 @@ function AddNeed({ onAdd, onClose, callings }: { onAdd: CallingsActions['addNeed
  */
 export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDate; data: CallingsData; actions: CallingsActions; timeZone: string }) {
   const [adding, setAdding] = useState(false)
+  const [justAdded, setJustAdded] = useState<string | null>(null)
   const suggestions = unsortedSuggestions(data.candidates)
-  const openNeeds = needsToDiscuss(date, data.needs, data.candidates)
+  // Newest first, so a calling just added shows up right under the Add button.
+  const openNeeds = needsToDiscuss(date, data.needs, data.candidates).toSorted((a, b) => b.created_at.localeCompare(a.created_at))
   const newRequests = unreceived(data.callingRequests)
   const waiting = awaitingSettingApart(date, data.needs, data.candidates)
 
@@ -481,22 +531,28 @@ export function CallingsManager({ date, data, actions, timeZone }: { date: IsoDa
       <Box component="section" aria-label="Callings to fill">
         <GroupHeading
           action={
-            !adding && (
-              <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
-                Add a calling
-              </Button>
-            )
+            <Button size="small" variant="outlined" startIcon={<AddIcon />} onClick={() => setAdding(true)}>
+              Add a calling
+            </Button>
           }
         >
           Callings to fill
         </GroupHeading>
         <Stack spacing={1.5}>
-          {adding && <AddNeed onAdd={actions.addNeed} onClose={() => setAdding(false)} callings={data.callingList} />}
-          {openNeeds.length === 0 && !adding && <Muted>No callings to fill.</Muted>}
+          {openNeeds.length === 0 && <Muted>No callings to fill.</Muted>}
           {openNeeds.map((need) => (
-            <NeedCard key={need.id} need={need} data={data} actions={actions} timeZone={timeZone} />
+            <NeedCard key={need.id} need={need} data={data} actions={actions} timeZone={timeZone} justAdded={need.id === justAdded} />
           ))}
         </Stack>
+        <AddCallingDialog
+          open={adding}
+          onClose={() => setAdding(false)}
+          onAdd={(calling) => {
+            setJustAdded(calling.id)
+            actions.addNeed(calling)
+          }}
+          callings={data.callingList}
+        />
       </Box>
     </Stack>
   )

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { agendaData } from '../test/fixtures'
@@ -245,13 +245,84 @@ describe('CallingsManager', () => {
     await user.selectOptions(screen.getByLabelText('Attach Brother Vale to a calling'), 'Primary Teacher')
     expect(a.updateCandidate).toHaveBeenCalledWith('c2', { need_id: 'n1', status: 'discussing' })
 
+  })
+
+  it('adds a calling from a dialog with its release and first names', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
+
     await user.click(screen.getByRole('button', { name: 'Add a calling' }))
-    const form = screen.getByRole('form', { name: 'Add a calling to fill' })
-    await user.type(within(form).getByLabelText('Calling'), 'Ward Librarian')
-    await user.type(within(form).getByLabelText('Releasing (optional)'), 'Sister Ames')
-    await user.click(within(form).getByRole('button', { name: 'Add calling' }))
-    expect(a.addNeed).toHaveBeenCalledWith({ calling_title: 'Ward Librarian', release_name: 'Sister Ames' })
-    expect(screen.queryByRole('form', { name: 'Add a calling to fill' })).not.toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Add a calling' })
+    await user.type(within(dialog).getByLabelText(/^Calling/), 'Ward Librarian')
+    await user.type(within(dialog).getByLabelText("Who's being released (optional)"), 'Sister Ames')
+    await user.type(within(dialog).getByLabelText('Name to consider (optional)'), 'Brother Hale')
+    await user.click(within(dialog).getByRole('button', { name: 'Another name' }))
+    await user.type(within(dialog).getByLabelText('Another name to consider'), 'Sister Dunn')
+    // The rarer choices wait behind More options.
+    expect(within(dialog).queryByLabelText('Notes')).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'More options' }))
+    await user.type(within(dialog).getByLabelText('Notes'), 'Library opens in January')
+    await user.click(within(dialog).getByRole('button', { name: 'Add calling' }))
+
+    expect(a.addNeed).toHaveBeenCalledWith({
+      id: expect.any(String),
+      calling_title: 'Ward Librarian',
+      release_name: 'Sister Ames',
+      release_on: null,
+      release_only: false,
+      notes: 'Library opens in January',
+      names: ['Brother Hale', 'Sister Dunn'],
+    })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('adds a release-only calling, which needs who is released and takes no names', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    render(<CallingsManager date="2026-10-25" data={agendaData()} actions={a} timeZone="America/Denver" />)
+
+    await user.click(screen.getByRole('button', { name: 'Add a calling' }))
+    const dialog = screen.getByRole('dialog', { name: 'Add a calling' })
+    await user.type(within(dialog).getByLabelText(/^Calling/), 'Ward Librarian')
+    await user.click(within(dialog).getByRole('button', { name: 'More options' }))
+    await user.click(within(dialog).getByLabelText(/Release only/))
+    expect(within(dialog).queryByLabelText('Name to consider (optional)')).not.toBeInTheDocument()
+
+    await user.click(within(dialog).getByRole('button', { name: 'Add calling' }))
+    expect(a.addNeed).not.toHaveBeenCalled()
+
+    await user.type(within(dialog).getByLabelText(/^Who's being released/), 'Sister Ames')
+    fireEvent.change(within(dialog).getByLabelText('Release Sister Ames on'), { target: { value: '2026-11-08' } })
+    await user.click(within(dialog).getByRole('button', { name: 'Add calling' }))
+    expect(a.addNeed).toHaveBeenCalledWith(expect.objectContaining({ release_name: 'Sister Ames', release_on: '2026-11-08', release_only: true, names: [] }))
+  })
+
+  it('lists the newest calling first', () => {
+    const data = agendaData()
+    data.needs = data.needs.map((n, i) => ({ ...n, created_at: `2026-10-0${i + 1}T00:00:00Z` }))
+    render(<CallingsManager date="2026-10-25" data={data} actions={actions()} timeZone="America/Denver" />)
+    const titles = within(screen.getByRole('region', { name: 'Callings to fill' }))
+      .getAllByRole('article')
+      .map((el) => el.getAttribute('aria-label'))
+    expect(titles).toEqual(['Sunday School', 'RS Teacher', 'Primary Teacher'])
+  })
+
+  it('shows and edits a calling\'s notes', async () => {
+    const user = userEvent.setup()
+    const a = actions()
+    const data = agendaData()
+    data.needs[0] = { ...data.needs[0], notes: 'Sunbeams class' }
+    render(<CallingsManager date="2026-10-25" data={data} actions={a} timeZone="America/Denver" />)
+
+    expect(within(need('Primary Teacher')).getByText('Sunbeams class')).toBeInTheDocument()
+    await user.click(within(need('Primary Teacher')).getByRole('button', { name: 'More for Primary Teacher' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Edit notes' }))
+    const box = screen.getByLabelText('Notes for Primary Teacher')
+    await user.clear(box)
+    await user.type(box, 'CTR 7 class')
+    await user.click(within(need('Primary Teacher')).getByRole('button', { name: 'Save' }))
+    expect(a.updateNeed).toHaveBeenCalledWith('n1', { notes: 'CTR 7 class' })
   })
 
   it('suggests titles from the calling list, including ones added by the ward', async () => {
@@ -259,8 +330,8 @@ describe('CallingsManager', () => {
     render(<CallingsManager date="2026-10-25" data={agendaData()} actions={actions()} timeZone="America/Denver" />)
 
     await user.click(screen.getByRole('button', { name: 'Add a calling' }))
-    const form = screen.getByRole('form', { name: 'Add a calling to fill' })
-    await user.type(within(form).getByLabelText('Calling'), 'teacher')
+    const dialog = screen.getByRole('dialog', { name: 'Add a calling' })
+    await user.type(within(dialog).getByLabelText(/^Calling/), 'teacher')
     const list = screen.getByRole('listbox')
     expect(within(list).getByText('Added by the ward')).toBeInTheDocument()
     expect(within(list).getByRole('option', { name: 'RS Teacher' })).toBeInTheDocument()

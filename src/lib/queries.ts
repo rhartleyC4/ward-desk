@@ -315,8 +315,10 @@ export async function removeFromCallingList(client: Client, id: string) {
   check(await client.from('callings').delete().eq('id', id))
 }
 
-export async function addNeed(client: Client, need: TablesInsert<'calling_needs'>) {
-  check(await client.from('calling_needs').insert(need))
+/** Adds a calling to fill, with any names to consider for it. */
+export async function addNeed(client: Client, need: TablesInsert<'calling_needs'>, names: string[] = []) {
+  const { id } = must(await client.from('calling_needs').insert(need).select('id').single())
+  if (names.length) check(await client.from('calling_candidates').insert(names.map((person_name) => ({ need_id: id, person_name, status: 'discussing' as const }))))
 }
 
 export async function updateNeed(client: Client, id: string, changes: TablesUpdate<'calling_needs'>) {

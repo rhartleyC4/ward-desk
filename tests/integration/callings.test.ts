@@ -60,6 +60,19 @@ describe('callings confidentiality', () => {
     expect(agenda.meetings.length).toBeGreaterThan(0)
   })
 
+  it('adds a calling with its first names to consider in one step', async () => {
+    const bishop = await signIn('bishop')
+    const id = crypto.randomUUID()
+    await addNeed(bishop, { id, calling_title: `${TAG} Ward Librarian`, release_only: false, notes: `${TAG} note` }, [`${TAG} Brother Hale`, `${TAG} Sister Dunn`])
+    const { needs, candidates } = await loadCallings(bishop)
+    expect(needs.find((n) => n.id === id)).toMatchObject({ calling_title: `${TAG} Ward Librarian`, notes: `${TAG} note` })
+    // Both names go in together, so they share a created_at; sort to compare.
+    expect(candidates.filter((c) => c.need_id === id).map((c) => [c.person_name, c.status]).sort()).toEqual([
+      [`${TAG} Brother Hale`, 'discussing'],
+      [`${TAG} Sister Dunn`, 'discussing'],
+    ])
+  })
+
   it('carries an accepted name through to Sustainings Today on the agenda', async () => {
     const bishop = await signIn('bishop')
     await addNeed(bishop, { calling_title: `${TAG} Activities Committee` })
